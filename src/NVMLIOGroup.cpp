@@ -516,7 +516,6 @@ namespace geopm
     #ifdef GEOPM_DEBUG
             throw Exception("NVMLIOGroup::" + std::string(__func__) + ": Handling not defined for " +
                             signal_name, GEOPM_ERROR_LOGIC, __FILE__, __LINE__);
-
     #endif
         }
         return result;
