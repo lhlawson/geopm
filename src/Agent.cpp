@@ -30,8 +30,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
-
 #include "Agent.hpp"
 
 #include <cmath>
@@ -52,6 +50,11 @@
 #include "Endpoint.hpp"
 #include "SharedMemoryUser.hpp"
 #include "Helper.hpp"
+#include "config.h"
+#ifdef GEOPM_ENABLE_NVML
+#include "NVMLUtilizationAgent.hpp"
+#include "NVMLBoardUtilizationAgent.hpp"
+#endif
 
 namespace geopm
 {
@@ -83,6 +86,16 @@ namespace geopm
                         FrequencyMapAgent::make_plugin,
                         Agent::make_dictionary(FrequencyMapAgent::policy_names(),
                                                FrequencyMapAgent::sample_names()));
+#ifdef GEOPM_ENABLE_NVML
+        register_plugin(NVMLUtilizationAgent::plugin_name(),
+                        NVMLUtilizationAgent::make_plugin,
+                        Agent::make_dictionary(NVMLUtilizationAgent::policy_names(),
+                                               NVMLUtilizationAgent::sample_names()));
+        register_plugin(NVMLBoardUtilizationAgent::plugin_name(),
+                        NVMLBoardUtilizationAgent::make_plugin,
+                        Agent::make_dictionary(NVMLBoardUtilizationAgent::policy_names(),
+                                               NVMLBoardUtilizationAgent::sample_names()));
+#endif
     }
 
 

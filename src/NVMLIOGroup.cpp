@@ -66,6 +66,20 @@ namespace geopm
                                   Agg::average,
                                   string_format_double
                                   }},
+                              {"NVML::FREQUENCY_MAX", {
+                                  "Streaming multiprocessor maximum frequency in hertz",
+                                  {},
+                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                  Agg::average,
+                                  string_format_double
+                                  }},
+                              {"NVML::FREQUENCY_MIN", {
+                                  "Streaming multiprocessor minimum frequency in hertz",
+                                  {},
+                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                  Agg::average,
+                                  string_format_double
+                                  }},
                               {"NVML::UTILIZATION_ACCELERATOR", {
                                   "Fraction of time the accelerator operated on a kernel in the last set of driver samples",
                                   {},
@@ -474,6 +488,12 @@ namespace geopm
         double result = NAN;
         if (signal_name == "NVML::FREQUENCY" || signal_name == "FREQUENCY_ACCELERATOR") {
             result = (double) m_nvml_device_pool.frequency_status_sm(domain_idx)*1e6;
+        }
+        else if (signal_name == "NVML::FREQUENCY_MAX") {
+            result = (double) m_nvml_device_pool.frequency_max_sm(domain_idx)*1e6;
+        }
+        else if (signal_name == "NVML::FREQUENCY_MIN") {
+            result = (double) m_nvml_device_pool.frequency_supported(domain_idx).back()*1e6;
         }
         else if (signal_name == "NVML::UTILIZATION_ACCELERATOR") {
             result = (double) m_nvml_device_pool.utilization(domain_idx)/100;

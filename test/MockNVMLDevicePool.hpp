@@ -72,6 +72,10 @@ class MockNVMLDevicePool : public geopm::NVMLDevicePool
                            uint64_t(int));
         MOCK_CONST_METHOD1(active_process_list,
                            std::vector<int>(int));
+        MOCK_CONST_METHOD1(frequency_max_sm,
+                           uint64_t(int accel_idx));
+        MOCK_CONST_METHOD1(frequency_supported,
+                           std::vector<int>(int));
         MOCK_CONST_METHOD3(frequency_control_sm,
                            void(int, int, int));
         MOCK_CONST_METHOD1(frequency_reset_control,
