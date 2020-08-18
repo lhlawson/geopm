@@ -58,6 +58,8 @@ namespace geopm
             virtual uint64_t throughput_tx_pcie(int accel_idx) const override;
             virtual uint64_t utilization_mem(int accel_idx) const override;
             virtual std::vector<int> active_process_list(int accel_idx) const override;
+            virtual uint64_t frequency_max_sm(int accel_idx) const override;
+            virtual std::vector<int> frequency_supported(int accel_idx) const override;
 
             virtual void frequency_control_sm(int accel_idx, int min_freq, int max_freq) const override;
             virtual void frequency_reset_control(int accel_idx) const override;

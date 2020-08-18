@@ -630,11 +630,15 @@ libgeopmpolicy_la_SOURCES = contrib/json11/json11.cpp \
 if ENABLE_NVML
     libgeopmpolicy_la_SOURCES += src/NVMLAcceleratorTopo.cpp \
                                  src/NVMLAcceleratorTopo.hpp \
+                                 src/NVMLBoardUtilizationAgent.cpp \
+                                 src/NVMLBoardUtilizationAgent.hpp \
                                  src/NVMLDevicePool.cpp \
                                  src/NVMLDevicePool.hpp \
                                  src/NVMLDevicePoolImp.hpp \
                                  src/NVMLIOGroup.cpp \
                                  src/NVMLIOGroup.hpp \
+                                 src/NVMLUtilizationAgent.cpp \
+                                 src/NVMLUtilizationAgent.hpp \
                                  #end
 endif
 

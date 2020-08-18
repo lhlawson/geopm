@@ -333,6 +333,48 @@ namespace geopm
         return result;
     }
 
+    uint64_t NVMLDevicePoolImp::frequency_max_sm(int accel_idx) const
+    {
+        check_accel_range(accel_idx);
+        unsigned int result;
+        nvmlReturn_t nvml_result;
+
+        nvml_result = nvmlDeviceGetMaxClockInfo(m_nvml_device.at(accel_idx), NVML_CLOCK_SM, &result);
+        check_nvml_result(nvml_result, GEOPM_ERROR_RUNTIME, "NVMLDevicePool::" + std::string(__func__) +
+                          ": NVML failed to get Maximum Streaming Multiprocessor Frequency for accelerator " +
+                          std::to_string(accel_idx) + ".", __LINE__);
+
+        return (uint64_t)result;
+    }
+
+    std::vector<int> NVMLDevicePoolImp::frequency_supported(int accel_idx) const
+    {
+        check_accel_range(accel_idx);
+
+        unsigned int clock_mem;
+        unsigned int *supported_clocks;
+        unsigned int count = 0;
+        nvmlReturn_t nvml_result;
+
+        nvml_result = nvmlDeviceGetClock(m_nvml_device.at(accel_idx), NVML_CLOCK_MEM, NVML_CLOCK_ID_CURRENT,
+                                         &clock_mem);
+
+        nvml_result = nvmlDeviceGetSupportedGraphicsClocks(m_nvml_device.at(accel_idx), clock_mem, &count, supported_clocks);
+        if (nvml_result == NVML_SUCCESS) {
+        }
+        else if (nvml_result == NVML_ERROR_INSUFFICIENT_SIZE) {
+            supported_clocks = new unsigned int[count];
+            nvml_result = nvmlDeviceGetSupportedGraphicsClocks(m_nvml_device.at(accel_idx), 877, &count, supported_clocks);
+        }
+        check_nvml_result(nvml_result, GEOPM_ERROR_RUNTIME, "NVMLDevicePool::" + std::string(__func__) +
+                          ": NVML failed to get Minimum Streaming Multiprocessor Frequency for accelerator " +
+                          std::to_string(accel_idx) + " with memory frequency at " + std::to_string(clock_mem) +
+                          ".", __LINE__);
+
+        std::vector<int> result(supported_clocks, supported_clocks+count);
+        return result;
+    }
+
     void NVMLDevicePoolImp::frequency_control_sm(int accel_idx, int min_freq, int max_freq) const
     {
         check_accel_range(accel_idx);

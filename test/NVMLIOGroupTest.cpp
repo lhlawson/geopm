@@ -239,6 +239,8 @@ TEST_F(NVMLIOGroupTest, read_signal)
     std::vector<double> mock_pcie_rx_throughput = {4000, 3000, 2000, 0};
     std::vector<double> mock_pcie_tx_throughput = {2000, 3000, 4000, 100};
     std::vector<double> mock_utilization_mem = {25, 50, 100, 75};
+    std::vector<double> mock_freq_max = {1530, 1530, 1270, 1190};
+    std::vector<std::vector<int>> mock_freq_supported = {{1530,135}, {1530,420}, {1270,635}, {1190,800}};
 
     std::vector<int> active_process_list = {40961, 40962, 40963};
 
@@ -255,7 +257,8 @@ TEST_F(NVMLIOGroupTest, read_signal)
         EXPECT_CALL(*m_device_pool, throughput_rx_pcie(accel_idx)).WillRepeatedly(Return(mock_pcie_rx_throughput.at(accel_idx)));
         EXPECT_CALL(*m_device_pool, throughput_tx_pcie(accel_idx)).WillRepeatedly(Return(mock_pcie_tx_throughput.at(accel_idx)));
         EXPECT_CALL(*m_device_pool, utilization_mem(accel_idx)).WillRepeatedly(Return(mock_utilization_mem.at(accel_idx)));
-
+        EXPECT_CALL(*m_device_pool, frequency_max_sm(accel_idx)).WillRepeatedly(Return(mock_freq_max.at(accel_idx)));
+        EXPECT_CALL(*m_device_pool, frequency_supported(accel_idx)).WillRepeatedly(Return(mock_freq_supported.at(accel_idx)));
     }
 
     for (int cpu_idx = 0; cpu_idx < num_cpu; ++cpu_idx) {
@@ -301,6 +304,12 @@ TEST_F(NVMLIOGroupTest, read_signal)
 
         double utilization_mem = nvml_io.read_signal("NVML::UTILIZATION_MEMORY", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
         EXPECT_DOUBLE_EQ(utilization_mem, mock_utilization_mem.at(accel_idx)/100);
+
+        double frequency_max = nvml_io.read_signal("NVML::FREQUENCY_MAX", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
+        EXPECT_DOUBLE_EQ(frequency_max, mock_freq_max.at(accel_idx)*1e6);
+
+        double frequency_min = nvml_io.read_signal("NVML::FREQUENCY_MIN", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
+        EXPECT_DOUBLE_EQ(frequency_min, mock_freq_supported.at(accel_idx).back()*1e6);
     }
 
     for (int cpu_idx = 0; cpu_idx < num_cpu; ++cpu_idx) {

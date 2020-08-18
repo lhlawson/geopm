@@ -134,6 +134,20 @@ namespace geopm
             /// @return List of PIDs that are associated with a context on the
             //          specified NVML device.
             virtual std::vector<int> active_process_list(int accel_idx) const = 0;
+            /// @brief Get the NVML device streaming multiprocessor maximum
+            //         frequency in MHz.
+            /// @param [in] accel_idx The index indicating a particular
+            ///        accelerator.
+            /// @return Accelerator streaming multiproccesor maximum frequency
+            //          in MHz.
+            virtual uint64_t frequency_max_sm(int accel_idx) const = 0;
+            /// @brief Get the NVML device streaming multiprocessor supported
+            //         frequencies in MHz (for the current memory clock speed).
+            /// @param [in] accel_idx The index indicating a particular
+            ///        accelerator.
+            /// @return Accelerator streaming multiproccesor supported frequencies
+            //          in MHz.
+            virtual std::vector<int> frequency_supported(int accel_idx) const = 0;
 
             /// @brief Set min and max frequency for NVML device.
             /// @param [in] accel_idx The index indicating a particular
