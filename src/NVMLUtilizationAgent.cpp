@@ -260,7 +260,7 @@ namespace geopm
                 }
             }
 
-            freq_ctl_itr = m_control_available.find("NVML::FREQUENCY");
+            freq_ctl_itr = m_control_available.find("NVML::FREQUENCY_CONTROL");
             for (int domain_idx = 0; domain_idx < freq_ctl_itr->second.controls.size(); ++domain_idx) {
                 // set accelerator frequency.
                 if (reccomended_accel_freq.at(domain_idx) != freq_ctl_itr->second.controls.at(domain_idx).m_last_setting) {

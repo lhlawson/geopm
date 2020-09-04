@@ -96,10 +96,18 @@ namespace geopm
 
             // Policy indices; must match policy_names()
             enum m_policy_e {
-                M_POLICY_ACCELERATOR_FREQ_HIGH,
-                M_POLICY_ACCELERATOR_FREQ_LOW,
-                M_POLICY_XEON_FREQ_HIGH,
-                M_POLICY_XEON_FREQ_LOW,
+                M_POLICY_ACCELERATOR_UTIL_THRESH_0,
+                M_POLICY_ACCELERATOR_FREQ_SUB_THRESH_0,
+                M_POLICY_XEON_FREQ_SUB_THRESH_0,
+                M_POLICY_ACCELERATOR_UTIL_THRESH_1,
+                M_POLICY_ACCELERATOR_FREQ_SUB_THRESH_1,
+                M_POLICY_XEON_FREQ_SUB_THRESH_1,
+                M_POLICY_ACCELERATOR_FREQ_ABOVE_THRESH_1,
+                M_POLICY_XEON_FREQ_ABOVE_THRESH_1,
+                M_POLICY_USE_MEM_UTIL_THRESH,
+                M_POLICY_ACCELERATOR_MEM_UTIL_THRESH,
+                M_POLICY_ACCELERATOR_FREQ_ABOVE_MEM_UTIL_THRESH,
+                M_POLICY_XEON_FREQ_ABOVE_MEM_UTIL_THRESH,
                 M_NUM_POLICY
             };
             // Sample indices; must match sample_names()

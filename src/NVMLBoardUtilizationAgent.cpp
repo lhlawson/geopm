@@ -61,6 +61,7 @@ namespace geopm
         , m_do_write_batch(false)
         , m_signal_available({{"NVML::FREQUENCY", {}},
                               {"NVML::UTILIZATION_ACCELERATOR", {}},
+                              {"NVML::UTILIZATION_MEMORY", {}},
                               {"NVML::POWER", {}},
                               {"NVML::TOTAL_ENERGY_CONSUMPTION", {}},
                               {"FREQUENCY", {}}
@@ -98,25 +99,6 @@ namespace geopm
     void NVMLBoardUtilizationAgent::validate_policy(std::vector<double> &in_policy) const
     {
         assert(in_policy.size() == M_NUM_POLICY);
-
-        //TODO: taken from example agent, moved to here...can we ever actually hit these beng NAN?
-        // Check for NAN to set default values for policy
-        if (std::isnan(in_policy[M_POLICY_ACCELERATOR_FREQ_LOW])) {
-            in_policy[M_POLICY_ACCELERATOR_FREQ_LOW] =
-                m_platform_io.read_signal("NVML::FREQUENCY_MIN", GEOPM_DOMAIN_BOARD, 0);
-        }
-        if (std::isnan(in_policy[M_POLICY_ACCELERATOR_FREQ_HIGH])) {
-            in_policy[M_POLICY_ACCELERATOR_FREQ_HIGH] =
-                m_platform_io.read_signal("NVML::FREQUENCY_MAX", GEOPM_DOMAIN_BOARD, 0);
-        }
-        if (std::isnan(in_policy[M_POLICY_XEON_FREQ_HIGH])) {
-            in_policy[M_POLICY_XEON_FREQ_HIGH] =
-                m_platform_io.read_signal("CPU_FREQUENCY_MAX", GEOPM_DOMAIN_BOARD, 0);
-        }
-        if (std::isnan(in_policy[M_POLICY_XEON_FREQ_LOW])) {
-            in_policy[M_POLICY_XEON_FREQ_LOW] =
-                m_platform_io.read_signal("CPU_FREQUENCY_STICKER", GEOPM_DOMAIN_BOARD, 0);
-        }
     }
 
     // Distribute incoming policy to children
@@ -160,25 +142,27 @@ namespace geopm
         m_do_write_batch = false;
 
         double utilization_accelerator = m_signal_available.at("NVML::UTILIZATION_ACCELERATOR").m_last_signal;
+        double utilization_memory = m_signal_available.at("NVML::UTILIZATION_MEMORY").m_last_signal;
         double accel_freq_request = NAN;
         double xeon_freq_request = NAN;
 
-        if (!std::isnan(utilization_accelerator)) {
-            if(utilization_accelerator < 0.01) {
-                //All accelerators are idle
-                accel_freq_request = in_policy[M_POLICY_ACCELERATOR_FREQ_LOW]; //low accelerator frequency
-                xeon_freq_request = in_policy[M_POLICY_XEON_FREQ_HIGH]; //high xeon frequency
-            } else if(utilization_accelerator >= 0.01) {
-                //All accelerators are active
-                accel_freq_request = in_policy[M_POLICY_ACCELERATOR_FREQ_HIGH]; //high accelerator frequency
-                xeon_freq_request = in_policy[M_POLICY_XEON_FREQ_LOW];          //low xeon frequency
+        if (!std::isnan(utilization_accelerator)) { //0% GPU utilization
+            if(utilization_accelerator <= in_policy[M_POLICY_ACCELERATOR_UTIL_THRESH_0]) {
+                accel_freq_request = in_policy[M_POLICY_ACCELERATOR_FREQ_SUB_THRESH_0];
+                xeon_freq_request = in_policy[M_POLICY_XEON_FREQ_SUB_THRESH_0];
+            } else if(utilization_accelerator <= in_policy[M_POLICY_ACCELERATOR_UTIL_THRESH_1]) {
+                accel_freq_request = in_policy[M_POLICY_ACCELERATOR_FREQ_SUB_THRESH_1];
+                xeon_freq_request = in_policy[M_POLICY_XEON_FREQ_SUB_THRESH_1];
             } else {
-                //Catch all/safety caseb
-                //    The performance degradation averse approach is to act as if
-                //    the accelerators are critical to perf (high util accelerator freq)
-                //    and the xeons are critical to perf (low util xeon freq)
-                accel_freq_request = in_policy[M_POLICY_ACCELERATOR_FREQ_HIGH];
-                xeon_freq_request = in_policy[M_POLICY_XEON_FREQ_HIGH]; //high xeon frequency
+                accel_freq_request = in_policy[M_POLICY_ACCELERATOR_FREQ_ABOVE_THRESH_1];
+                xeon_freq_request = in_policy[M_POLICY_XEON_FREQ_ABOVE_THRESH_1];
+            }
+        }
+
+        if (in_policy[M_POLICY_USE_MEM_UTIL_THRESH] == 1.0) {
+            if (utilization_memory > in_policy[M_POLICY_ACCELERATOR_MEM_UTIL_THRESH]) {
+                accel_freq_request = in_policy[M_POLICY_ACCELERATOR_FREQ_ABOVE_MEM_UTIL_THRESH];
+                xeon_freq_request = in_policy[M_POLICY_XEON_FREQ_ABOVE_MEM_UTIL_THRESH];
             }
         }
 
@@ -298,8 +282,18 @@ namespace geopm
     // Describes expected policies to be provided by the resource manager or user
     std::vector<std::string> NVMLBoardUtilizationAgent::policy_names(void)
     {
-        return {"ACCELERATOR_FREQUENCY_HIGH", "ACCELERATOR_FREQUENCY_LOW",
-                "XEON_FREQUENCY_HIGH", "XEON_FREQUENCY_LOW"};
+        return {"ACCELERATOR_UTIL_THRESH_0",
+                "ACCELERATOR_FREQUENCY_SUB_THRESH_0",
+                "XEON_FREQUENCY_SUB_THRESH_0",
+                "ACCELERATOR_UTIL_THRESH_1",
+                "ACCELERATOR_FREQUENCY_SUB_THRESH_1",
+                "XEON_FREQUENCY_SUB_THRESH_1",
+                "ACCELERATOR_FREQUENCY_ABOVE_THRESH_1",
+                "XEON_FREQUENCY_ABOVE_THRESH_1",
+                "USE_MEM_UTIL_THRESH",
+                "ACCELERATOR_MEM_UTIL_THRESH",
+                "ACCELERATOR_FREQUENCY_ABOVE_MEM_UTIL_THRESH",
+                "XEON_FREQUENCY_ABOVE_MEM_UTIL_THRESH"};
     }
 
     // Describes samples to be provided to the resource manager or user
