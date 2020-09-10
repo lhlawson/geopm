@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 - 2021, Intel Corporation
+ * Copyright (c) 2015, 2016, 2017, 2018, 2019, 2020, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,34 +34,38 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <map>
 
 #include "config.h"
 #include "Exception.hpp"
-#include "NVMLAcceleratorTopo.hpp"
+#include "LevelZeroDevicePool.hpp"
 #include "LevelZeroAcceleratorTopo.hpp"
 
 namespace geopm
 {
-    const AcceleratorTopo &accelerator_topo(void)
+    LevelZeroAcceleratorTopo::LevelZeroAcceleratorTopo()
+        : LevelZeroAcceleratorTopo(levelzero_device_pool(geopm_sched_num_cpu()), geopm_sched_num_cpu())
     {
-#ifdef GEOPM_ENABLE_NVML
-        static NVMLAcceleratorTopo instance;
-#else
-    #ifdef GEOPM_ENABLE_LEVELZERO
-        static LevelZeroAcceleratorTopo instance;
-    #else
-        static AcceleratorTopo instance;
-    #endif
-#endif
-        return instance;
     }
 
-    int AcceleratorTopo::num_accelerator(void) const
+    LevelZeroAcceleratorTopo::LevelZeroAcceleratorTopo(const LevelZeroDevicePool &device_pool, const int num_cpu)
+        : m_levelzero_device_pool(device_pool)
+        , m_num_accelerator(m_levelzero_device_pool.num_accelerator())
     {
-        return 0;
+        if (m_num_accelerator == 0) {
+            std::cerr << "Warning: <geopm> LevelZeroAcceleratorTopo: No levelZero accelerators detected.\n";
+        }
+        else {
+        }
+        //TODO: Add cpu to accelerator affinitization
     }
 
-    std::set<int> AcceleratorTopo::cpu_affinity_ideal(int domain_idx) const
+    int LevelZeroAcceleratorTopo::num_accelerator(void) const
+    {
+        return m_num_accelerator;
+    }
+
+    std::set<int> LevelZeroAcceleratorTopo::cpu_affinity_ideal(int accel_idx) const
     {
         return {};
     }
