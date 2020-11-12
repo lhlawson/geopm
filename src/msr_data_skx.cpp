@@ -609,6 +609,20 @@ namespace geopm
                 }
             }
         },
+        "PPERF": {
+            "offset": "0x64E",
+            "domain": "cpu",
+            "fields": {
+                "PCNT" : {
+                    "begin_bit": 0,
+                    "end_bit": 47,
+                    "function": "overflow",
+                    "units": "none",
+                    "scalar": 1.0,
+                    "writeable": false
+                }
+            }
+        },
         "UNCORE_RATIO_LIMIT": {
             "offset": "0x620",
             "domain": "package",
