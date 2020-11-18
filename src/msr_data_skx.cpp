@@ -619,6 +619,7 @@ namespace geopm
                     "function": "overflow",
                     "units": "none",
                     "scalar": 1.0,
+                    "behavior":  "monotone",
                     "writeable": false
                 }
             }

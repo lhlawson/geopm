@@ -44,6 +44,7 @@
 #include "geopm_agent.h"
 #include "geopm_plugin.hpp"
 #include "MonitorAgent.hpp"
+#include "PCNTThresholdAgent.hpp"
 #include "PowerBalancerAgent.hpp"
 #include "PowerGovernorAgent.hpp"
 #include "EnergyEfficientAgent.hpp"
@@ -65,6 +66,10 @@ namespace geopm
                         MonitorAgent::make_plugin,
                         Agent::make_dictionary(MonitorAgent::policy_names(),
                                                MonitorAgent::sample_names()));
+        register_plugin(PCNTThresholdAgent::plugin_name(),
+                        PCNTThresholdAgent::make_plugin,
+                        Agent::make_dictionary(PCNTThresholdAgent::policy_names(),
+                                               PCNTThresholdAgent::sample_names()));
         register_plugin(PowerBalancerAgent::plugin_name(),
                         PowerBalancerAgent::make_plugin,
                         Agent::make_dictionary(PowerBalancerAgent::policy_names(),
