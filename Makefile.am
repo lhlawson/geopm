@@ -544,6 +544,10 @@ libgeopmpolicy_la_SOURCES = contrib/json11/json11.cpp \
                             src/OptionParser.hpp \
                             src/PCNTThresholdAgent.cpp \
                             src/PCNTThresholdAgent.hpp \
+                            src/PCNTThresholdPackageAgent.cpp \
+                            src/PCNTThresholdPackageAgent.hpp \
+                            src/PCNTVariabilityAgent.cpp \
+                            src/PCNTVariabilityAgent.hpp \
                             src/PlatformIO.cpp \
                             src/PlatformIO.hpp \
                             src/PlatformIOImp.hpp \

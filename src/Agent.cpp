@@ -45,6 +45,8 @@
 #include "geopm_plugin.hpp"
 #include "MonitorAgent.hpp"
 #include "PCNTThresholdAgent.hpp"
+#include "PCNTThresholdPackageAgent.hpp"
+#include "PCNTVariabilityAgent.hpp"
 #include "PowerBalancerAgent.hpp"
 #include "PowerGovernorAgent.hpp"
 #include "EnergyEfficientAgent.hpp"
@@ -70,6 +72,14 @@ namespace geopm
                         PCNTThresholdAgent::make_plugin,
                         Agent::make_dictionary(PCNTThresholdAgent::policy_names(),
                                                PCNTThresholdAgent::sample_names()));
+        register_plugin(PCNTThresholdPackageAgent::plugin_name(),
+                        PCNTThresholdPackageAgent::make_plugin,
+                        Agent::make_dictionary(PCNTThresholdPackageAgent::policy_names(),
+                                               PCNTThresholdPackageAgent::sample_names()));
+        register_plugin(PCNTVariabilityAgent::plugin_name(),
+                        PCNTVariabilityAgent::make_plugin,
+                        Agent::make_dictionary(PCNTVariabilityAgent::policy_names(),
+                                               PCNTVariabilityAgent::sample_names()));
         register_plugin(PowerBalancerAgent::plugin_name(),
                         PowerBalancerAgent::make_plugin,
                         Agent::make_dictionary(PowerBalancerAgent::policy_names(),

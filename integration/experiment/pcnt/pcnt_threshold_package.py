@@ -63,14 +63,20 @@ def launch_configs(output_dir, app_conf):
                       "THRESH_1": 0.5,
                       "FREQ_SUB_THRESH_0": sys_min,
                       "FREQ_SUB_THRESH_1": sys_sticker,
-                      "FREQ_ABOVE_THRESH_1": sys_max},
+                      "FREQ_ABOVE_THRESH_1": sys_max,
+                      "UNCORE_SUB_THRESH_0": 1.2e9,
+                      "UNCORE_SUB_THRESH_1": 2.1e9,
+                      "UNCORE_ABOVE_THRESH_1": 2.4e9
+                     },
                   ]
+    config_names=['default-p01']
+
     targets = []
     agent = 'pcnt_threshold'
-    for config in config_list:
-        name = 'default'
+    for idx,config in enumerate(config_list):
+        name = config_names[idx]
         options = config;
-        file_name = os.path.join(output_dir, '{}_agent_default.config'.format(agent))
+        file_name = os.path.join(output_dir, '{}_agent_{}.config'.format(agent, name))
         agent_conf = geopmpy.io.AgentConf(file_name, agent, options)
         targets.append(launch_util.LaunchConfig(app_conf=app_conf,
                                                 agent_conf=agent_conf,
