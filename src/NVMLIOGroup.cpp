@@ -164,6 +164,13 @@ namespace geopm
                                     Agg::average,
                                     string_format_double
                                     }},
+                               {"NVML::APPLICATION_FREQUENCY_CONTROL", {
+                                    "Sets streaming multiprocessor frequency when an application is resident on the accelerator",
+                                    {},
+                                    GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                    Agg::average,
+                                    string_format_double
+                                    }},
                                {"NVML::FREQUENCY_RESET_CONTROL", {
                                     "Resets streaming multiprocessor frequency min and max limits to default values."
                                     "\n  Parameter provided is unused.",
@@ -547,6 +554,9 @@ namespace geopm
 
         if (control_name == "NVML::FREQUENCY_CONTROL" || control_name == "FREQUENCY_ACCELERATOR_CONTROL") {
             m_nvml_device_pool.frequency_control_sm(domain_idx, setting/1e6, setting/1e6);
+        }
+        if (control_name == "NVML::APPLICATION_FREQUENCY_CONTROL") {
+            m_nvml_device_pool.application_frequency_control_sm(domain_idx, setting/1e6);
         }
         else if (control_name == "NVML::FREQUENCY_RESET_CONTROL") {
             m_nvml_device_pool.frequency_reset_control(domain_idx);

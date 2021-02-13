@@ -138,6 +138,16 @@ namespace geopm
             /// @brief Set min and max frequency for NVML device.
             /// @param [in] accel_idx The index indicating a particular
             ///        accelerator.
+            /// @param [in] target_freq Target frequency in MHz.
+            virtual void application_frequency_control_sm(int accel_idx, int target_freq) const = 0;
+            /// @brief Set min and max frequency for NVML device.
+            /// @param [in] accel_idx The index indicating a particular
+            ///        accelerator.
+            /// @param [in] target_freq Target frequency in MHz.
+            virtual void application_frequency_reset_control(int accel_idx) const = 0;
+            /// @brief Set application frequency for NVML device.
+            /// @param [in] accel_idx The index indicating a particular
+            ///        accelerator.
             /// @param [in] min_freq Target min frequency in MHz.
             /// @param [in] max_freq Target max frequency in MHz.
             virtual void frequency_control_sm(int accel_idx, int min_freq, int max_freq) const = 0;

@@ -335,6 +335,28 @@ namespace geopm
         return result;
     }
 
+    void NVMLDevicePoolImp::application_frequency_control_sm(int accel_idx, int target_freq) const
+    {
+        check_accel_range(accel_idx);
+
+        unsigned int mem_freq = frequency_status_mem(accel_idx);
+        nvmlReturn_t nvml_result = nvmlDeviceSetApplicationsClocks(m_nvml_device[accel_idx], mem_freq, (unsigned int) target_freq);
+
+        check_nvml_result(nvml_result, GEOPM_ERROR_RUNTIME, "NVMLDevicePool::" + std::string(__func__) +
+                          ": NVML failed to set application sm frequency for accelerator " +
+                          std::to_string(accel_idx) + ".", __LINE__);
+    }
+
+    void NVMLDevicePoolImp::application_frequency_reset_control(int accel_idx) const
+    {
+        check_accel_range(accel_idx);
+
+        nvmlReturn_t nvml_result =  nvmlDeviceResetApplicationsClocks(m_nvml_device[accel_idx]);
+        check_nvml_result(nvml_result, GEOPM_ERROR_RUNTIME, "NVMLDevicePool::" + std::string(__func__) +
+                          ": NVML failed to reset sm frequency for accelerator " +
+                          std::to_string(accel_idx) + ".", __LINE__);
+    }
+
     void NVMLDevicePoolImp::frequency_control_sm(int accel_idx, int min_freq, int max_freq) const
     {
         check_accel_range(accel_idx);
