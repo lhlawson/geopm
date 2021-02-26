@@ -493,6 +493,20 @@ namespace geopm
                 }
             }
         },
+        "PPERF": {
+            "offset": "0x64E",
+            "domain": "cpu",
+            "fields": {
+                "PCNT" : {
+                    "begin_bit": 0,
+                    "end_bit": 47,
+                    "function": "overflow",
+                    "units": "none",
+                    "scalar": 1.0,
+                    "writeable": false
+                }
+            }
+        },
         "DRAM_POWER_LIMIT": {
             "offset": "0x618",
             "domain": "board_memory",

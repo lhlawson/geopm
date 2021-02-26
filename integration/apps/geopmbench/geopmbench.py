@@ -88,3 +88,63 @@ class TinyAppConf(apps.AppConf):
 
     def get_bash_exec_args(self):
         return self._bench_conf.get_path()
+
+class DgemmImbalanceAppConf(apps.AppConf):
+
+    @staticmethod
+    def name():
+        return 'DGEMM'
+
+    def __init__(self):
+        num_nodes = 2
+
+        self._bench_conf = geopmpy.io.BenchConf('dgemm-imbalance.conf')
+        self._bench_conf.append_region('dgemm-imbalance', 600)
+        self._bench_conf.set_loop_count(10)
+        self._bench_conf.append_imbalance('mcfly5', 0)
+        self._bench_conf.append_imbalance('mcfly6', 0.15)
+
+    def get_rank_per_node(self):
+        # TODO: use self._machine_file to determine?
+        return 2
+
+    def get_bash_setup_commands(self):
+        # TODO: get rid of side effects
+        self._bench_conf.write()
+        return ''
+
+    def get_bash_exec_path(self):
+        # TODO: may need to find local version if not installed
+        return 'geopmbench'
+
+    def get_bash_exec_args(self):
+        return self._bench_conf.get_path()
+
+class DgemmStreamAppConf(apps.AppConf):
+
+    @staticmethod
+    def name():
+        return 'DGEMM'
+
+    def __init__(self):
+
+        self._bench_conf = geopmpy.io.BenchConf('dgemm_stream.conf')
+        self._bench_conf.append_region('dgemm', 50)
+        self._bench_conf.append_region('stream', 1)
+        self._bench_conf.set_loop_count(80)
+
+    def get_rank_per_node(self):
+        # TODO: use self._machine_file to determine?
+        return 2
+
+    def get_bash_setup_commands(self):
+        # TODO: get rid of side effects
+        self._bench_conf.write()
+        return ''
+
+    def get_bash_exec_path(self):
+        # TODO: may need to find local version if not installed
+        return 'geopmbench'
+
+    def get_bash_exec_args(self):
+        return self._bench_conf.get_path()
