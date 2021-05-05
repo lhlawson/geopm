@@ -158,7 +158,7 @@ namespace geopm
                                   string_format_double
                                   }},
                               {"LEVELZERO::ENERGY", {
-                                  "Accelerator energy in ???",
+                                  "Accelerator energy in Joules",
                                   {},
                                   GEOPM_DOMAIN_BOARD_ACCELERATOR,
                                   Agg::average,
@@ -271,6 +271,97 @@ namespace geopm
                                   }},
                               {"LEVELZERO::POWER", {
                                   "Accelerator power usage in watts",
+                                  {},
+                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                  Agg::sum,
+                                  string_format_double
+                                  }},
+                              {"LEVELZERO::DOMAIN:FREQUENCY", {
+                                  "Number of frequency domains",
+                                  {},
+                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                  Agg::sum,
+                                  string_format_double
+                                  }},
+                              {"LEVELZERO::DOMAIN:POWER", {
+                                  "Number of power domains",
+                                  {},
+                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                  Agg::sum,
+                                  string_format_double
+                                  }},
+                              {"LEVELZERO::DOMAIN:ENGINE", {
+                                  "Total number of engine domains/groups",
+                                  {},
+                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                  Agg::sum,
+                                  string_format_double
+                                  }},
+                              {"LEVELZERO::DOMAIN:ENGINE:COMPUTE", {
+                                  "Number of compute engine groups",
+                                  {},
+                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                  Agg::sum,
+                                  string_format_double
+                                  }},
+                              {"LEVELZERO::DOMAIN:ENGINE:COPY", {
+                                  "Number of copy engine groups",
+                                  {},
+                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                  Agg::sum,
+                                  string_format_double
+                                  }},
+                              {"LEVELZERO::DOMAIN:ENGINE:MEDIA_DECODE", {
+                                  "Number of media decode engine groups",
+                                  {},
+                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                  Agg::sum,
+                                  string_format_double
+                                  }},
+                              {"LEVELZERO::DOMAIN:ENGINE:MEDIA_ENCODE", {
+                                  "Number of media encode engine groups",
+                                  {},
+                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                  Agg::sum,
+                                  string_format_double
+                                  }},
+                              {"LEVELZERO::DOMAIN:PERFORMANCE", {
+                                  "Number of performance domains",
+                                  {},
+                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                  Agg::sum,
+                                  string_format_double
+                                  }},
+                              {"LEVELZERO::DOMAIN:STANDBY", {
+                                  "Number of standby domains",
+                                  {},
+                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                  Agg::sum,
+                                  string_format_double
+                                  }},
+                              {"LEVELZERO::DOMAIN:MEMORY", {
+                                  "Number of memory domains",
+                                  {},
+                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                  Agg::sum,
+                                  string_format_double
+                                  }},
+                              {"LEVELZERO::DOMAIN:FABRIC", {
+                                  "Number of fabric domains",
+                                  {},
+                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                  Agg::sum,
+                                  string_format_double
+                                  }},
+                              {"LEVELZERO::DOMAIN:TEMPERATURE", {
+                                  "Number of temperature domains",
+                                  {},
+                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                  Agg::sum,
+                                  string_format_double
+                                  }},
+                              {"LEVELZERO::DOMAIN:FAN", {
+                                  "Number of fan domains",
                                   {},
                                   GEOPM_DOMAIN_BOARD_ACCELERATOR,
                                   Agg::sum,
@@ -672,6 +763,45 @@ namespace geopm
         }
         else if (signal_name == "LEVELZERO::MEMORY_ALLOCATED") {
             result = m_levelzero_device_pool.memory_allocated(domain_idx);
+        }
+        else if (signal_name == "LEVELZERO::DOMAIN:FREQUENCY") {
+            result = m_levelzero_device_pool.frequency_domains(domain_idx);
+        }
+        else if (signal_name == "LEVELZERO::DOMAIN:POWER") {
+            result = m_levelzero_device_pool.power_domains(domain_idx);
+        }
+        else if (signal_name == "LEVELZERO::DOMAIN:ENGINE") {
+            result = m_levelzero_device_pool.engine_domains(domain_idx);
+        }
+        else if ("LEVELZERO::DOMAIN:ENGINE:COMPUTE") {
+            result = m_levelzero_device_pool.engine_compute_domains(domain_idx);
+        }
+        else if ("LEVELZERO::DOMAIN:ENGINE:COPY") {
+            result = m_levelzero_device_pool.engine_copy_domains(domain_idx);
+        }
+        else if ("LEVELZERO::DOMAIN:ENGINE:MEDIA_DECODE") {
+            result = m_levelzero_device_pool.engine_media_decode_domains(domain_idx);
+        }
+        else if ("LEVELZERO::DOMAIN:ENGINE:MEDIA_ENCODE") {
+            result = m_levelzero_device_pool.engine_media_encode_domains(domain_idx);
+        }
+        else if (signal_name == "LEVELZERO::DOMAIN:PERFORMANCE") {
+            result = m_levelzero_device_pool.performance_domains(domain_idx);
+        }
+        else if (signal_name == "LEVELZERO::DOMAIN:STANDBY") {
+            result = m_levelzero_device_pool.standby_domains(domain_idx);
+        }
+        else if (signal_name == "LEVELZERO::DOMAIN:MEMORY") {
+            result = m_levelzero_device_pool.memory_domains(domain_idx);
+        }
+        else if (signal_name == "LEVELZERO::DOMAIN:FABRIC") {
+            result = m_levelzero_device_pool.fabric_domains(domain_idx);
+        }
+        else if (signal_name == "LEVELZERO::DOMAIN:TEMPERATURE") {
+            result = m_levelzero_device_pool.temperature_domains(domain_idx);
+        }
+        else if (signal_name == "LEVELZERO::DOMAIN:FAN") {
+            result = m_levelzero_device_pool.fan_domains(domain_idx);
         }
         else {
     #ifdef GEOPM_DEBUG

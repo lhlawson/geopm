@@ -98,6 +98,19 @@ namespace geopm
             virtual uint64_t standby_mode(int accel_idx) const = 0;
             virtual std::pair<double, double> memory_bandwidth(int accel_idx) const = 0;
             virtual double memory_allocated(int accel_idx) const = 0;
+            virtual uint64_t frequency_domains(int accel_idx) const = 0;
+            virtual uint64_t power_domains(int accel_idx) const = 0;
+            virtual uint64_t engine_domains(int accel_idx) const = 0;
+            virtual uint64_t performance_domains(int accel_idx) const = 0;
+            virtual uint64_t standby_domains(int accel_idx) const = 0;
+            virtual uint64_t memory_domains(int accel_idx) const = 0;
+            virtual uint64_t fabric_domains(int accel_idx) const = 0;
+            virtual uint64_t temperature_domains(int accel_idx) const = 0;
+            virtual uint64_t fan_domains(int accel_idx) const = 0;
+            virtual uint64_t engine_compute_domains(int accel_idx) const = 0;
+            virtual uint64_t engine_copy_domains(int accel_idx) const = 0;
+            virtual uint64_t engine_media_decode_domains(int accel_idx) const = 0;
+            virtual uint64_t engine_media_encode_domains(int accel_idx) const = 0;
 
             /// @brief Set min and max frequency for LevelZero device.
             /// @param [in] accel_idx The index indicating a particular
