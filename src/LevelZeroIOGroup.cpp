@@ -374,55 +374,6 @@ namespace geopm
                                     GEOPM_DOMAIN_BOARD_ACCELERATOR,
                                     Agg::average,
                                     string_format_double
-                                    }},
-                                {"LEVELZERO::STANDBY_MODE_CONTROL", {
-                                    "Sets accelerator standby mode",
-                                    {},
-                                    GEOPM_DOMAIN_BOARD_ACCELERATOR,
-                                    Agg::average,
-                                    string_format_double
-                                    }},
-                                {"LEVELZERO::POWER_LIMIT_BURST_ENABLE_CONTROL", {
-                                    "",
-                                    {},
-                                    GEOPM_DOMAIN_BOARD_ACCELERATOR,
-                                    Agg::average,
-                                    string_format_double
-                                    }},
-                                {"LEVELZERO::POWER_LIMIT_SUSTAINED_WINDOW_CONTROL", {
-                                    "",
-                                    {},
-                                    GEOPM_DOMAIN_BOARD_ACCELERATOR,
-                                    Agg::average,
-                                    string_format_double
-                                    }},
-                                {"LEVELZERO::POWER_LIMIT_SUSTAINED_LIMIT_CONTROL", {
-                                    "",
-                                    {},
-                                    GEOPM_DOMAIN_BOARD_ACCELERATOR,
-                                    Agg::average,
-                                    string_format_double
-                                    }},
-                                {"LEVELZERO::POWER_LIMIT_SUSTAINED_ENABLE_CONTROL", {
-                                    "",
-                                    {},
-                                    GEOPM_DOMAIN_BOARD_ACCELERATOR,
-                                    Agg::average,
-                                    string_format_double
-                                    }},
-                                {"LEVELZERO::POWER_LIMIT_BURST_LIMIT_CONTROL", {
-                                    "",
-                                    {},
-                                    GEOPM_DOMAIN_BOARD_ACCELERATOR,
-                                    Agg::average,
-                                    string_format_double
-                                    }},
-                                {"LEVELZERO::POWER_LIMIT_PEAK_AC_CONTROL", {
-                                    "",
-                                    {},
-                                    GEOPM_DOMAIN_BOARD_ACCELERATOR,
-                                    Agg::average,
-                                    string_format_double
                                     }}
                               })
     {
@@ -447,8 +398,6 @@ namespace geopm
             }
             sv.second.controls = result;
         }
-        register_control_alias("FREQUENCY_ACCELERATOR_CONTROL", "LEVELZERO::FREQUENCY_CONTROL");
-
     }
 
     // Extract the set of all signal names from the index map
@@ -593,7 +542,7 @@ namespace geopm
     {
         m_is_batch_read = true;
         for (auto &sv : m_signal_available) {
-            for (int domain_idx = 0; domain_idx < sv.second.signals.size(); ++domain_idx) {
+            for (unsigned int domain_idx = 0; domain_idx < sv.second.signals.size(); ++domain_idx) {
                 if (sv.second.signals.at(domain_idx)->m_do_read) {
                     //TODO: numerous optimizations are possible, including:
                     //          grouped power limit reads
@@ -609,7 +558,7 @@ namespace geopm
     void LevelZeroIOGroup::write_batch(void)
     {
         for (auto &sv : m_control_available) {
-            for (int domain_idx = 0; domain_idx < sv.second.controls.size(); ++domain_idx) {
+            for (unsigned int domain_idx = 0; domain_idx < sv.second.controls.size(); ++domain_idx) {
                 if (sv.second.controls.at(domain_idx)->m_is_adjusted) {
                     //TODO: numerous optimizations are possible, including:
                     //          grouped power limit writes
@@ -831,39 +780,12 @@ namespace geopm
                             GEOPM_ERROR_INVALID, __FILE__, __LINE__);
         }
 
-        if (control_name == "LEVELZERO::FREQUENCY_CONTROL" || control_name == "FREQUENCY_ACCELERATOR_CONTROL") {
-            m_levelzero_device_pool.frequency_control_gpu(domain_idx, setting/1e6, setting/1e6);
-        }
-        else if (control_name == "LEVELZERO::FREQUENCY_MEMORY_CONTROL" || control_name == "FREQUENCY_ACCELERATOR_MEMORY_CONTROL") {
-            m_levelzero_device_pool.frequency_control_mem(domain_idx, setting/1e6, setting/1e6);
-        }
-        else if (control_name == "LEVELZERO::POWER_LIMIT_SUSTAINED_ENABLE_CONTROL") {
-            m_levelzero_device_pool.power_control_sustained(domain_idx, setting, NULL, NULL);
-        }
-        else if (control_name == "LEVELZERO::POWER_LIMIT_SUSTAINED_LIMIT_CONTROL") {
-            m_levelzero_device_pool.power_control_sustained(domain_idx, NULL, setting*1e3, NULL);
-        }
-        else if (control_name == "LEVELZERO::POWER_LIMIT_SUSTAINED_WINDOW_CONTROL") {
-            m_levelzero_device_pool.power_control_sustained(domain_idx, NULL, NULL, setting); //TODO: scale setting
-        }
-        else if (control_name == "LEVELZERO::POWER_LIMIT_BURST_ENABLE_CONTROL") {
-            m_levelzero_device_pool.power_control_burst(domain_idx, setting, NULL);
-        }
-        else if (control_name == "LEVELZERO::POWER_LIMIT_BURST_LIMIT_CONTROL") {
-            m_levelzero_device_pool.power_control_burst(domain_idx, NULL, setting*1e3);
-        }
-        else if (control_name == "LEVELZERO::POWER_LIMIT_PEAK_AC_CONTROL") {
-            m_levelzero_device_pool.power_control_peak(domain_idx, setting*1e3); //TODO: scale setting
-        }
-        else if (control_name == "LEVELZERO::STANDBY_MODE_CONTROL") {
-            m_levelzero_device_pool.standby_mode_control(domain_idx, setting);
-        }
-        else {
-    #ifdef GEOPM_DEBUG
-                throw Exception("LevelZeroIOGroup::" + std::string(__func__) + "Handling not defined for "
-                                + control_name, GEOPM_ERROR_LOGIC, __FILE__, __LINE__);
-    #endif
-        }
+    //    else {
+    //#ifdef GEOPM_DEBUG
+    //            throw Exception("LevelZeroIOGroup::" + std::string(__func__) + "Handling not defined for "
+    //                            + control_name, GEOPM_ERROR_LOGIC, __FILE__, __LINE__);
+    //#endif
+    //    }
     }
 
     // Implemented to allow an IOGroup to save platform settings before starting

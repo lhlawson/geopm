@@ -57,77 +57,68 @@ namespace geopm
             /// @param [in] accel_idx The index indicating a particular
             ///        accelerator.
             /// @return Accelerator device core clock rate in MHz.
-            virtual uint64_t frequency_status_gpu(int accel_idx) const = 0;
-            virtual uint64_t frequency_status_mem(int accel_idx) const = 0;
-            virtual double core_clock_rate(int accel_idx) const = 0;
-            virtual uint64_t frequency_min_gpu(int accel_idx) const = 0;
-            virtual uint64_t frequency_max_gpu(int accel_idx) const = 0;
-            virtual uint64_t frequency_min_mem(int accel_idx) const = 0;
-            virtual uint64_t frequency_max_mem(int accel_idx) const = 0;
-            virtual double frequency_throttle_gpu(int accel_idx) const = 0;
-            virtual double frequency_throttle_mem(int accel_idx) const = 0;
+            virtual double frequency_status_gpu(unsigned int accel_idx) const = 0;
+            virtual double frequency_status_mem(unsigned int accel_idx) const = 0;
+            virtual double core_clock_rate(unsigned int accel_idx) const = 0;
+            virtual uint64_t frequency_min_gpu(unsigned int accel_idx) const = 0;
+            virtual uint64_t frequency_max_gpu(unsigned int accel_idx) const = 0;
+            virtual uint64_t frequency_min_mem(unsigned int accel_idx) const = 0;
+            virtual uint64_t frequency_max_mem(unsigned int accel_idx) const = 0;
+            virtual double frequency_throttle_gpu(unsigned int accel_idx) const = 0;
+            virtual double frequency_throttle_mem(unsigned int accel_idx) const = 0;
             /// @brief Get the LevelZero device utilization metric.
             /// @param [in] accel_idx The index indicating a particular
             ///        accelerator.
             /// @return Accelerator streaming multiprocessor utilization
             //          percentage as a whole number from 0 to 100.
-            virtual double utilization(int accel_idx) const = 0;
-            virtual double utilization_compute(int accel_idx) const = 0;
-            virtual double utilization_copy(int accel_idx) const = 0;
+            virtual double utilization(unsigned int accel_idx) const = 0;
+            virtual double utilization_compute(unsigned int accel_idx) const = 0;
+            virtual double utilization_copy(unsigned int accel_idx) const = 0;
             /// @brief Get the LevelZero device power in ???.
             /// @param [in] accel_idx The index indicating a particular
             ///        accelerator.
             /// @return Accelerator power consumption in milliwatts.
-            virtual double power(int accel_idx) const = 0;
-            virtual uint64_t power_tdp(int accel_idx) const = 0;
-            virtual uint64_t power_limit_min(int accel_idx) const = 0;
-            virtual uint64_t power_limit_max(int accel_idx) const = 0;
+            virtual double power(unsigned int accel_idx) const = 0;
+            virtual uint64_t power_tdp(unsigned int accel_idx) const = 0;
+            virtual uint64_t power_limit_min(unsigned int accel_idx) const = 0;
+            virtual uint64_t power_limit_max(unsigned int accel_idx) const = 0;
             virtual std::tuple<zes_power_sustained_limit_t,
                                zes_power_burst_limit_t,
-                               zes_power_peak_limit_t> power_limit(int accel_idx) const = 0;
+                               zes_power_peak_limit_t> power_limit(unsigned int accel_idx) const = 0;
             /// @brief Get the LevelZero device energy in ???.
             /// @param [in] accel_idx The index indicating a particular
             ///        accelerator.
             /// @return Accelerator power consumption in milliwatts.
-            virtual uint64_t energy (int accel_idx) const = 0;
-            virtual zes_energy_threshold_t energy_threshold(int accel_idx) const = 0;
-            virtual double performance_factor(int accel_idx) const = 0;
-            virtual double performance_factor_gpu(int accel_idx) const = 0;
-            virtual double performance_factor_mem(int accel_idx) const = 0;
-            virtual std::vector<zes_process_state_t> active_process_list(int accel_idx) const = 0;
-            virtual uint64_t standby_mode(int accel_idx) const = 0;
-            virtual std::pair<double, double> memory_bandwidth(int accel_idx) const = 0;
-            virtual double memory_allocated(int accel_idx) const = 0;
-            virtual uint64_t frequency_domains(int accel_idx) const = 0;
-            virtual uint64_t power_domains(int accel_idx) const = 0;
-            virtual uint64_t engine_domains(int accel_idx) const = 0;
-            virtual uint64_t performance_domains(int accel_idx) const = 0;
-            virtual uint64_t standby_domains(int accel_idx) const = 0;
-            virtual uint64_t memory_domains(int accel_idx) const = 0;
-            virtual uint64_t fabric_domains(int accel_idx) const = 0;
-            virtual uint64_t temperature_domains(int accel_idx) const = 0;
-            virtual uint64_t fan_domains(int accel_idx) const = 0;
-            virtual uint64_t engine_compute_domains(int accel_idx) const = 0;
-            virtual uint64_t engine_copy_domains(int accel_idx) const = 0;
-            virtual uint64_t engine_media_decode_domains(int accel_idx) const = 0;
-            virtual uint64_t engine_media_encode_domains(int accel_idx) const = 0;
+            virtual uint64_t energy (unsigned int accel_idx) const = 0;
+            virtual zes_energy_threshold_t energy_threshold(unsigned int accel_idx) const = 0;
+            virtual double performance_factor(unsigned int accel_idx) const = 0;
+            virtual double performance_factor_gpu(unsigned int accel_idx) const = 0;
+            virtual double performance_factor_mem(unsigned int accel_idx) const = 0;
+            virtual std::vector<zes_process_state_t> active_process_list(unsigned int accel_idx) const = 0;
+            virtual uint64_t standby_mode(unsigned int accel_idx) const = 0;
+            virtual std::pair<double, double> memory_bandwidth(unsigned int accel_idx) const = 0;
+            virtual double memory_allocated(unsigned int accel_idx) const = 0;
+            virtual uint64_t frequency_domains(unsigned int accel_idx) const = 0;
+            virtual uint64_t power_domains(unsigned int accel_idx) const = 0;
+            virtual uint64_t engine_domains(unsigned int accel_idx) const = 0;
+            virtual uint64_t performance_domains(unsigned int accel_idx) const = 0;
+            virtual uint64_t standby_domains(unsigned int accel_idx) const = 0;
+            virtual uint64_t memory_domains(unsigned int accel_idx) const = 0;
+            virtual uint64_t fabric_domains(unsigned int accel_idx) const = 0;
+            virtual uint64_t temperature_domains(unsigned int accel_idx) const = 0;
+            virtual uint64_t fan_domains(unsigned int accel_idx) const = 0;
+            virtual uint64_t engine_compute_domains(unsigned int accel_idx) const = 0;
+            virtual uint64_t engine_copy_domains(unsigned int accel_idx) const = 0;
+            virtual uint64_t engine_media_decode_domains(unsigned int accel_idx) const = 0;
+            virtual uint64_t engine_media_encode_domains(unsigned int accel_idx) const = 0;
 
             /// @brief Set min and max frequency for LevelZero device.
             /// @param [in] accel_idx The index indicating a particular
             ///        accelerator.
             /// @param [in] min_freq Target min frequency in MHz.
             /// @param [in] max_freq Target max frequency in MHz.
-            virtual void frequency_control_gpu(int accel_idx, double min_freq, double max_freq) const = 0;
-            virtual void frequency_control_mem(int accel_idx, double min_freq, double max_freq) const = 0;
-            virtual void power_control_sustained(int accel_idx, double enable, double limit, double interval) const = 0;
-            virtual void power_control_burst(int accel_idx, double enable, double limit) const = 0;
-            virtual void power_control_peak(int accel_idx, double limit) const = 0;
-            virtual void power_control(int accel_idx, zes_power_sustained_limit_t sustained,
-                                                      zes_power_burst_limit_t burst,
-                                                      zes_power_peak_limit_t peak) const = 0;
-            virtual void energy_threshold_control(int accel_idx, double setting) const = 0;
-            virtual void performance_factor_control(int accel_idx, double setting) const = 0;
-            virtual void standby_mode_control(int accel_idx, double setting) const = 0;
+            virtual void energy_threshold_control(unsigned int accel_idx, double setting) const = 0;
+            virtual void performance_factor_control(unsigned int accel_idx, double setting) const = 0;
 
         private:
     };
