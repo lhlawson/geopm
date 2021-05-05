@@ -54,19 +54,6 @@ namespace geopm
     //////////////////////
     // Timing Functions //
     //////////////////////
-    static __inline__ timespec getticks()
-    {
-        timespec t;
-        clock_gettime(CLOCK_MONOTONIC_RAW, &t);
-        return t;
-    }
-
-    static __inline__ double diff_ticks(timespec start, timespec end)
-    {
-        return (end.tv_sec - start.tv_sec) +
-            (end.tv_nsec - start.tv_nsec)*1E-9;
-    }
-
     const LevelZeroDevicePool &levelzero_device_pool(const int num_cpu)
     {
         static LevelZeroDevicePoolImp instance(num_cpu);
@@ -76,7 +63,6 @@ namespace geopm
     LevelZeroDevicePoolImp::LevelZeroDevicePoolImp(const int num_cpu)
         : M_NUM_CPU(num_cpu)
     {
-        std::cout << "\n\n\n########################################################" << std::endl;
         //TODO: change to a check and error if not enabled
         setenv("ZES_ENABLE_SYSMAN", "1", 1);
         timespec start, stop;
@@ -90,8 +76,6 @@ namespace geopm
         ze_result = zeInit(0);
         check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                         ": LevelZero Driver failed to initialize.", __LINE__);
-        std::cout << "Debug: levelZero Driver initialized.\n";
-
         // Discover drivers
         ze_result = zeDriverGet(&m_num_driver, nullptr);
         check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
@@ -100,7 +84,6 @@ namespace geopm
         ze_result = zeDriverGet(&m_num_driver, m_levelzero_driver.data());
         check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                         ": LevelZero Driver acquisition failed.", __LINE__);
-        std::cout << "Debug: levelZero " << std::to_string(m_num_driver) <<  " driver(s) acquired.\n";
 
         for (int driver = 0; driver < m_num_driver; driver++) {
             // Discover devices in a driver
@@ -113,7 +96,6 @@ namespace geopm
             ze_result = zeDeviceGet(m_levelzero_driver.at(driver), &num_device, device_handle.data());
             check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                             ": LevelZero Device acquisition failed.", __LINE__);
-            std::cout << "Debug: levelZero " << num_device << " device(s) acquired.\n";
 
             m_sysman_device.insert(m_sysman_device.end(), device_handle.begin(), device_handle.end());
             m_num_accelerator = m_num_accelerator + num_device;
@@ -130,25 +112,19 @@ namespace geopm
         m_engine_domain.resize(m_num_accelerator);
         m_perf_domain.resize(m_num_accelerator);
 
-        std::cout << "########################################################\n\n\n" << std::endl;
-        std::cout << "########################################################" << std::endl;
-
         for (int accel_idx = 0; accel_idx < m_num_accelerator; accel_idx++) {
             ze_device_properties_t property;
             ze_result = zeDeviceGetProperties(m_sysman_device.at(accel_idx), &property);
 
             check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                             ": failed to get device properties.", __LINE__);
-            std::cout << "Debug: levelZero accelerator" << std::to_string(accel_idx) <<  " device properties acquired.\n";
 
             if (property.type == ZE_DEVICE_TYPE_GPU) {
                 if ((property.flags >> ZE_DEVICE_PROPERTY_FLAG_INTEGRATED) && 1  == 0x1) {
-                    std::cout << "\tDebug: package gpu" << std::to_string(accel_idx) << " - name: " << property.name << ", coreClockRate: " << std::to_string(property.coreClockRate)<< ".\n";
+
                     throw Exception("LevelZeroDevicePool::" + std::string(__func__) + ": accel_idx " +
                                     std::to_string(accel_idx) + "  is an unsupported type of accelerator: " +
                                     "Integrated GPU", GEOPM_ERROR_INVALID, __FILE__, __LINE__);
-                } else {
-                    std::cout << "\tDebug: board gpu" << std::to_string(accel_idx) << " - name: " << property.name << ", coreClockRate: " << std::to_string(property.coreClockRate)<< ".\n";
                 }
             }
             else {
@@ -168,12 +144,8 @@ namespace geopm
                                 type_string, GEOPM_ERROR_INVALID, __FILE__, __LINE__);
             }
 
-            std::cout << "Debug: caching domains for accel_idx " << std::to_string(accel_idx) <<  ".\n";
             domain_cache(accel_idx);
        }
-
-        std::cout << "########################################################\n\n\n" << std::endl;
-
     }
 
     void LevelZeroDevicePoolImp::domain_cache(int accel_idx) {
@@ -194,7 +166,6 @@ namespace geopm
             ze_result = zesDeviceEnumFrequencyDomains(m_sysman_device.at(accel_idx), &num_domain, m_freq_domain.at(accel_idx).data());
             check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                         ": Sysman failed to get domain handles.", __LINE__);
-            std::cout << "Debug: levelZero " << std::to_string(num_domain) <<  " freq domain(s) acquired.\n";
         }
 
         //Cache power domains
@@ -211,7 +182,6 @@ namespace geopm
             ze_result = zesDeviceEnumPowerDomains(m_sysman_device.at(accel_idx), &num_domain, m_power_domain.at(accel_idx).data());
             check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                             ": Sysman failed to get domain handle(s).", __LINE__);
-            std::cout << "Debug: levelZero " << std::to_string(num_domain) <<  " power domain handle(s) acquired.\n";
         }
 
         //Cache engine domains
@@ -228,7 +198,6 @@ namespace geopm
             ze_result = zesDeviceEnumEngineGroups(m_sysman_device.at(accel_idx), &num_domain, m_engine_domain.at(accel_idx).data());
             check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                             ": Sysman failed to get number of domains", __LINE__);
-            std::cout << "Debug: levelZero " << std::to_string(num_domain) <<  " engine groups(s) acquired.\n";
         }
 
         //Cache performance domains
@@ -245,7 +214,6 @@ namespace geopm
             ze_result = zesDeviceEnumPerformanceFactorDomains(m_sysman_device.at(accel_idx), &num_domain, m_perf_domain.at(accel_idx).data());
             check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                             ": Sysman failed to get number of domains", __LINE__);
-            std::cout << "Debug: levelZero " << std::to_string(num_domain) <<  " perf groups(s) acquired.\n";
         }
 
         //Standby domain signals
@@ -262,7 +230,6 @@ namespace geopm
             ze_result = zesDeviceEnumStandbyDomains(m_sysman_device.at(accel_idx), &num_domain, m_standby_domain.at(accel_idx).data());
             check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                             ": Sysman failed to get number of domains", __LINE__);
-            std::cout << "Debug: levelZero " << std::to_string(num_domain) <<  " standby groups(s) acquired.\n";
         }
 
         //Memory domain signals
@@ -279,7 +246,6 @@ namespace geopm
             ze_result = zesDeviceEnumMemoryModules(m_sysman_device.at(accel_idx), &num_domain, m_mem_domain.at(accel_idx).data());
             check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                             ": Sysman failed to get number of domains", __LINE__);
-            std::cout << "Debug: levelZero " << std::to_string(num_domain) <<  " memory modules(s) acquired.\n";
         }
 
         //Fabric domain signals
@@ -295,7 +261,6 @@ namespace geopm
             ze_result = zesDeviceEnumFabricPorts(m_sysman_device.at(accel_idx), &num_domain, m_fabric_domain.at(accel_idx).data());
             check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                             ": Sysman failed to get number of domains", __LINE__);
-            std::cout << "Debug: levelZero " << std::to_string(num_domain) <<  " fabric port(s) acquired.\n";
         }
 
         //Temperature domain signals
@@ -312,7 +277,6 @@ namespace geopm
             ze_result = zesDeviceEnumTemperatureSensors(m_sysman_device.at(accel_idx), &num_domain, m_temperature_domain.at(accel_idx).data());
             check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                             ": Sysman failed to get number of domains", __LINE__);
-            std::cout << "Debug: levelZero " << std::to_string(num_domain) <<  " temperature sensor(s) acquired.\n";
         }
 
         //Fan domain signals
@@ -328,7 +292,6 @@ namespace geopm
             ze_result = zesDeviceEnumFans(m_sysman_device.at(accel_idx), &num_domain, m_fan_domain.at(accel_idx).data());
             check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                             ": Sysman failed to get number of domains", __LINE__);
-            std::cout << "Debug: levelZero " << std::to_string(num_domain) <<  " fan(s) acquired.\n";
         }
 
         //TODO: Consider caching all accelerator properties
@@ -374,6 +337,102 @@ namespace geopm
         }
     }
 
+    uint64_t LevelZeroDevicePoolImp::frequency_domains(int accel_idx) const
+    {
+        check_accel_range(accel_idx);
+        return m_freq_domain.at(accel_idx).size();
+    }
+
+    uint64_t LevelZeroDevicePoolImp::power_domains(int accel_idx) const
+    {
+        check_accel_range(accel_idx);
+        return m_power_domain.at(accel_idx).size();
+    }
+
+    uint64_t LevelZeroDevicePoolImp::engine_domains(int accel_idx) const
+    {
+        check_accel_range(accel_idx);
+        return m_engine_domain.at(accel_idx).size();
+    }
+
+
+    uint64_t LevelZeroDevicePoolImp::engine_compute_domains(int accel_idx) const
+    {
+        return engine_domain_types(accel_idx, ZES_ENGINE_GROUP_COMPUTE_SINGLE);
+    }
+
+    uint64_t LevelZeroDevicePoolImp::engine_copy_domains(int accel_idx) const
+    {
+        return engine_domain_types(accel_idx, ZES_ENGINE_GROUP_COPY_SINGLE);
+    }
+
+    uint64_t LevelZeroDevicePoolImp::engine_media_decode_domains(int accel_idx) const
+    {
+        return engine_domain_types(accel_idx, ZES_ENGINE_GROUP_MEDIA_DECODE_SINGLE);
+    }
+
+    uint64_t LevelZeroDevicePoolImp::engine_media_encode_domains(int accel_idx) const
+    {
+        return engine_domain_types(accel_idx, ZES_ENGINE_GROUP_MEDIA_ENCODE_SINGLE);
+    }
+
+    uint64_t LevelZeroDevicePoolImp::engine_domain_types(int accel_idx, zes_engine_group_t engine_type) const
+    {
+        check_accel_range(accel_idx);
+        check_domain_range(m_engine_domain.at(accel_idx).size(), __func__, __LINE__);
+
+        ze_result_t ze_result;
+        uint64_t result = 0;
+        zes_engine_properties_t property;
+
+        for (auto handle : m_engine_domain.at(accel_idx)) {
+            ze_result = zesEngineGetProperties(handle, &property);
+            check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
+                                                            ": Sysman failed to get engine properties.", __LINE__);
+            if ((engine_type == property.type) && property.onSubdevice == 0) {
+                result++;
+            }
+        }
+
+        return result;
+    }
+
+    uint64_t LevelZeroDevicePoolImp::performance_domains(int accel_idx) const
+    {
+        check_accel_range(accel_idx);
+        return m_perf_domain.at(accel_idx).size();
+    }
+
+    uint64_t LevelZeroDevicePoolImp::standby_domains(int accel_idx) const
+    {
+        check_accel_range(accel_idx);
+        return m_standby_domain.at(accel_idx).size();
+    }
+
+    uint64_t LevelZeroDevicePoolImp::memory_domains(int accel_idx) const
+    {
+        check_accel_range(accel_idx);
+        return m_mem_domain.at(accel_idx).size();
+    }
+
+    uint64_t LevelZeroDevicePoolImp::fabric_domains(int accel_idx) const
+    {
+        check_accel_range(accel_idx);
+        return m_fabric_domain.at(accel_idx).size();
+    }
+
+    uint64_t LevelZeroDevicePoolImp::temperature_domains(int accel_idx) const
+    {
+        check_accel_range(accel_idx);
+        return m_temperature_domain.at(accel_idx).size();
+    }
+
+    uint64_t LevelZeroDevicePoolImp::fan_domains(int accel_idx) const
+    {
+        check_accel_range(accel_idx);
+        return m_fan_domain.at(accel_idx).size();
+    }
+
     uint64_t LevelZeroDevicePoolImp::frequency_status_gpu(int accel_idx) const
     {
         return frequency_status(accel_idx, ZES_FREQ_DOMAIN_GPU);
@@ -403,8 +462,10 @@ namespace geopm
                 ze_result = zesFrequencyGetState(handle, &state);
                 check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                                 ": Sysman failed to get frequency state", __LINE__);
+#ifdef GEOPM_DEBUG
                 std::cout << "Debug: levelZero state.actual = " << std::to_string((double)state.actual) <<".\n";
                 std::cout << "Debug: levelZero state.request = " << std::to_string(state.request) <<".\n";
+#endif
                 result = state.actual;
             }
         }
@@ -456,9 +517,6 @@ namespace geopm
             ze_result = zesFrequencyGetProperties(handle, &property);
             check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                             ": Sysman failed to get domain properties.", __LINE__);
-            std::cout << "Debug: levelZero property.min = " << std::to_string(property.min) <<".\n";
-            std::cout << "Debug: levelZero property.max = " << std::to_string(property.max) <<".\n";
-
             if (type == property.type && property.onSubdevice == 0) { //For initial GEOPM support we're not handling sub-devices
                 result_min = property.min;
                 result_max = property.max;
@@ -515,7 +573,6 @@ namespace geopm
 
     //TODO: add zesFrequencyGetAvailableClocks for getting all available frequencies?
 
-
     double LevelZeroDevicePoolImp::utilization(int accel_idx) const
     {
         return utilization(accel_idx, ZES_ENGINE_GROUP_ALL);
@@ -523,12 +580,18 @@ namespace geopm
 
     double LevelZeroDevicePoolImp::utilization_compute(int accel_idx) const
     {
-        return utilization(accel_idx, ZES_ENGINE_GROUP_COMPUTE_ALL);
+        //TODO: identify if compute_all exists, if not use compute_single and aggregate
+        //TODO: transition to return utilization(accel_idx, ZES_ENGINE_GROUP_COMPUTE_ALL); ?
+        //return utilization(accel_idx, ZES_ENGINE_GROUP_3D_RENDER_COMPUTE_ALL);
+
+        return utilization(accel_idx, ZES_ENGINE_GROUP_COMPUTE_SINGLE);
     }
 
     double LevelZeroDevicePoolImp::utilization_copy(int accel_idx) const
     {
-        return utilization(accel_idx, ZES_ENGINE_GROUP_COPY_ALL);
+        //TODO: identify if copy_all exists, if not use copy_single and aggregate
+        //return utilization(accel_idx, ZES_ENGINE_GROUP_COPY_ALL);
+        return utilization(accel_idx, ZES_ENGINE_GROUP_COPY_SINGLE);
     }
 
     double LevelZeroDevicePoolImp::utilization(int accel_idx, zes_engine_group_t engine_type) const
@@ -547,29 +610,36 @@ namespace geopm
             ze_result = zesEngineGetProperties(handle, &property);
             check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                             ": Sysman failed to get engine properties.", __LINE__);
+#ifdef GEOPM_DEBUG
             std::cout << "Debug: levelZero engine type is: " << std::to_string(property.type) << ".\n";
+            std::cout << "\tDebug: attempting to match engine type:  " << std::to_string(engine_type) << ".\n";
+#endif
             if ((engine_type == property.type || engine_type == ZES_ENGINE_GROUP_ALL) && property.onSubdevice == 0) {
                 ze_result = zesEngineGetActivity(handle, &stats_prev);
                 check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                                 ": Sysman failed to get engine group activity.", __LINE__);
+#ifdef GEOPM_DEBUG
                 std::cout << "Debug: levelZero engine stat active time: " << std::to_string(stats_prev.activeTime) << ".\n";
                 std::cout << "Debug: levelZero engine stat timestamp: " << std::to_string(stats_prev.timestamp) << ".\n";
+#endif
 
                 //TODO: wait approach?  May use geopm spin wait.
-                std::this_thread::sleep_for(std::chrono::milliseconds(2));
+                std::this_thread::sleep_for(std::chrono::milliseconds(5));
 
                 //TODO: track if any engine group met the criteria, throw if none?
 
                 ze_result = zesEngineGetActivity(handle, &stats_curr);
                 check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                                 ": Sysman failed to get engine group activity.", __LINE__);
+#ifdef GEOPM_DEBUG
                 std::cout << "Debug: levelZero engine stat active time: " << std::to_string(stats_curr.activeTime) << ".\n";
                 std::cout << "Debug: levelZero engine stat timestamp: " << std::to_string(stats_curr.timestamp) << ".\n";
+#endif
 
                 if (stats_prev.timestamp >= stats_curr.timestamp) {
                     result = -1;
                 } else {
-                    result = (stats_curr.activeTime - stats_prev.activeTime) / (stats_curr.timestamp - stats_prev.timestamp);
+                    result += (stats_curr.activeTime - stats_prev.activeTime) / (stats_curr.timestamp - stats_prev.timestamp);
                 }
                 //TODO: track if any engine group met the criteria, throw if none?
             }
@@ -598,29 +668,40 @@ namespace geopm
                 ze_result = zesPowerGetEnergyCounter(handle, &energy_prev);
                 check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                                 ": Sysman failed to get energy_counter value for power", __LINE__);
+#ifdef GEOPM_DEBUG
                 std::cout << "Debug: levelZero energy_counter.energy = " << std::to_string(energy_prev.energy)
                                                                          <<"uJ.\n";
                 std::cout << "Debug: levelZero energy_counter.timestamp = " << std::to_string(energy_prev.timestamp)
                                                                          <<"uS.\n";
+
+                std::cout << "\t\tenergy = " << std::to_string((double)energy_prev.energy/1000)
+                                                                         <<" J.\n";
+                std::cout << "\t\ttime = " << std::to_string((double)energy_prev.timestamp/1000)
+                                                                         <<" S.\n";
+#endif
+
+                std::cout << "Debug: levelZero energy_counter.timestamp = " << std::to_string(energy_prev.timestamp);
                 //TODO: wait approach?  May use geopm spin wait.
-                std::this_thread::sleep_for(std::chrono::milliseconds(2));
+                std::this_thread::sleep_for(std::chrono::milliseconds(5));
 
                 ze_result = zesPowerGetEnergyCounter(handle, &energy_curr);
                 check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                                 ": Sysman failed to get energy_counter value for power", __LINE__);
+
+#ifdef GEOPM_DEBUG
                 std::cout << "Debug: levelZero energy_counter.energy = " << std::to_string(energy_curr.energy)
                                                                          <<"uJ.\n";
                 std::cout << "Debug: levelZero energy_counter.timestamp = " << std::to_string(energy_curr.timestamp)
                                                                             <<"uS.\n";
+                std::cout << "\t\tenergy = " << std::to_string((double)energy_curr.energy/1000)
+                                                                         <<" J.\n";
+                std::cout << "\t\ttime = " << std::to_string((double)energy_curr.timestamp/1000)
+                                                                         <<" S.\n";
+#endif
 
                 if (energy_prev.timestamp >= energy_curr.timestamp) {
                     result = -1;
                 } else {
-                    std::cout << "Debug: levelZero numerator = " << std::to_string((energy_curr.energy - energy_prev.energy))
-                                                                 <<".\n";
-                    std::cout << "Debug: levelZero denomenator = " << std::to_string((energy_curr.timestamp - energy_prev.timestamp))
-                                                                 <<".\n";
-
                     result = double(energy_curr.energy - energy_prev.energy) / double(energy_curr.timestamp - energy_prev.timestamp);
                 }
             }
@@ -695,6 +776,7 @@ namespace geopm
             }
         }
 
+#ifdef GEOPM_DEBUG
         std::cout << "Debug: levelZero sustained_limit_t.sustained: \n" <<
                      "\t enabled: " << std::to_string(sustained.enabled) << "\n"
                      "\t power: " << std::to_string(sustained.power) << " mW\n"
@@ -707,6 +789,7 @@ namespace geopm
         std::cout << "Debug: levelZero peak_limit_t.peak: \n" <<
                      "\t powerAC: " << std::to_string(peak.powerAC) << " mW\n"
                      "\t powerAC: " << std::to_string(peak.powerAC) << " mW\n" << std::endl;
+#endif
 
         return std::make_tuple(sustained, burst, peak);
     }
@@ -730,8 +813,6 @@ namespace geopm
                 ze_result = zesPowerGetEnergyCounter(handle, &energy_counter);
                 check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                                 ": Sysman failed to get energy_counter values", __LINE__);
-                std::cout << "Debug: levelZero energy_counter.energy = " << std::to_string(energy_counter.energy) <<".\n";
-                std::cout << "Debug: levelZero energy_counter.timestamp = " << std::to_string(energy_counter.timestamp) <<".\n";
                 result = energy_counter.energy;
             }
         }
@@ -954,8 +1035,6 @@ namespace geopm
                 ze_result = zesFrequencySetRange(handle, &range);
                 check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                                 ": Sysman failed to set frequency.", __LINE__);
-                std::cout << "Debug: levelZero set frequency range = {" << std::to_string(range.min) << ","  << std::to_string(range.max) << "}.\n";
-
             }
         }
     }

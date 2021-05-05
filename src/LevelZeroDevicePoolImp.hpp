@@ -79,6 +79,19 @@ namespace geopm
             virtual uint64_t standby_mode(int accel_idx) const override;
             virtual std::pair<double, double> memory_bandwidth(int accel_idx) const override;
             virtual double memory_allocated(int accel_idx) const override;
+            virtual uint64_t frequency_domains(int accel_idx) const override;
+            virtual uint64_t power_domains(int accel_idx) const override;
+            virtual uint64_t engine_domains(int accel_idx) const override;
+            virtual uint64_t performance_domains(int accel_idx) const override;
+            virtual uint64_t standby_domains(int accel_idx) const override;
+            virtual uint64_t memory_domains(int accel_idx) const override;
+            virtual uint64_t fabric_domains(int accel_idx) const override;
+            virtual uint64_t temperature_domains(int accel_idx) const override;
+            virtual uint64_t fan_domains(int accel_idx) const override;
+            virtual uint64_t engine_compute_domains(int accel_idx) const override;
+            virtual uint64_t engine_copy_domains(int accel_idx) const override;
+            virtual uint64_t engine_media_decode_domains(int accel_idx) const override;
+            virtual uint64_t engine_media_encode_domains(int accel_idx) const override;
 
             virtual void frequency_control_gpu(int accel_idx, double min_freq, double max_freq) const override;
             virtual void frequency_control_mem(int accel_idx, double min_freq, double max_freq) const override;
@@ -106,6 +119,7 @@ namespace geopm
             virtual double frequency_throttle(int accel_idx, zes_freq_domain_t type) const;
             virtual double utilization(int accel_idx, zes_engine_group_t engine_type) const;
             virtual void frequency_control(int accel_idx, double min_freq, double max_freq, zes_freq_domain_t type) const;
+            virtual uint64_t engine_domain_types(int accel_idx, zes_engine_group_t engine_type) const;
 
             std::string ze_error_string(ze_result_t result);
 
