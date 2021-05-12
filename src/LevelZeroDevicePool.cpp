@@ -573,9 +573,8 @@ namespace geopm
     double LevelZeroDevicePoolImp::utilization_compute(unsigned int accel_idx) const
     {
         //TODO: identify if compute_all exists, if not use compute_single and aggregate
-        //TODO: transition to return utilization(accel_idx, ZES_ENGINE_GROUP_COMPUTE_ALL); ?
-        //return utilization(accel_idx, ZES_ENGINE_GROUP_3D_RENDER_COMPUTE_ALL);
-
+        //TODO: transition to return utilization(accel_idx, ZES_ENGINE_GROUP_COMPUTE_ALL)
+        //      or return utilization(accel_idx, ZES_ENGINE_GROUP_3D_RENDER_COMPUTE_ALL)?
         return utilization(accel_idx, ZES_ENGINE_GROUP_COMPUTE_SINGLE);
     }
 
@@ -591,7 +590,8 @@ namespace geopm
         check_accel_range(accel_idx);
         check_domain_range(m_engine_domain.at(accel_idx).size(), __func__, __LINE__);
         ze_result_t ze_result;
-        double result = NAN;
+        double result = 0;
+        bool domain_match = false;
 
         zes_engine_properties_t property;
         zes_engine_stats_t stats_prev;
@@ -602,40 +602,38 @@ namespace geopm
             ze_result = zesEngineGetProperties(handle, &property);
             check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                             ": Sysman failed to get engine properties.", __LINE__);
-#ifdef GEOPM_DEBUG
-            std::cout << "Debug: levelZero engine type is: " << std::to_string(property.type) << ".\n";
-            std::cout << "\tDebug: attempting to match engine type:  " << std::to_string(engine_type) << ".\n";
-#endif
-            if ((engine_type == property.type || engine_type == ZES_ENGINE_GROUP_ALL) && property.onSubdevice == 0) {
+
+            if ((engine_type == property.type) && property.onSubdevice == 0) {
+                domain_match = true;
+
                 ze_result = zesEngineGetActivity(handle, &stats_prev);
                 check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                                 ": Sysman failed to get engine group activity.", __LINE__);
-#ifdef GEOPM_DEBUG
-                std::cout << "Debug: levelZero engine stat active time: " << std::to_string(stats_prev.activeTime) << ".\n";
-                std::cout << "Debug: levelZero engine stat timestamp: " << std::to_string(stats_prev.timestamp) << ".\n";
-#endif
 
                 //TODO: wait approach?  May use geopm spin wait.
                 std::this_thread::sleep_for(std::chrono::milliseconds(5));
 
                 //TODO: track if any engine group met the criteria, throw if none?
-
                 ze_result = zesEngineGetActivity(handle, &stats_curr);
                 check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                                 ": Sysman failed to get engine group activity.", __LINE__);
-#ifdef GEOPM_DEBUG
-                std::cout << "Debug: levelZero engine stat active time: " << std::to_string(stats_curr.activeTime) << ".\n";
-                std::cout << "Debug: levelZero engine stat timestamp: " << std::to_string(stats_curr.timestamp) << ".\n";
-#endif
 
                 if (stats_prev.timestamp >= stats_curr.timestamp) {
                     result = -1;
                 } else {
-                    result += (stats_curr.activeTime - stats_prev.activeTime) / (stats_curr.timestamp - stats_prev.timestamp);
+                    //TODO: this is currently aggregating all instances reported, but never dividing by number of instances.
+                    //      this is to get around issues with the same hardware being reported multiple times and not having access
+                    //      to a _ALL variant (COMPUTE_ALL etc).
+                    // see: https://spec.oneapi.com/level-zero/latest/sysman/api.html#zes-engine-group-t
+                    result += double(stats_curr.activeTime - stats_prev.activeTime) / double(stats_curr.timestamp - stats_prev.timestamp);
                 }
-                //TODO: track if any engine group met the criteria, throw if none?
             }
         }
+
+        if (!domain_match) {
+            result = NAN;
+        }
+
         return result;
     }
 
