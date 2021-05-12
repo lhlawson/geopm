@@ -103,27 +103,6 @@ namespace geopm
                                   Agg::average,
                                   string_format_double
                                   }},
-                              {"LEVELZERO::MEMORY_BANDWIDTH_RATIO_TX", {
-                                  "????????????????",
-                                  {},
-                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
-                                  Agg::average,
-                                  string_format_double
-                                  }},
-                              {"LEVELZERO::MEMORY_BANDWIDTH_RATIO_RX", {
-                                  "????????????????",
-                                  {},
-                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
-                                  Agg::average,
-                                  string_format_double
-                                  }},
-                              {"LEVELZERO::MEMORY_BANDWIDTH_RATIO_TOTAL", {
-                                  "????????????????",
-                                  {},
-                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
-                                  Agg::average,
-                                  string_format_double
-                                  }},
                               {"LEVELZERO::MEMORY_ALLOCATED", {
                                   "Memory usage as a ratio of total memory",
                                   {},
@@ -161,27 +140,6 @@ namespace geopm
                                   }},
                               {"LEVELZERO::ENERGY", {
                                   "Accelerator energy in Joules",
-                                  {},
-                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
-                                  Agg::average,
-                                  string_format_double
-                                  }},
-                              {"LEVELZERO::PERFORMANCE_FACTOR", {
-                                  "????",
-                                  {},
-                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
-                                  Agg::average,
-                                  string_format_double
-                                  }},
-                              {"LEVELZERO::PERFORMANCE_FACTOR_GPU", {
-                                  "????",
-                                  {},
-                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
-                                  Agg::average,
-                                  string_format_double
-                                  }},
-                              {"LEVELZERO::PERFORMANCE_FACTOR_MEM", {
-                                  "????",
                                   {},
                                   GEOPM_DOMAIN_BOARD_ACCELERATOR,
                                   Agg::average,
@@ -732,36 +690,12 @@ namespace geopm
         else if (signal_name == "LEVELZERO::POWER_LIMIT_DEFAULT") {
             result = m_levelzero_device_pool.power_tdp(domain_idx)/1e3;
         }
-        else if (signal_name == "LEVELZERO::PERFORMANCE_FACTOR") {
-            result = m_levelzero_device_pool.performance_factor(domain_idx)/100;
-        }
-        else if (signal_name == "LEVELZERO::PERFORMANCE_FACTOR_GPU") {
-            result = m_levelzero_device_pool.performance_factor_gpu(domain_idx)/100;
-        }
-        else if (signal_name == "LEVELZERO::PERFORMANCE_FACTOR_MEM") {
-            result = m_levelzero_device_pool.performance_factor_mem(domain_idx)/100;
-        }
         else if (signal_name == "LEVELZERO::CPU_ACCELERATOR_ACTIVE_AFFINITIZATION") {
             std::map<pid_t, double> process_map = accelerator_process_map();
             result = cpu_accelerator_affinity(domain_idx, process_map);
         }
         else if (signal_name == "LEVELZERO::STANDBY_MODE") {
             result = m_levelzero_device_pool.standby_mode(domain_idx);
-        }
-        else if (signal_name == "LEVELZERO::MEMORY_BANDWIDTH_RATIO_TX") {
-            double total, tx, rx;
-            std::tie(total, tx, rx) = m_levelzero_device_pool.memory_bandwidth(domain_idx);
-            result = tx;
-        }
-        else if (signal_name == "LEVELZERO::MEMORY_BANDWIDTH_RATIO_RX") {
-            double total, tx, rx;
-            std::tie(total, tx, rx) = m_levelzero_device_pool.memory_bandwidth(domain_idx);
-            result = rx;
-        }
-        else if (signal_name == "LEVELZERO::MEMORY_BANDWIDTH_RATIO_TOTAL") {
-            double total, tx, rx;
-            std::tie(total, tx, rx) = m_levelzero_device_pool.memory_bandwidth(domain_idx);
-            result = rx;
         }
         else if (signal_name == "LEVELZERO::MEMORY_ALLOCATED") {
             result = m_levelzero_device_pool.memory_allocated(domain_idx);

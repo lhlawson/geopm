@@ -100,7 +100,6 @@ namespace geopm
             virtual double performance_factor_mem(unsigned int accel_idx) const = 0;
             virtual std::vector<uint32_t> active_process_list(unsigned int accel_idx) const = 0;
             virtual uint64_t standby_mode(unsigned int accel_idx) const = 0;
-            virtual std::tuple<double, double, double> memory_bandwidth(unsigned int accel_idx) const = 0;
             virtual double memory_allocated(unsigned int accel_idx) const = 0;
             virtual uint64_t frequency_domains(unsigned int accel_idx) const = 0;
             virtual uint64_t power_domains(unsigned int accel_idx) const = 0;
