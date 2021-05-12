@@ -56,8 +56,26 @@ namespace geopm
             std::cerr << "Warning: <geopm> LevelZeroAcceleratorTopo: No levelZero accelerators detected.\n";
         }
         else {
+            m_cpu_affinity_ideal.resize(m_num_accelerator);
+            unsigned int num_cpu_per_accelerator = num_cpu / m_num_accelerator;
+
+            //TODO: Add ideal cpu to accelerator affinitization that isn't a simple split.  This may come from
+            //      a call to oneAPI
+            for (unsigned int accel_idx = 0; accel_idx <  m_num_accelerator; ++accel_idx) {
+                for (unsigned int cpu_idx = accel_idx*num_cpu_per_accelerator;
+                     cpu_idx < (accel_idx+1)*num_cpu_per_accelerator;
+                     cpu_idx++) {
+                    m_cpu_affinity_ideal.at(accel_idx).insert(cpu_idx);
+                }
+            }
+
+            if ((num_cpu % m_num_accelerator) != 0) {
+                throw Exception("LevelZeroAcceleratorTopo::" + std::string(__func__) +
+                                ": Failed to affinitize all valid CPUs to Accelerators.  Number of CPUs was" +
+                                " not evenly divisible by number of accelerators",
+                                GEOPM_ERROR_INVALID, __FILE__, __LINE__);
+            }
         }
-        //TODO: Add cpu to accelerator affinitization
     }
 
     int LevelZeroAcceleratorTopo::num_accelerator(void) const
@@ -67,6 +85,11 @@ namespace geopm
 
     std::set<int> LevelZeroAcceleratorTopo::cpu_affinity_ideal(int accel_idx) const
     {
-        return {};
+        if (accel_idx < 0 || (unsigned int)accel_idx >= m_num_accelerator) {
+            throw Exception("LevelZeroAcceleratorTopo::" + std::string(__func__) + ": accel_idx " +
+                            std::to_string(accel_idx) + " is out of range",
+                            GEOPM_ERROR_INVALID, __FILE__, __LINE__);
+        }
+        return m_cpu_affinity_ideal.at(accel_idx);
     }
 }
