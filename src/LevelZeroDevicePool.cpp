@@ -962,57 +962,6 @@ namespace geopm
         return (uint64_t)mode;
     }
 
-    //TODO: Memory domain signals should be split
-    std::tuple<double, double, double> LevelZeroDevicePoolImp::memory_bandwidth(unsigned int accel_idx) const
-    {
-        check_accel_range(accel_idx);
-        check_domain_range(m_mem_domain.at(accel_idx).size(), __func__, __LINE__);
-        double bandwidth_total = NAN;
-        double bandwidth_tx = NAN;
-        double bandwidth_rx = NAN;
-
-        zes_mem_bandwidth_t bandwidth_prev;
-        zes_mem_bandwidth_t bandwidth_curr;
-
-        ze_result_t ze_result;
-        for (auto handle : m_mem_domain.at(accel_idx)) {
-            zes_mem_properties_t property;
-            ze_result = zesMemoryGetProperties(handle, &property);
-            check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
-                                                            ": Sysman failed to get domain memory properties",
-                                                             __LINE__);
-
-            //TODO: consider memory location (on device, in system)
-            if (property.onSubdevice == 0) { //For initial GEOPM support we're not handling sub-devices
-
-                //TODO: Fix the assumption that there's only a single domain. For now we're assuming 1 or
-                //      taking the last domain basically...could be HBM, DDR3/4/5, LPDDR, SRAM, GRF, ...
-                ze_result = zesMemoryGetBandwidth(handle, &bandwidth_prev);
-                check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
-                                                              ": Sysman failed to get memory bandwidth", __LINE__);
-
-                std::this_thread::sleep_for(std::chrono::milliseconds(5));
-
-                ze_result = zesMemoryGetBandwidth(handle, &bandwidth_curr);
-                check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
-                                                              ": Sysman failed to get memory bandwidth", __LINE__);
-                if (bandwidth_prev.timestamp >= bandwidth_curr.timestamp) {
-                    bandwidth_tx = -1;
-                    bandwidth_rx = -1;
-                    bandwidth_total = -1;
-                } else {
-                    bandwidth_tx = (10^6) * (double(bandwidth_curr.writeCounter - bandwidth_prev.writeCounter) / (double(bandwidth_curr.timestamp - bandwidth_prev.timestamp)*bandwidth_curr.maxBandwidth));
-                    bandwidth_rx = (10^6) * (double(bandwidth_curr.readCounter - bandwidth_prev.readCounter) / (double(bandwidth_curr.timestamp - bandwidth_prev.timestamp)*bandwidth_curr.maxBandwidth));
-
-                    bandwidth_total = (10^6) * (double(bandwidth_curr.readCounter - bandwidth_prev.readCounter) +
-                                      double(bandwidth_curr.writeCounter - bandwidth_prev.writeCounter)) /
-                                      double(bandwidth_curr.maxBandwidth * (bandwidth_curr.timestamp - bandwidth_prev.timestamp));
-                }
-            }
-        }
-        return {bandwidth_total, bandwidth_tx, bandwidth_rx};
-    }
-
     double LevelZeroDevicePoolImp::memory_allocated(unsigned int accel_idx) const
     {
         check_accel_range(accel_idx);
