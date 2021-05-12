@@ -82,21 +82,25 @@ namespace geopm
             virtual uint64_t power_tdp(unsigned int accel_idx) const = 0;
             virtual uint64_t power_limit_min(unsigned int accel_idx) const = 0;
             virtual uint64_t power_limit_max(unsigned int accel_idx) const = 0;
-            virtual std::tuple<zes_power_sustained_limit_t,
-                               zes_power_burst_limit_t,
-                               zes_power_peak_limit_t> power_limit(unsigned int accel_idx) const = 0;
+            virtual uint64_t power_limit_sustained_enabled(unsigned int accel_idx) const = 0;
+            virtual uint64_t power_limit_sustained_power(unsigned int accel_idx) const = 0;
+            virtual uint64_t power_limit_sustained_interval(unsigned int accel_idx) const = 0;
+            virtual uint64_t power_limit_burst_enabled(unsigned int accel_idx) const = 0;
+            virtual uint64_t power_limit_burst_power(unsigned int accel_idx) const = 0;
+            virtual uint64_t power_limit_peak_ac(unsigned int accel_idx) const = 0;
+            virtual uint64_t power_limit_peak_dc(unsigned int accel_idx) const = 0;
+
             /// @brief Get the LevelZero device energy in ???.
             /// @param [in] accel_idx The index indicating a particular
             ///        accelerator.
             /// @return Accelerator power consumption in milliwatts.
             virtual uint64_t energy (unsigned int accel_idx) const = 0;
-            virtual zes_energy_threshold_t energy_threshold(unsigned int accel_idx) const = 0;
             virtual double performance_factor(unsigned int accel_idx) const = 0;
             virtual double performance_factor_gpu(unsigned int accel_idx) const = 0;
             virtual double performance_factor_mem(unsigned int accel_idx) const = 0;
-            virtual std::vector<zes_process_state_t> active_process_list(unsigned int accel_idx) const = 0;
+            virtual std::vector<uint32_t> active_process_list(unsigned int accel_idx) const = 0;
             virtual uint64_t standby_mode(unsigned int accel_idx) const = 0;
-            virtual std::pair<double, double> memory_bandwidth(unsigned int accel_idx) const = 0;
+            virtual std::tuple<double, double, double> memory_bandwidth(unsigned int accel_idx) const = 0;
             virtual double memory_allocated(unsigned int accel_idx) const = 0;
             virtual uint64_t frequency_domains(unsigned int accel_idx) const = 0;
             virtual uint64_t power_domains(unsigned int accel_idx) const = 0;

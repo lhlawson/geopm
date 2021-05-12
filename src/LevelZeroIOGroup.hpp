@@ -76,10 +76,7 @@ namespace geopm
             static std::string plugin_name(void);
             static std::unique_ptr<IOGroup> make_plugin(void);
         private:
-            /////////start level zero for device pool/////////
             void init(void);
-
-            /////////end level zero for device pool/////////
 
             void register_signal_alias(const std::string &alias_name, const std::string &signal_name);
             void register_control_alias(const std::string &alias_name, const std::string &control_name);
