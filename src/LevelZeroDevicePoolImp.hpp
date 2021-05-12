@@ -36,8 +36,6 @@
 #include <string>
 
 #include "LevelZeroDevicePool.hpp"
-#include <level_zero/ze_api.h>
-#include <level_zero/zes_api.h>
 
 #include "geopm_time.h"
 
@@ -66,18 +64,21 @@ namespace geopm
             virtual uint64_t power_tdp(unsigned int accel_idx) const override;
             virtual uint64_t power_limit_min(unsigned int accel_idx) const override;
             virtual uint64_t power_limit_max(unsigned int accel_idx) const override;
-            virtual std::tuple<zes_power_sustained_limit_t,
-                               zes_power_burst_limit_t,
-                               zes_power_peak_limit_t> power_limit(unsigned int accel_idx) const override;
+            virtual uint64_t power_limit_sustained_enabled(unsigned int accel_idx) const override;
+            virtual uint64_t power_limit_sustained_power(unsigned int accel_idx) const override;
+            virtual uint64_t power_limit_sustained_interval(unsigned int accel_idx) const override;
+            virtual uint64_t power_limit_burst_enabled(unsigned int accel_idx) const override;
+            virtual uint64_t power_limit_burst_power(unsigned int accel_idx) const override;
+            virtual uint64_t power_limit_peak_ac(unsigned int accel_idx) const override;
+            virtual uint64_t power_limit_peak_dc(unsigned int accel_idx) const override;
             virtual uint64_t energy(unsigned int accel_idx) const override;
-            virtual zes_energy_threshold_t energy_threshold(unsigned int accel_idx) const override;
             //TODO: performance_factor_compute instead
             virtual double performance_factor(unsigned int accel_idx) const override;
             virtual double performance_factor_gpu(unsigned int accel_idx) const override;
             virtual double performance_factor_mem(unsigned int accel_idx) const override;
-            virtual std::vector<zes_process_state_t> active_process_list(unsigned int accel_idx) const override;
+            virtual std::vector<uint32_t> active_process_list(unsigned int accel_idx) const override;
             virtual uint64_t standby_mode(unsigned int accel_idx) const override;
-            virtual std::pair<double, double> memory_bandwidth(unsigned int accel_idx) const override;
+            virtual std::tuple<double, double, double> memory_bandwidth(unsigned int accel_idx) const override;
             virtual double memory_allocated(unsigned int accel_idx) const override;
             virtual uint64_t frequency_domains(unsigned int accel_idx) const override;
             virtual uint64_t power_domains(unsigned int accel_idx) const override;
@@ -103,6 +104,10 @@ namespace geopm
             virtual void check_domain_range(int size, const char *func, int line) const;
             virtual void check_ze_result(ze_result_t ze_result, int error, std::string message, int line) const;
             virtual int num_accelerator(ze_device_type_t type) const;
+
+            virtual std::tuple<zes_power_sustained_limit_t,
+                               zes_power_burst_limit_t,
+                               zes_power_peak_limit_t> power_limit(unsigned int accel_idx) const;
 
             virtual std::tuple<uint64_t, uint64_t, uint64_t> power_limit_default(unsigned int accel_idx) const;
             virtual double frequency_status(int accel_idx, zes_freq_domain_t) const;

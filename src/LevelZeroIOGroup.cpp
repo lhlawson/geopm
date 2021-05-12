@@ -48,11 +48,6 @@
 #include "Agg.hpp"
 #include "Helper.hpp"
 
-//Level Zero
-#include <level_zero/ze_api.h>
-#include <level_zero/zet_api.h>
-#include <level_zero/zes_api.h>
-
 namespace geopm
 {
 
@@ -108,14 +103,21 @@ namespace geopm
                                   Agg::average,
                                   string_format_double
                                   }},
-                              {"LEVELZERO::MEMORY_BANDWIDTH_TX", {
+                              {"LEVELZERO::MEMORY_BANDWIDTH_RATIO_TX", {
                                   "????????????????",
                                   {},
                                   GEOPM_DOMAIN_BOARD_ACCELERATOR,
                                   Agg::average,
                                   string_format_double
                                   }},
-                              {"LEVELZERO::MEMORY_BANDWIDTH_RX", {
+                              {"LEVELZERO::MEMORY_BANDWIDTH_RATIO_RX", {
+                                  "????????????????",
+                                  {},
+                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                  Agg::average,
+                                  string_format_double
+                                  }},
+                              {"LEVELZERO::MEMORY_BANDWIDTH_RATIO_TOTAL", {
                                   "????????????????",
                                   {},
                                   GEOPM_DOMAIN_BOARD_ACCELERATOR,
@@ -213,7 +215,7 @@ namespace geopm
                                   Agg::average,
                                   string_format_double
                                   }},
-                              {"LEVELZERO::POWER_LIMIT_SUSTAINED_WINDOW", {
+                              {"LEVELZERO::POWER_LIMIT_SUSTAINED_INTERVAL", {
                                   "",
                                   {},
                                   GEOPM_DOMAIN_BOARD_ACCELERATOR,
@@ -616,9 +618,6 @@ namespace geopm
         }
 
         double result = NAN;
-        zes_power_sustained_limit_t sustained;
-        zes_power_burst_limit_t burst;
-        zes_power_peak_limit_t peak;
 
         if (signal_name == "LEVELZERO::FREQUENCY" || signal_name == "FREQUENCY_ACCELERATOR") {
             result = m_levelzero_device_pool.frequency_status_gpu(domain_idx)*1e6;
@@ -651,32 +650,25 @@ namespace geopm
             result = m_levelzero_device_pool.energy(domain_idx)/1e3;
         }
         else if (signal_name == "LEVELZERO::POWER_LIMIT_SUSTAINED") {
-            std::tie(sustained, burst, peak) = m_levelzero_device_pool.power_limit(domain_idx);
-            result = sustained.power/1e3;
+            result = m_levelzero_device_pool.power_limit_sustained_power(domain_idx)/1e3;
         }
-        else if (signal_name == "LEVELZERO::POWER_LIMIT_SUSTAINED_WINDOW") {
-            std::tie(sustained, burst, peak) = m_levelzero_device_pool.power_limit(domain_idx);
-            result = sustained.interval;
+        else if (signal_name == "LEVELZERO::POWER_LIMIT_SUSTAINED_INTERVAL") {
+            result = m_levelzero_device_pool.power_limit_sustained_interval(domain_idx)/1e3;
         }
         else if (signal_name == "LEVELZERO::POWER_LIMIT_SUSTAINED_ENABLED") {
-            std::tie(sustained, burst, peak) = m_levelzero_device_pool.power_limit(domain_idx);
-            result = sustained.enabled;
+            result = m_levelzero_device_pool.power_limit_sustained_enabled(domain_idx);
         }
         else if (signal_name == "LEVELZERO::POWER_LIMIT_BURST") {
-            std::tie(sustained, burst, peak) = m_levelzero_device_pool.power_limit(domain_idx);
-            result = burst.power/1e3;
+            result = m_levelzero_device_pool.power_limit_burst_power(domain_idx)/1e3;
         }
         else if (signal_name == "LEVELZERO::POWER_LIMIT_BURST_ENABLED") {
-            std::tie(sustained, burst, peak) = m_levelzero_device_pool.power_limit(domain_idx);
-            result = burst.enabled;
+            result = m_levelzero_device_pool.power_limit_burst_enabled(domain_idx);
         }
         else if (signal_name == "LEVELZERO::POWER_LIMIT_PEAK_AC") {
-            std::tie(sustained, burst, peak) = m_levelzero_device_pool.power_limit(domain_idx);
-            result = peak.powerAC/1e3;
+            result = m_levelzero_device_pool.power_limit_peak_ac(domain_idx)/1e3;
         }
         else if (signal_name == "LEVELZERO::POWER_LIMIT_PEAK_DC") {
-            std::tie(sustained, burst, peak) = m_levelzero_device_pool.power_limit(domain_idx);
-            result = peak.powerDC/1e3;
+            result = m_levelzero_device_pool.power_limit_peak_dc(domain_idx)/1e3;
         }
         else if (signal_name == "LEVELZERO::POWER_LIMIT_MIN") {
             result = m_levelzero_device_pool.power_limit_min(domain_idx)/1e3;
@@ -697,18 +689,34 @@ namespace geopm
             result = m_levelzero_device_pool.performance_factor_mem(domain_idx)/100;
         }
         else if (signal_name == "LEVELZERO::CPU_ACCELERATOR_ACTIVE_AFFINITIZATION") {
-            std::vector<zes_process_state_t> process_list = m_levelzero_device_pool.active_process_list(domain_idx);
+            //std::vector<zes_process_state_t> process_list = m_levelzero_device_pool.active_process_list(domain_idx);
+            std::vector<uint32_t> process_list = m_levelzero_device_pool.active_process_list(domain_idx);
+
+            //TODO: Iterate over and print
+            std::cout << "Processes associated with GPU: " << std::endl;
+            for (auto proc : process_list) {
+                std::cout << std::to_string(proc) << ", ";
+            }
+            std::cout << std::endl;
+
         }
         else if (signal_name == "LEVELZERO::STANDBY_MODE") {
             result = m_levelzero_device_pool.standby_mode(domain_idx);
         }
-        else if (signal_name == "LEVELZERO::MEMORY_BANDWIDTH_TX") {
-            double temp;
-            std::tie(result, temp) = m_levelzero_device_pool.memory_bandwidth(domain_idx);
+        else if (signal_name == "LEVELZERO::MEMORY_BANDWIDTH_RATIO_TX") {
+            double total, tx, rx;
+            std::tie(total, tx, rx) = m_levelzero_device_pool.memory_bandwidth(domain_idx);
+            result = tx;
         }
-        else if (signal_name == "LEVELZERO::MEMORY_BANDWIDTH_RX") {
-            double temp;
-            std::tie(temp, result) = m_levelzero_device_pool.memory_bandwidth(domain_idx);
+        else if (signal_name == "LEVELZERO::MEMORY_BANDWIDTH_RATIO_RX") {
+            double total, tx, rx;
+            std::tie(total, tx, rx) = m_levelzero_device_pool.memory_bandwidth(domain_idx);
+            result = rx;
+        }
+        else if (signal_name == "LEVELZERO::MEMORY_BANDWIDTH_RATIO_TOTAL") {
+            double total, tx, rx;
+            std::tie(total, tx, rx) = m_levelzero_device_pool.memory_bandwidth(domain_idx);
+            result = rx;
         }
         else if (signal_name == "LEVELZERO::MEMORY_ALLOCATED") {
             result = m_levelzero_device_pool.memory_allocated(domain_idx);
