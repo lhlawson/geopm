@@ -911,7 +911,6 @@ namespace geopm
         return performance_factor(accel_idx);
     }
 
-    //std::vector<zes_process_state_t> LevelZeroDevicePoolImp::active_process_list(unsigned int accel_idx) const
     std::vector<uint32_t> LevelZeroDevicePoolImp::active_process_list(unsigned int accel_idx) const
     {
         check_accel_range(accel_idx);
@@ -1037,7 +1036,7 @@ namespace geopm
 
                 //TODO: Fix the assumption that there's only a single domain. For now we're assuming 1 or
                 //      taking the last domain basically...could be HBM, DDR3/4/5, LPDDR, SRAM, GRF, ...
-                allocated_ratio = (state.size - state.free) / state.size;
+                allocated_ratio = (double)(state.size - state.free) / (double)state.size;
             }
         }
         return allocated_ratio;
