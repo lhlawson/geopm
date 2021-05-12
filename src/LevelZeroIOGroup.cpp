@@ -125,7 +125,7 @@ namespace geopm
                                   string_format_double
                                   }},
                               {"LEVELZERO::MEMORY_ALLOCATED", {
-                                  "????????????????",
+                                  "Memory usage as a ratio of total memory",
                                   {},
                                   GEOPM_DOMAIN_BOARD_ACCELERATOR,
                                   Agg::average,
@@ -539,6 +539,59 @@ namespace geopm
         return result;
     }
 
+    // Cache the processes in a PID <-> Accelerator map before using them elsewhere
+    std::map<pid_t, double> LevelZeroIOGroup::accelerator_process_map(void) const
+    {
+        std::map<pid_t,double> accelerator_pid_map;
+
+        for (int accel_idx = 0; accel_idx < m_platform_topo.num_domain(GEOPM_DOMAIN_BOARD_ACCELERATOR); ++accel_idx) {
+            std::cout << "Processes associated with GPU " << std::to_string(accel_idx) << ":" << std::endl;
+
+            std::vector<uint32_t> active_process_list = m_levelzero_device_pool.active_process_list(accel_idx);
+            for (auto proc_itr : active_process_list) {
+                std::cout << std::to_string(proc_itr) << ", ";
+                // If a process is associated with multiple accelerators we have no good means of
+                // signaling the user beyond providing an error value (NAN).
+                if (!accelerator_pid_map.count((pid_t)proc_itr)) {
+                    accelerator_pid_map[(pid_t)proc_itr] = accel_idx;
+                }
+                else {
+                    accelerator_pid_map[(pid_t)proc_itr] = NAN;
+                }
+            }
+            std::cout << std::endl;
+        }
+        return accelerator_pid_map;
+    }
+
+    // Parse PID to CPU affinitzation and use process list --> accelerator map to get CPU --> accelerator
+    double LevelZeroIOGroup::cpu_accelerator_affinity(int cpu_idx, std::map<pid_t, double> process_map) const
+    {
+        double result = -1;
+        size_t num_cpu = m_platform_topo.num_domain(GEOPM_DOMAIN_CPU);
+        size_t alloc_size = CPU_ALLOC_SIZE(num_cpu);
+        cpu_set_t *proc_cpuset = CPU_ALLOC(num_cpu);
+        if (proc_cpuset == NULL) {
+            throw Exception("LevelZeroIOGroup::" + std::string(__func__) +
+                            ": failed to allocate process CPU mask",
+                            ENOMEM, __FILE__, __LINE__);
+        }
+        for (auto &proc : process_map) {
+            int err = sched_getaffinity(proc.first, alloc_size, proc_cpuset);
+            if (err == EINVAL || err == EFAULT) {
+                throw Exception("LevelIOGroup::" + std::string(__func__) +
+                                ": failed to get affinity mask for process: " +
+                                std::to_string(proc.first), err, __FILE__, __LINE__);
+            }
+            if (!err && CPU_ISSET(cpu_idx, proc_cpuset)) {
+                result = proc.second;
+                // Return first match, w/o break will return last match
+                break;
+            }
+        }
+        return result;
+    }
+
     // Parse and update saved values for signals
     void LevelZeroIOGroup::read_batch(void)
     {
@@ -689,16 +742,8 @@ namespace geopm
             result = m_levelzero_device_pool.performance_factor_mem(domain_idx)/100;
         }
         else if (signal_name == "LEVELZERO::CPU_ACCELERATOR_ACTIVE_AFFINITIZATION") {
-            //std::vector<zes_process_state_t> process_list = m_levelzero_device_pool.active_process_list(domain_idx);
-            std::vector<uint32_t> process_list = m_levelzero_device_pool.active_process_list(domain_idx);
-
-            //TODO: Iterate over and print
-            std::cout << "Processes associated with GPU: " << std::endl;
-            for (auto proc : process_list) {
-                std::cout << std::to_string(proc) << ", ";
-            }
-            std::cout << std::endl;
-
+            std::map<pid_t, double> process_map = accelerator_process_map();
+            result = cpu_accelerator_affinity(domain_idx, process_map);
         }
         else if (signal_name == "LEVELZERO::STANDBY_MODE") {
             result = m_levelzero_device_pool.standby_mode(domain_idx);
