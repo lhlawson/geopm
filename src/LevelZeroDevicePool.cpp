@@ -432,22 +432,24 @@ namespace geopm
         return m_fan_domain.at(accel_idx).size();
     }
 
-    double LevelZeroDevicePoolImp::frequency_status_gpu(unsigned int accel_idx) const
+    uint64_t LevelZeroDevicePoolImp::frequency_status_gpu(unsigned int accel_idx) const
     {
-        return frequency_status(accel_idx, ZES_FREQ_DOMAIN_GPU);
+        return (uint64_t)frequency_status(accel_idx, ZES_FREQ_DOMAIN_GPU);
     }
 
-    double LevelZeroDevicePoolImp::frequency_status_mem(unsigned int accel_idx) const
+    uint64_t LevelZeroDevicePoolImp::frequency_status_mem(unsigned int accel_idx) const
     {
-        return frequency_status(accel_idx, ZES_FREQ_DOMAIN_MEMORY);
+        return (uint64_t)frequency_status(accel_idx, ZES_FREQ_DOMAIN_MEMORY);
     }
 
+    //TODO: provide frequency: efficient (analogous to sticker?), tdp, and requested.
+    //      see: https://spec.oneapi.com/level-zero/latest/sysman/api.html#_CPPv416zes_freq_state_t
     double LevelZeroDevicePoolImp::frequency_status(int accel_idx, zes_freq_domain_t type) const
     {
         check_accel_range(accel_idx);
         check_domain_range(m_freq_domain.at(accel_idx).size(), __func__, __LINE__);
         ze_result_t ze_result;
-        double result = NAN;
+        double result = 0;
 
         for (auto handle : m_freq_domain.at(accel_idx)) {
             zes_freq_properties_t property;
@@ -685,10 +687,18 @@ namespace geopm
             ze_result = zesPowerGetProperties(handle, &property);
             check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                             ": Sysman failed to get domain power properties", __LINE__);
+
             if (property.onSubdevice == 0) { //For initial GEOPM support we're not handling sub-devices
-                tdp = property.defaultLimit;
-                min_power_limit = property.minLimit;
-                max_power_limit = property.maxLimit;
+                // Generally -1 indicates a lack of support for querying this value
+                if (property.defaultLimit != -1) {
+                    tdp = property.defaultLimit;
+                }
+                if (property.minLimit != -1) {
+                    min_power_limit = property.minLimit;
+                }
+                if (property.maxLimit != -1) {
+                    max_power_limit = property.maxLimit;
+                }
             }
         }
 
@@ -698,9 +708,14 @@ namespace geopm
     //TODO: move power limits to cache.  Add refresh signal in IO Group
     uint64_t LevelZeroDevicePoolImp::power_limit_peak_ac(unsigned int accel_idx) const
     {
+        uint64_t result = 0;
         zes_power_peak_limit_t peak = {};
         peak = std::get<2>(power_limit(accel_idx));
-        return (uint64_t)peak.powerDC;//cast from int32_t. TODO: check if negative possible?
+        // Generally -1 indicates a lack of support for querying this value
+        if (peak.powerDC != -1) {
+            result = (uint64_t)peak.powerDC;
+        }
+        return result;
     }
 
     //TODO: move power limits to cache.  Add refresh signal in IO Group
@@ -714,9 +729,15 @@ namespace geopm
     //TODO: move power limits to cache.  Add refresh signal in IO Group
     uint64_t LevelZeroDevicePoolImp::power_limit_burst_power(unsigned int accel_idx) const
     {
+        uint64_t result = 0;
         zes_power_burst_limit_t burst = {};
         burst = std::get<1>(power_limit(accel_idx));
-        return (uint64_t)burst.power;//cast from int32_t. TODO: check if negative possible?
+
+        // Generally -1 indicates a lack of support for querying this value
+        if (burst.power != -1) {
+            result = (uint64_t)burst.power;
+        }
+        return result;
     }
 
     //TODO: move power limits to cache.  Add refresh signal in IO Group
@@ -730,17 +751,29 @@ namespace geopm
     //TODO: move power limits to cache.  Add refresh signal in IO Group
     uint64_t LevelZeroDevicePoolImp::power_limit_sustained_power(unsigned int accel_idx) const
     {
+        uint64_t result = 0;
         zes_power_sustained_limit_t sustained = {};
         sustained = std::get<0>(power_limit(accel_idx));
-        return (uint64_t)sustained.power; //cast from int32_t. TODO: check if negative possible?
+
+        // Generally -1 indicates a lack of support for querying this value
+        if (sustained.power != -1) {
+            result = (uint64_t)sustained.power;
+        }
+        return result;
     }
 
     //TODO: move power limits to cache.  Add refresh signal in IO Group
     uint64_t LevelZeroDevicePoolImp::power_limit_sustained_interval(unsigned int accel_idx) const
     {
+        uint64_t result = 0;
         zes_power_sustained_limit_t sustained = {};
         sustained = std::get<0>(power_limit(accel_idx));
-        return (uint64_t)sustained.interval; //cast from int32_t. TODO: check if negative possible?
+
+        // Generally -1 indicates a lack of support for querying this value
+        if (sustained.interval != -1) {
+            result = (uint64_t)sustained.interval;
+        }
+        return result;
     }
 
     //TODO: move power limits to cache.  Add refresh signal in IO Group
@@ -768,7 +801,7 @@ namespace geopm
             }
         }
 
-#ifdef GEOPM_DEBUG
+//#ifdef GEOPM_DEBUG
         std::cout << "Debug: levelZero sustained_limit_t.sustained: \n" <<
                      "\t enabled: " << std::to_string(sustained.enabled) << "\n"
                      "\t power: " << std::to_string(sustained.power) << " mW\n"
@@ -779,9 +812,8 @@ namespace geopm
                      "\t power: " << std::to_string(burst.power) << " mW\n" << std::endl;
 
         std::cout << "Debug: levelZero peak_limit_t.peak: \n" <<
-                     "\t powerAC: " << std::to_string(peak.powerAC) << " mW\n"
                      "\t powerAC: " << std::to_string(peak.powerAC) << " mW\n" << std::endl;
-#endif
+//#endif
 
         return std::make_tuple(sustained, burst, peak);
     }
@@ -999,91 +1031,91 @@ namespace geopm
             else if (ze_result == ZE_RESULT_ERROR_INVALID_ARGUMENT) {
                 error_string = "ZE_RESULT_ERROR_INVALID_ARGUMENT";
             }
-			else if (ze_result == ZE_RESULT_ERROR_OUT_OF_HOST_MEMORY) {
+            else if (ze_result == ZE_RESULT_ERROR_OUT_OF_HOST_MEMORY) {
                 error_string = "ZE_RESULT_ERROR_OUT_OF_HOST_MEMORY";
             }
-			else if (ze_result == ZE_RESULT_ERROR_OUT_OF_DEVICE_MEMORY) {
+            else if (ze_result == ZE_RESULT_ERROR_OUT_OF_DEVICE_MEMORY) {
                 error_string = "ZE_RESULT_ERROR_OUT_OF_DEVICE_MEMORY";
             }
-			else if (ze_result == ZE_RESULT_ERROR_MODULE_BUILD_FAILURE) {
+            else if (ze_result == ZE_RESULT_ERROR_MODULE_BUILD_FAILURE) {
                 error_string = "ZE_RESULT_ERROR_MODULE_BUILD_FAILURE";
             }
-			else if (ze_result == ZE_RESULT_ERROR_INSUFFICIENT_PERMISSIONS) {
+            else if (ze_result == ZE_RESULT_ERROR_INSUFFICIENT_PERMISSIONS) {
                 error_string = "ZE_RESULT_ERROR_INSUFFICIENT_PERMISSIONS";
             }
-			else if (ze_result == ZE_RESULT_ERROR_NOT_AVAILABLE) {
+            else if (ze_result == ZE_RESULT_ERROR_NOT_AVAILABLE) {
                 error_string = "ZE_RESULT_ERROR_NOT_AVAILABLE";
             }
-			else if (ze_result == ZE_RESULT_ERROR_UNSUPPORTED_VERSION) {
+            else if (ze_result == ZE_RESULT_ERROR_UNSUPPORTED_VERSION) {
                 error_string = "ZE_RESULT_ERROR_UNSUPPORTED_VERSION";
             }
-			else if (ze_result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+            else if (ze_result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
                 error_string = "ZE_RESULT_ERROR_UNSUPPORTED_FEATURE";
             }
-			else if (ze_result == ZE_RESULT_ERROR_INVALID_NULL_HANDLE) {
+            else if (ze_result == ZE_RESULT_ERROR_INVALID_NULL_HANDLE) {
                 error_string = "ZE_RESULT_ERROR_INVALID_NULL_HANDLE";
             }
-			else if (ze_result == ZE_RESULT_ERROR_HANDLE_OBJECT_IN_USE) {
+            else if (ze_result == ZE_RESULT_ERROR_HANDLE_OBJECT_IN_USE) {
                 error_string = "ZE_RESULT_ERROR_HANDLE_OBJECT_IN_USE";
             }
-			else if (ze_result == ZE_RESULT_ERROR_INVALID_NULL_POINTER) {
+            else if (ze_result == ZE_RESULT_ERROR_INVALID_NULL_POINTER) {
                 error_string = "ZE_RESULT_ERROR_INVALID_NULL_POINTER";
             }
-			else if (ze_result == ZE_RESULT_ERROR_INVALID_SIZE) {
+            else if (ze_result == ZE_RESULT_ERROR_INVALID_SIZE) {
                 error_string = "ZE_RESULT_ERROR_INVALID_SIZE";
             }
-			else if (ze_result == ZE_RESULT_ERROR_UNSUPPORTED_SIZE) {
+            else if (ze_result == ZE_RESULT_ERROR_UNSUPPORTED_SIZE) {
                 error_string = "ZE_RESULT_ERROR_UNSUPPORTED_SIZE";
             }
-			else if (ze_result == ZE_RESULT_ERROR_UNSUPPORTED_ALIGNMENT) {
+            else if (ze_result == ZE_RESULT_ERROR_UNSUPPORTED_ALIGNMENT) {
                 error_string = "ZE_RESULT_ERROR_UNSUPPORTED_ALIGNMENT";
             }
-			else if (ze_result == ZE_RESULT_ERROR_INVALID_SYNCHRONIZATION_OBJECT) {
+            else if (ze_result == ZE_RESULT_ERROR_INVALID_SYNCHRONIZATION_OBJECT) {
                 error_string = "ZE_RESULT_ERROR_INVALID_SYNCHRONIZATION_OBJECT";
             }
-			else if (ze_result == ZE_RESULT_ERROR_INVALID_ENUMERATION) {
+            else if (ze_result == ZE_RESULT_ERROR_INVALID_ENUMERATION) {
                 error_string = "ZE_RESULT_ERROR_INVALID_ENUMERATION";
             }
-			else if (ze_result == ZE_RESULT_ERROR_UNSUPPORTED_ENUMERATION) {
+            else if (ze_result == ZE_RESULT_ERROR_UNSUPPORTED_ENUMERATION) {
                 error_string = "ZE_RESULT_ERROR_UNSUPPORTED_ENUMERATION";
             }
-			else if (ze_result == ZE_RESULT_ERROR_UNSUPPORTED_IMAGE_FORMAT) {
+            else if (ze_result == ZE_RESULT_ERROR_UNSUPPORTED_IMAGE_FORMAT) {
                 error_string = "ZE_RESULT_ERROR_UNSUPPORTED_IMAGE_FORMAT";
             }
-			else if (ze_result == ZE_RESULT_ERROR_INVALID_NATIVE_BINARY) {
+            else if (ze_result == ZE_RESULT_ERROR_INVALID_NATIVE_BINARY) {
                 error_string = "ZE_RESULT_ERROR_INVALID_NATIVE_BINARY";
             }
-			else if (ze_result == ZE_RESULT_ERROR_INVALID_GLOBAL_NAME) {
+            else if (ze_result == ZE_RESULT_ERROR_INVALID_GLOBAL_NAME) {
                 error_string = "ZE_RESULT_ERROR_INVALID_GLOBAL_NAME";
             }
-			else if (ze_result == ZE_RESULT_ERROR_INVALID_KERNEL_NAME) {
+            else if (ze_result == ZE_RESULT_ERROR_INVALID_KERNEL_NAME) {
                 error_string = "ZE_RESULT_ERROR_INVALID_KERNEL_NAME";
             }
-			else if (ze_result == ZE_RESULT_ERROR_INVALID_FUNCTION_NAME) {
+            else if (ze_result == ZE_RESULT_ERROR_INVALID_FUNCTION_NAME) {
                 error_string = "ZE_RESULT_ERROR_INVALID_FUNCTION_NAME";
             }
-			else if (ze_result == ZE_RESULT_ERROR_INVALID_GROUP_SIZE_DIMENSION) {
+            else if (ze_result == ZE_RESULT_ERROR_INVALID_GROUP_SIZE_DIMENSION) {
                 error_string = "ZE_RESULT_ERROR_INVALID_GROUP_SIZE_DIMENSION";
             }
-			else if (ze_result == ZE_RESULT_ERROR_INVALID_GLOBAL_WIDTH_DIMENSION) {
+            else if (ze_result == ZE_RESULT_ERROR_INVALID_GLOBAL_WIDTH_DIMENSION) {
                 error_string = "ZE_RESULT_ERROR_INVALID_GLOBAL_WIDTH_DIMENSION";
             }
-			else if (ze_result == ZE_RESULT_ERROR_INVALID_KERNEL_ARGUMENT_INDEX) {
+            else if (ze_result == ZE_RESULT_ERROR_INVALID_KERNEL_ARGUMENT_INDEX) {
                 error_string = "ZE_RESULT_ERROR_INVALID_KERNEL_ARGUMENT_INDEX";
             }
-			else if (ze_result == ZE_RESULT_ERROR_INVALID_KERNEL_ARGUMENT_SIZE) {
+            else if (ze_result == ZE_RESULT_ERROR_INVALID_KERNEL_ARGUMENT_SIZE) {
                 error_string = "ZE_RESULT_ERROR_INVALID_KERNEL_ARGUMENT_SIZE";
             }
-			else if (ze_result == ZE_RESULT_ERROR_INVALID_KERNEL_ATTRIBUTE_VALUE) {
+            else if (ze_result == ZE_RESULT_ERROR_INVALID_KERNEL_ATTRIBUTE_VALUE) {
                 error_string = "ZE_RESULT_ERROR_INVALID_KERNEL_ATTRIBUTE_VALUE";
             }
-			else if (ze_result == ZE_RESULT_ERROR_INVALID_COMMAND_LIST_TYPE) {
+            else if (ze_result == ZE_RESULT_ERROR_INVALID_COMMAND_LIST_TYPE) {
                 error_string = "ZE_RESULT_ERROR_INVALID_COMMAND_LIST_TYPE";
             }
-			else if (ze_result == ZE_RESULT_ERROR_OVERLAPPING_REGIONS) {
+            else if (ze_result == ZE_RESULT_ERROR_OVERLAPPING_REGIONS) {
                 error_string = "ZE_RESULT_ERROR_OVERLAPPING_REGIONS";
             }
-			else if (ze_result == ZE_RESULT_ERROR_UNKNOWN) {
+            else if (ze_result == ZE_RESULT_ERROR_UNKNOWN) {
                 error_string = "ZE_RESULT_ERROR_UNKNOWN";
             }
 
