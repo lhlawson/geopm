@@ -61,15 +61,15 @@ namespace geopm
         : m_platform_topo(platform_topo)
         , m_levelzero_device_pool(device_pool)
         , m_is_batch_read(false)
-        , m_signal_available({{"LEVELZERO::FREQUENCY", {
-                                  "Accelerator Frequency in hertz",
+        , m_signal_available({{"LEVELZERO::FREQUENCY_GPU", {
+                                  "Accelerator compute/GPU domain frequency in hertz",
                                   {},
                                   GEOPM_DOMAIN_BOARD_ACCELERATOR,
                                   Agg::average,
                                   string_format_double
                                   }},
                               {"LEVELZERO::FREQUENCY_MEMORY", {
-                                  "????????????????",
+                                  "Accelerator memory domain frequency in hertz",
                                   {},
                                   GEOPM_DOMAIN_BOARD_ACCELERATOR,
                                   Agg::average,
@@ -83,21 +83,21 @@ namespace geopm
                                   string_format_double
                                   }},
                               {"LEVELZERO::UTILIZATION", {
-                                  "????????????????",
+                                  "All engine utilization.  NAN implies not supported",
                                   {},
                                   GEOPM_DOMAIN_BOARD_ACCELERATOR,
                                   Agg::average,
                                   string_format_double
                                   }},
                               {"LEVELZERO::UTILIZATION_COMPUTE", {
-                                  "????????????????",
+                                  "Compute engine utilization",
                                   {},
                                   GEOPM_DOMAIN_BOARD_ACCELERATOR,
                                   Agg::average,
                                   string_format_double
                                   }},
                               {"LEVELZERO::UTILIZATION_COPY", {
-                                  "????????????????",
+                                  "Copy engine utilization",
                                   {},
                                   GEOPM_DOMAIN_BOARD_ACCELERATOR,
                                   Agg::average,
@@ -110,29 +110,29 @@ namespace geopm
                                   Agg::average,
                                   string_format_double
                                   }},
-                              {"LEVELZERO::FREQUENCY_MIN", {
-                                  "????",
+                              {"LEVELZERO::FREQUENCY_GPU_MIN", {
+                                  "Accelerator compute/GPU domain minimum frequency in hertz",
                                   {},
                                   GEOPM_DOMAIN_BOARD_ACCELERATOR,
                                   Agg::average,
                                   string_format_double
                                   }},
-                              {"LEVELZERO::FREQUENCY_MAX", {
-                                  "????",
+                              {"LEVELZERO::FREQUENCY_GPU_MAX", {
+                                  "Accelerator compute/GPU domain maximum frequency in hertz",
                                   {},
                                   GEOPM_DOMAIN_BOARD_ACCELERATOR,
                                   Agg::average,
                                   string_format_double
                                   }},
                               {"LEVELZERO::FREQUENCY_THROTTLE_GPU", {
-                                  "????",
+                                  "Accelerator compute/GPU domain throttle indication",
                                   {},
                                   GEOPM_DOMAIN_BOARD_ACCELERATOR,
                                   Agg::average,
                                   string_format_double
                                   }},
                               {"LEVELZERO::FREQUENCY_THROTTLE_MEM", {
-                                  "????",
+                                  "Accelerator memory domain throttle indication",
                                   {},
                                   GEOPM_DOMAIN_BOARD_ACCELERATOR,
                                   Agg::average,
@@ -146,84 +146,81 @@ namespace geopm
                                   string_format_double
                                   }},
                               {"LEVELZERO::STANDBY_MODE", {
-                                  "????",
+                                  "Accelerator Standby Mode."
+                                  "\n  0 indicates the device may go into standby"
+                                  "\n  1 indicates the device will never go into standby",
                                   {},
                                   GEOPM_DOMAIN_BOARD_ACCELERATOR,
                                   Agg::average,
                                   string_format_double
                                   }},
                               {"LEVELZERO::CPU_ACCELERATOR_ACTIVE_AFFINITIZATION", {
-                                  "????",
+                                  "Returns the associated accelerator for a given CPU as determined by running processes."
+                                  "\n  If no accelerators map to the CPU then -1 is returned"
+                                  "\n  If multiple accelerators map to the CPU NAN is returned",
                                   {},
                                   GEOPM_DOMAIN_BOARD_ACCELERATOR,
                                   Agg::average,
                                   string_format_double
                                   }},
                               {"LEVELZERO::POWER_LIMIT_SUSTAINED_ENABLED", {
-                                  "",
+                                  "Accelerator sustained power limit enable value",
                                   {},
                                   GEOPM_DOMAIN_BOARD_ACCELERATOR,
                                   Agg::average,
                                   string_format_double
                                   }},
                               {"LEVELZERO::POWER_LIMIT_SUSTAINED", {
-                                  "",
+                                  "Accelerator sustained power limit in Watts",
                                   {},
                                   GEOPM_DOMAIN_BOARD_ACCELERATOR,
                                   Agg::average,
                                   string_format_double
                                   }},
                               {"LEVELZERO::POWER_LIMIT_SUSTAINED_INTERVAL", {
-                                  "",
+                                  "Accelerator sustained power limit interval in seconds",
                                   {},
                                   GEOPM_DOMAIN_BOARD_ACCELERATOR,
                                   Agg::average,
                                   string_format_double
                                   }},
                               {"LEVELZERO::POWER_LIMIT_BURST", {
-                                  "",
+                                  "Accelerator burst power limit in Watts",
                                   {},
                                   GEOPM_DOMAIN_BOARD_ACCELERATOR,
                                   Agg::average,
                                   string_format_double
                                   }},
                               {"LEVELZERO::POWER_LIMIT_BURST_ENABLED", {
-                                  "",
+                                  "Accelerator burst power limit enable value",
                                   {},
                                   GEOPM_DOMAIN_BOARD_ACCELERATOR,
                                   Agg::average,
                                   string_format_double
                                   }},
                               {"LEVELZERO::POWER_LIMIT_PEAK_AC", {
-                                  "",
-                                  {},
-                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
-                                  Agg::average,
-                                  string_format_double
-                                  }},
-                              {"LEVELZERO::POWER_LIMIT_PEAK_DC", {
-                                  "",
+                                  "Accelerator peak AC power limit in Watts",
                                   {},
                                   GEOPM_DOMAIN_BOARD_ACCELERATOR,
                                   Agg::average,
                                   string_format_double
                                   }},
                               {"LEVELZERO::POWER_LIMIT_DEFAULT", {
-                                  "",
+                                  "Default power limit in Watts",
                                   {},
                                   GEOPM_DOMAIN_BOARD_ACCELERATOR,
                                   Agg::average,
                                   string_format_double
                                   }},
                               {"LEVELZERO::POWER_LIMIT_MIN", {
-                                  "",
+                                  "Minimum power limit in Watts",
                                   {},
                                   GEOPM_DOMAIN_BOARD_ACCELERATOR,
                                   Agg::average,
                                   string_format_double
                                   }},
                               {"LEVELZERO::POWER_LIMIT_MAX", {
-                                  "",
+                                  "Maximum power limit in Watts",
                                   {},
                                   GEOPM_DOMAIN_BOARD_ACCELERATOR,
                                   Agg::average,
@@ -347,7 +344,7 @@ namespace geopm
             sv.second.signals = result;
         }
         register_signal_alias("POWER_ACCELERATOR", "LEVELZERO::POWER");
-        register_signal_alias("FREQUENCY_ACCELERATOR", "LEVELZERO::FREQUENCY");
+        register_signal_alias("FREQUENCY_ACCELERATOR", "LEVELZERO::FREQUENCY_COMPUTE");
 
         // populate controls for each domain
         for (auto &sv : m_control_available) {
@@ -630,7 +627,7 @@ namespace geopm
 
         double result = NAN;
 
-        if (signal_name == "LEVELZERO::FREQUENCY" || signal_name == "FREQUENCY_ACCELERATOR") {
+        if (signal_name == "LEVELZERO::FREQUENCY_GPU" || signal_name == "FREQUENCY_ACCELERATOR") {
             result = m_levelzero_device_pool.frequency_status_gpu(domain_idx)*1e6;
         }
         else if (signal_name == "LEVELZERO::FREQUENCY_MEMORY") {
@@ -639,10 +636,10 @@ namespace geopm
         else if (signal_name == "LEVELZERO::CORE_CLOCK_RATE") {
             result = m_levelzero_device_pool.core_clock_rate(domain_idx)*1e6;
         }
-        else if (signal_name == "LEVELZERO::FREQUENCY_MIN") {
+        else if (signal_name == "LEVELZERO::FREQUENCY_GPU_MIN") {
             result = m_levelzero_device_pool.frequency_min_gpu(domain_idx)*1e6;
         }
-        else if (signal_name == "LEVELZERO::FREQUENCY_MAX") {
+        else if (signal_name == "LEVELZERO::FREQUENCY_GPU_MAX") {
             result = m_levelzero_device_pool.frequency_max_gpu(domain_idx)*1e6;
         }
         else if (signal_name == "LEVELZERO::UTILIZATION") {
@@ -677,9 +674,6 @@ namespace geopm
         }
         else if (signal_name == "LEVELZERO::POWER_LIMIT_PEAK_AC") {
             result = m_levelzero_device_pool.power_limit_peak_ac(domain_idx)/1e3;
-        }
-        else if (signal_name == "LEVELZERO::POWER_LIMIT_PEAK_DC") {
-            result = m_levelzero_device_pool.power_limit_peak_dc(domain_idx)/1e3;
         }
         else if (signal_name == "LEVELZERO::POWER_LIMIT_MIN") {
             result = m_levelzero_device_pool.power_limit_min(domain_idx)/1e3;

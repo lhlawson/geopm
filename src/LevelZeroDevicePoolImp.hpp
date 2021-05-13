@@ -70,7 +70,6 @@ namespace geopm
             virtual uint64_t power_limit_burst_enabled(unsigned int accel_idx) const override;
             virtual uint64_t power_limit_burst_power(unsigned int accel_idx) const override;
             virtual uint64_t power_limit_peak_ac(unsigned int accel_idx) const override;
-            virtual uint64_t power_limit_peak_dc(unsigned int accel_idx) const override;
             virtual uint64_t energy(unsigned int accel_idx) const override;
             //TODO: performance_factor_compute instead
             virtual double performance_factor(unsigned int accel_idx) const override;
