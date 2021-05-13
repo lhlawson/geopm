@@ -57,8 +57,8 @@ namespace geopm
             /// @param [in] accel_idx The index indicating a particular
             ///        accelerator.
             /// @return Accelerator device core clock rate in MHz.
-            virtual double frequency_status_gpu(unsigned int accel_idx) const = 0;
-            virtual double frequency_status_mem(unsigned int accel_idx) const = 0;
+            virtual uint64_t frequency_status_gpu(unsigned int accel_idx) const = 0;
+            virtual uint64_t frequency_status_mem(unsigned int accel_idx) const = 0;
             virtual double core_clock_rate(unsigned int accel_idx) const = 0;
             virtual uint64_t frequency_min_gpu(unsigned int accel_idx) const = 0;
             virtual uint64_t frequency_max_gpu(unsigned int accel_idx) const = 0;
