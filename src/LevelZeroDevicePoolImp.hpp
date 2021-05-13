@@ -55,8 +55,6 @@ namespace geopm
             virtual uint64_t frequency_max_gpu(unsigned int accel_idx) const override;
             virtual uint64_t frequency_min_mem(unsigned int accel_idx) const override;
             virtual uint64_t frequency_max_mem(unsigned int accel_idx) const override;
-            virtual double frequency_throttle_gpu(unsigned int accel_idx) const override;
-            virtual double frequency_throttle_mem(unsigned int accel_idx) const override;
             virtual double utilization(unsigned int accel_idx) const override;
             virtual double utilization_compute(unsigned int accel_idx) const override;
             virtual double utilization_copy(unsigned int accel_idx) const override;
@@ -72,9 +70,9 @@ namespace geopm
             virtual uint64_t power_limit_peak_ac(unsigned int accel_idx) const override;
             virtual uint64_t energy(unsigned int accel_idx) const override;
             //TODO: performance_factor_compute instead
-            virtual double performance_factor(unsigned int accel_idx) const override;
-            virtual double performance_factor_gpu(unsigned int accel_idx) const override;
-            virtual double performance_factor_mem(unsigned int accel_idx) const override;
+            virtual uint64_t performance_factor(unsigned int accel_idx) const override;
+            virtual uint64_t performance_factor_gpu(unsigned int accel_idx) const override;
+            virtual uint64_t performance_factor_mem(unsigned int accel_idx) const override;
             virtual std::vector<uint32_t> active_process_list(unsigned int accel_idx) const override;
             virtual uint64_t standby_mode(unsigned int accel_idx) const override;
             virtual double memory_allocated(unsigned int accel_idx) const override;
@@ -110,7 +108,6 @@ namespace geopm
             virtual std::tuple<uint64_t, uint64_t, uint64_t> power_limit_default(unsigned int accel_idx) const;
             virtual double frequency_status(int accel_idx, zes_freq_domain_t) const;
             virtual std::pair<uint64_t,uint64_t> frequency_min_max(int accel_idx, zes_freq_domain_t type) const;
-            virtual double frequency_throttle(int accel_idx, zes_freq_domain_t type) const;
             virtual double utilization(int accel_idx, zes_engine_group_t engine_type) const;
             virtual uint64_t engine_domain_types(int accel_idx, zes_engine_group_t engine_type) const;
 
