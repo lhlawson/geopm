@@ -124,20 +124,6 @@ namespace geopm
                                   Agg::average,
                                   string_format_double
                                   }},
-                              {"LEVELZERO::FREQUENCY_THROTTLE_GPU", {
-                                  "Accelerator compute/GPU domain throttle indication",
-                                  {},
-                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
-                                  Agg::average,
-                                  string_format_double
-                                  }},
-                              {"LEVELZERO::FREQUENCY_THROTTLE_MEM", {
-                                  "Accelerator memory domain throttle indication",
-                                  {},
-                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
-                                  Agg::average,
-                                  string_format_double
-                                  }},
                               {"LEVELZERO::ENERGY", {
                                   "Accelerator energy in Joules",
                                   {},

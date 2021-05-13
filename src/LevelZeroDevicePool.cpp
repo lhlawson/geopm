@@ -518,51 +518,6 @@ namespace geopm
         return {result_min, result_max};
     }
 
-    double LevelZeroDevicePoolImp::frequency_throttle_gpu(unsigned int accel_idx) const
-    {
-        return frequency_throttle(accel_idx, ZES_FREQ_DOMAIN_GPU);
-    }
-
-    double LevelZeroDevicePoolImp::frequency_throttle_mem(unsigned int accel_idx) const
-    {
-        return frequency_throttle(accel_idx, ZES_FREQ_DOMAIN_MEMORY);
-    }
-
-    double LevelZeroDevicePoolImp::frequency_throttle(int accel_idx, zes_freq_domain_t type) const
-    {
-        check_accel_range(accel_idx);
-        check_domain_range(m_freq_domain.at(accel_idx).size(), __func__, __LINE__);
-        ze_result_t ze_result;
-        double result = NAN;
-
-        zes_freq_throttle_time_t throttle_time_prev;
-        zes_freq_throttle_time_t throttle_time_curr;
-        for (auto handle : m_freq_domain.at(accel_idx)) {
-            zes_freq_properties_t property;
-            ze_result = zesFrequencyGetProperties(handle, &property);
-            check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
-                                                            ": Sysman failed to get domain properties.", __LINE__);
-
-            if (type == property.type && property.onSubdevice == 0) { //For initial GEOPM support we're not handling sub-devices
-                ze_result = zesFrequencyGetThrottleTime(handle, &throttle_time_prev);
-                check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
-                                                            ": Sysman failed to get domain properties.", __LINE__);
-
-                //TODO: wait approach?  May use geopm spin wait.
-                std::this_thread::sleep_for(std::chrono::milliseconds(5));
-
-                ze_result = zesFrequencyGetThrottleTime(handle, &throttle_time_curr);
-                check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
-                                                            ": Sysman failed to get domain properties.", __LINE__);
-
-                result = (throttle_time_curr.throttleTime - throttle_time_prev.throttleTime)
-                         / (throttle_time_curr.timestamp - throttle_time_prev.timestamp);
-            }
-        }
-
-        return result;
-    }
-
     //TODO: add zesFrequencyGetAvailableClocks for getting all available frequencies?
 
     double LevelZeroDevicePoolImp::utilization(unsigned int accel_idx) const
@@ -865,7 +820,7 @@ namespace geopm
         }
     }
 
-    double LevelZeroDevicePoolImp::performance_factor(unsigned int accel_idx) const
+    uint64_t LevelZeroDevicePoolImp::performance_factor(unsigned int accel_idx) const
     {
         check_accel_range(accel_idx);
         check_domain_range(m_perf_domain.at(accel_idx).size(), __func__, __LINE__);
@@ -886,17 +841,17 @@ namespace geopm
                                                               ": Sysman failed to get performance factor", __LINE__);
             }
         }
-        return performance_factor;
+        return (uint64_t)performance_factor;
     }
 
-    double LevelZeroDevicePoolImp::performance_factor_gpu(unsigned int accel_idx) const
+    uint64_t LevelZeroDevicePoolImp::performance_factor_gpu(unsigned int accel_idx) const
     {
         //TODO: add passing argument for GPU
         check_domain_range(0, __func__, __LINE__); //forcing error for now
         return performance_factor(accel_idx);
     }
 
-    double LevelZeroDevicePoolImp::performance_factor_mem(unsigned int accel_idx) const
+    uint64_t LevelZeroDevicePoolImp::performance_factor_mem(unsigned int accel_idx) const
     {
         //TODO: add passing argument for MEM
         check_domain_range(0, __func__, __LINE__); //forcing error for now
@@ -973,7 +928,7 @@ namespace geopm
             if (property.onSubdevice == 0) { //For initial GEOPM support we're not handling sub-devices
                 ze_result = zesMemoryGetState(handle, &state);
                 check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
-                                                              ": Sysman failed to get memory bandwidth", __LINE__);
+                                                              ": Sysman failed to get memory allocated", __LINE__);
 
                 //TODO: Fix the assumption that there's only a single domain. For now we're assuming 1 or
                 //      taking the last domain basically...could be HBM, DDR3/4/5, LPDDR, SRAM, GRF, ...

@@ -64,8 +64,6 @@ namespace geopm
             virtual uint64_t frequency_max_gpu(unsigned int accel_idx) const = 0;
             virtual uint64_t frequency_min_mem(unsigned int accel_idx) const = 0;
             virtual uint64_t frequency_max_mem(unsigned int accel_idx) const = 0;
-            virtual double frequency_throttle_gpu(unsigned int accel_idx) const = 0;
-            virtual double frequency_throttle_mem(unsigned int accel_idx) const = 0;
             /// @brief Get the LevelZero device utilization metric.
             /// @param [in] accel_idx The index indicating a particular
             ///        accelerator.
@@ -94,9 +92,9 @@ namespace geopm
             ///        accelerator.
             /// @return Accelerator power consumption in milliwatts.
             virtual uint64_t energy (unsigned int accel_idx) const = 0;
-            virtual double performance_factor(unsigned int accel_idx) const = 0;
-            virtual double performance_factor_gpu(unsigned int accel_idx) const = 0;
-            virtual double performance_factor_mem(unsigned int accel_idx) const = 0;
+            virtual uint64_t performance_factor(unsigned int accel_idx) const = 0;
+            virtual uint64_t performance_factor_gpu(unsigned int accel_idx) const = 0;
+            virtual uint64_t performance_factor_mem(unsigned int accel_idx) const = 0;
             virtual std::vector<uint32_t> active_process_list(unsigned int accel_idx) const = 0;
             virtual uint64_t standby_mode(unsigned int accel_idx) const = 0;
             virtual double memory_allocated(unsigned int accel_idx) const = 0;
