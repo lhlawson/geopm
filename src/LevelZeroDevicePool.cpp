@@ -749,14 +749,6 @@ namespace geopm
     }
 
     //TODO: move power limits to cache.  Add refresh signal in IO Group
-    uint64_t LevelZeroDevicePoolImp::power_limit_peak_dc(unsigned int accel_idx) const
-    {
-        zes_power_peak_limit_t peak = {};
-        peak = std::get<2>(power_limit(accel_idx));
-        return (uint64_t)peak.powerAC;//cast from int32_t. TODO: check if negative possible?
-    }
-
-    //TODO: move power limits to cache.  Add refresh signal in IO Group
     uint64_t LevelZeroDevicePoolImp::power_limit_burst_enabled(unsigned int accel_idx) const
     {
         zes_power_burst_limit_t burst = {};

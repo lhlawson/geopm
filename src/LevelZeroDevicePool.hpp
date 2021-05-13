@@ -88,7 +88,6 @@ namespace geopm
             virtual uint64_t power_limit_burst_enabled(unsigned int accel_idx) const = 0;
             virtual uint64_t power_limit_burst_power(unsigned int accel_idx) const = 0;
             virtual uint64_t power_limit_peak_ac(unsigned int accel_idx) const = 0;
-            virtual uint64_t power_limit_peak_dc(unsigned int accel_idx) const = 0;
 
             /// @brief Get the LevelZero device energy in ???.
             /// @param [in] accel_idx The index indicating a particular
