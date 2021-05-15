@@ -72,6 +72,7 @@ namespace geopm
             virtual double utilization(unsigned int accel_idx) const = 0;
             virtual double utilization_compute(unsigned int accel_idx) const = 0;
             virtual double utilization_copy(unsigned int accel_idx) const = 0;
+            virtual double utilization_media_decode(unsigned int accel_idx) const = 0;
             /// @brief Get the LevelZero device power in ???.
             /// @param [in] accel_idx The index indicating a particular
             ///        accelerator.

@@ -535,6 +535,15 @@ namespace geopm
         return utilization(accel_idx, ZES_ENGINE_GROUP_COMPUTE_SINGLE);
     }
 
+
+    double LevelZeroDevicePoolImp::utilization_media_decode(unsigned int accel_idx) const
+    {
+        //TODO: identify if copy_all exists, if not use copy_single and aggregate
+        //return utilization(accel_idx, ZES_ENGINE_GROUP_COPY_ALL);
+        return utilization(accel_idx, ZES_ENGINE_GROUP_MEDIA_DECODE_SINGLE);
+    }
+
+
     double LevelZeroDevicePoolImp::utilization_copy(unsigned int accel_idx) const
     {
         //TODO: identify if copy_all exists, if not use copy_single and aggregate
