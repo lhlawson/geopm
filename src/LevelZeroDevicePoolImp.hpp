@@ -58,6 +58,7 @@ namespace geopm
             virtual double utilization(unsigned int accel_idx) const override;
             virtual double utilization_compute(unsigned int accel_idx) const override;
             virtual double utilization_copy(unsigned int accel_idx) const override;
+            virtual double utilization_media_decode(unsigned int accel_idx) const override;
             virtual double power(unsigned int accel_idx) const override;
             virtual uint64_t power_tdp(unsigned int accel_idx) const override;
             virtual uint64_t power_limit_min(unsigned int accel_idx) const override;

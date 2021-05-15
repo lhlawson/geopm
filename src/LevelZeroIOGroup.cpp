@@ -103,6 +103,13 @@ namespace geopm
                                   Agg::average,
                                   string_format_double
                                   }},
+                              {"LEVELZERO::UTILIZATION_MEDIA_DECODE", {
+                                  "Media decode engine utilization",
+                                  {},
+                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                  Agg::average,
+                                  string_format_double
+                                  }},
                               {"LEVELZERO::MEMORY_ALLOCATED", {
                                   "Memory usage as a ratio of total memory",
                                   {},
@@ -330,7 +337,7 @@ namespace geopm
             sv.second.signals = result;
         }
         register_signal_alias("POWER_ACCELERATOR", "LEVELZERO::POWER");
-        register_signal_alias("FREQUENCY_ACCELERATOR", "LEVELZERO::FREQUENCY_COMPUTE");
+        register_signal_alias("FREQUENCY_ACCELERATOR", "LEVELZERO::FREQUENCY_GPU");
 
         // populate controls for each domain
         for (auto &sv : m_control_available) {
@@ -636,6 +643,9 @@ namespace geopm
         }
         else if (signal_name == "LEVELZERO::UTILIZATION_COPY") {
             result = m_levelzero_device_pool.utilization_copy(domain_idx);
+        }
+        else if (signal_name == "LEVELZERO::UTILIZATION_MEDIA_DECODE") {
+            result = m_levelzero_device_pool.utilization_media_decode(domain_idx);
         }
         else if (signal_name == "LEVELZERO::POWER" || signal_name == "POWER_ACCELERATOR") {
             result = m_levelzero_device_pool.power(domain_idx);
