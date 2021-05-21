@@ -665,7 +665,7 @@ namespace geopm
         },
         "PM_ENABLE": {
             "offset": "0x770",
-            "domain": "cpu",
+            "domain": "package",
             "fields": {
                 "ENABLE": {
                     "begin_bit": 0,
@@ -680,7 +680,7 @@ namespace geopm
         },
         "HWP_CAPABILITIES": {
             "offset": "0x771",
-            "domain": "cpu",
+            "domain": "package",
             "fields": {
                 "HIGHEST_PERFORMANCE": {
                     "begin_bit": 0,
@@ -704,7 +704,7 @@ namespace geopm
                     "begin_bit": 16,
                     "end_bit":   23,
                     "function":  "scale",
-                    "units":     "none",
+                    "units":     "hertz",
                     "scalar":    1e8,
                     "behavior":  "variable",
                     "writeable": false
