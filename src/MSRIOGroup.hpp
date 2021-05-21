@@ -209,6 +209,9 @@ namespace geopm
             std::shared_ptr<geopm_time_s> m_time_zero;
             std::shared_ptr<double> m_time_batch;
 
+            bool hwp(void);
+            bool m_hwp_is_enabled;
+
             // All available signals: map from name to signal_info.
             // The signals vector is over the indices for the domain.
             // The signals pointers should be copied when signal is

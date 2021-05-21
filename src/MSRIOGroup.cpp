@@ -108,11 +108,21 @@ namespace geopm
             parse_json_msrs(data);
         }
 
+        m_hwp_is_enabled = hwp();
         register_signal_alias("TIMESTAMP_COUNTER", "MSR::TIME_STAMP_COUNTER:TIMESTAMP_COUNT");
+
+        if (m_hwp_is_enabled)
+        {
+            // TODO: make a combined signal of min, max, and desired.  This is handled in write_control
+            register_signal_alias("CPU_FREQUENCY_CONTROL", "MSR::HWP_REQUEST:MINIMUM_PERFORMANCE");
+
+            // TODO: this does NOT actually address the issue of Package vs per core HWP
+            register_signal_alias("PACKAGE_FREQUENCY_CONTROL", "MSR::HWP_REQUEST_PKG:DESIRED_PERFORMANCE");
+        } else {
+            register_signal_alias("CPU_FREQUENCY_CONTROL", "MSR::PERF_CTL:FREQ");
+        }
         register_signal_alias("FREQUENCY", "MSR::PERF_STATUS:FREQ"); // TODO: Remove @ v2.0
         register_signal_alias("CPU_FREQUENCY_STATUS", "MSR::PERF_STATUS:FREQ");
-        register_signal_alias("CPU_FREQUENCY_CONTROL", "MSR::PERF_CTL:FREQ");
-
         std::string max_turbo_name;
         switch (m_cpuid) {
             case MSRIOGroup::M_CPUID_KNL:
@@ -132,9 +142,18 @@ namespace geopm
                 throw Exception("MSRIOGroup: Unsupported CPUID",
                                 GEOPM_ERROR_RUNTIME, __FILE__, __LINE__);
         }
-        register_signal_alias("FREQUENCY_MAX", max_turbo_name); // TODO: Remove @ v2.0
+
+        if (m_hwp_is_enabled)
+        {
+            register_signal_alias("FREQUENCY_MAX", "MSR::HWP_CAPABILITIES:HIGHEST_PERFORMANCE"); // TODO: Remove @ v2.0
+            register_signal_alias("CPU_FREQUENCY_MAX", "MSR::HWP_CAPABILITIES:HIGHEST_PERFORMANCE");
+        }
+        else {
+            register_signal_alias("FREQUENCY_MAX", max_turbo_name); // TODO: Remove @ v2.0
+            register_signal_alias("CPU_FREQUENCY_MAX", max_turbo_name);
+        }
+
         set_signal_description("FREQUENCY_MAX", "Maximum processor frequency."); // TODO: Remove @ v2.0
-        register_signal_alias("CPU_FREQUENCY_MAX", max_turbo_name);
         set_signal_description("CPU_FREQUENCY_MAX", "Maximum processor frequency.");
 
         register_signal_alias("ENERGY_PACKAGE", "MSR::PKG_ENERGY_STATUS:ENERGY");
@@ -150,9 +169,22 @@ namespace geopm
         register_power_signals();
 
         register_control_alias("POWER_PACKAGE_LIMIT", "MSR::PKG_POWER_LIMIT:PL1_POWER_LIMIT");
-        register_control_alias("FREQUENCY", "MSR::PERF_CTL:FREQ"); // TODO: Remove @ v2.0
-        register_control_alias("CPU_FREQUENCY_CONTROL", "MSR::PERF_CTL:FREQ");
         register_control_alias("POWER_PACKAGE_TIME_WINDOW", "MSR::PKG_POWER_LIMIT:PL1_TIME_WINDOW");
+
+        if (m_hwp_is_enabled)
+        {
+            // TODO: make a combined signal of min, max, and desired
+            register_control_alias("FREQUENCY", "MSR::HWP_REQUEST:MINIMUM_PERFORMANCE"); // TODO: Remove @ v2.0
+            register_control_alias("CPU_FREQUENCY_CONTROL", "MSR::HWP_REQUEST:MINIMUM_PERFORMANCE");
+
+            // TODO: this does NOT actually address the issue of Package vs per core HWP
+            register_control_alias("PACKAGE_FREQUENCY", "MSR::HWP_REQUEST_PKG:MINIMUM_PERFORMANCE"); // TODO: Remove @ v2.0
+            register_control_alias("PACKAGE_FREQUENCY_CONTROL", "MSR::HWP_REQUEST_PKG:MINIMUM_PERFORMANCE");
+        }
+        else {
+            register_control_alias("FREQUENCY", "MSR::PERF_CTL:FREQ"); // TODO: Remove @ v2.0
+            register_control_alias("CPU_FREQUENCY_CONTROL", "MSR::PERF_CTL:FREQ");
+        }
     }
 
     void MSRIOGroup::set_signal_description(const std::string &name,
@@ -419,6 +451,17 @@ namespace geopm
             write_control("MSR::PKG_POWER_LIMIT:PL1_LIMIT_ENABLE", domain_type, domain_idx, 1.0);
         }
 
+        //HWP Handling
+        if (m_hwp_is_enabled && (control_name == "CPU_FREQUENCY_CONTROL" || control_name == "FREQUENCY")) {
+            push_control("MSR::HWP_REQUEST:MAXIMUM_PERFORMANCE", domain_type, domain_idx);
+            push_control("MSR::HWP_REQUEST:PACKAGE_CONTROL", domain_type, domain_idx);
+        }
+        if (m_hwp_is_enabled && (control_name == "PACKAGE_FREQUENCY_CONTROL" || control_name == "PACKAGE_FREQUENCY")) {
+            push_control("MSR::HWP_REQUEST_PKG:MAXIMUM_PERFORMANCE", domain_type, domain_idx);
+            //TODO: confirm this will write all appropriate CPUs associated with this domain
+            push_control("MSR::HWP_REQUEST:PACKAGE_CONTROL", domain_type, domain_idx);
+        }
+
         if (!is_found) {
             result = m_control_pushed.size();
             m_control_pushed.push_back(control);
@@ -473,6 +516,8 @@ namespace geopm
         }
         m_control_pushed[control_idx]->adjust(setting);
         m_is_adjusted[control_idx] = true;
+
+        //TODO: Call adjust on HWP max freq etc signals if FREQUENCY, CPU_FREQUENCY_CONTROL, etc are set
     }
 
     double MSRIOGroup::read_signal(const std::string &signal_name, int domain_type, int domain_idx)
@@ -518,6 +563,19 @@ namespace geopm
         if (control_name == "POWER_PACKAGE_LIMIT") {
             write_control("MSR::PKG_POWER_LIMIT:PL1_LIMIT_ENABLE", domain_type, domain_idx, 1.0);
         }
+
+        //HWP Handling
+        if (m_hwp_is_enabled) {
+            if (control_name == "CPU_FREQUENCY_CONTROL" || control_name == "FREQUENCY") {
+                write_control("MSR::HWP_REQUEST:MAXIMUM_PERFORMANCE", domain_type, domain_idx, setting);
+                write_control("MSR::HWP_REQUEST:PACKAGE_CONTROL", domain_type, domain_idx, 0.0);
+            }
+            else if (control_name == "PACKAGE_FREQUENCY_CONTROL" || control_name == "PACKAGE_FREQUENCY") {
+                write_control("MSR::HWP_REQUEST_PKG:MAXIMUM_PERFORMANCE", domain_type, domain_idx, setting);
+                //TODO: confirm this will write all appropriate CPUs associated with this domain
+                write_control("MSR::HWP_REQUEST:PACKAGE_CONTROL", domain_type, domain_idx, 1.0);
+            }
+        }
         std::shared_ptr<Control> control = m_control_available.at(control_name).controls[domain_idx];
         control->write(setting);
     }
@@ -548,6 +606,31 @@ namespace geopm
                 dom_ctl->restore();
             }
         }
+    }
+
+    bool MSRIOGroup::hwp(void)
+    {
+        uint32_t leaf = 6; //thermal and power management features
+        uint32_t eax, ebx, ecx, edx;
+        const uint32_t hwp_mask = 0x80;
+        bool supported, enabled = false;
+        __get_cpuid(leaf, &eax, &ebx, &ecx, &edx);
+
+        supported = (bool)((eax & hwp_mask) >> 7);
+
+        if (supported) {
+            int domain = signal_domain_type("MSR::PM_ENABLE:ENABLE");
+            int num_domain = m_platform_topo.num_domain(domain);
+            double pkg_enable = 0.0;
+            for (int dom_idx = 0; dom_idx < num_domain; ++dom_idx) {
+                pkg_enable += read_signal("MSR::PM_ENABLE:ENABLE", domain, dom_idx);
+            }
+            if (pkg_enable == 1.0*num_domain) {
+                enabled = true;
+            }
+        }
+
+        return enabled;
     }
 
     int MSRIOGroup::cpuid(void)
