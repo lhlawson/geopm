@@ -67,7 +67,11 @@ namespace geopm
         : M_NUM_CPU(num_cpu)
     {
         //TODO: change to a check and error if not enabled
-        setenv("ZES_ENABLE_SYSMAN", "1", 1);
+        char *zes_enable_sysman = getenv("ZES_ENABLE_SYSMAN");
+        if (zes_enable_sysman == NULL || strcmp(zes_enable_sysman, "1") != 0) {
+            std::cout << "GEOPM Debug: ZES_ENABLE_SYSMAN not set to 1.  Forcing to 1" << std::endl;
+            setenv("ZES_ENABLE_SYSMAN", "1", 1);
+        }
 
         ze_result_t ze_result;
         //Initialize
