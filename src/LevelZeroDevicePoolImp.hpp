@@ -114,8 +114,8 @@ namespace geopm
             std::string ze_error_string(ze_result_t result);
 
             uint32_t m_num_driver;
-            uint32_t m_num_accelerator;
-            uint32_t m_num_package_gpu;
+            uint32_t m_num_device;
+            uint32_t m_num_integrated_gpu;
             uint32_t m_num_board_gpu;
             uint32_t m_num_cpu;
             uint32_t m_num_fpga;
@@ -124,6 +124,11 @@ namespace geopm
             std::vector<ze_driver_handle_t> m_levelzero_driver;
             std::vector<ze_device_handle_t> m_levelzero_device;
             std::vector<zes_device_handle_t> m_sysman_device;
+            std::vector<zes_device_handle_t> m_sysman_board_gpu;
+            std::vector<zes_device_handle_t> m_sysman_integrated_gpu;
+            std::vector<zes_device_handle_t> m_sysman_cpu;
+            std::vector<zes_device_handle_t> m_sysman_fpga;
+            std::vector<zes_device_handle_t> m_sysman_mca;
 
             std::vector<std::vector<zes_freq_handle_t> > m_freq_domain;
             std::vector<std::vector<zes_pwr_handle_t> > m_power_domain;

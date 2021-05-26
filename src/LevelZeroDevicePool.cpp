@@ -66,7 +66,7 @@ namespace geopm
     LevelZeroDevicePoolImp::LevelZeroDevicePoolImp(const int num_cpu)
         : M_NUM_CPU(num_cpu)
     {
-        //TODO: change to a check and error if not enabled
+        //TODO: change to a check and error if not enabled.  All ENV handling goes through environment class
         char *zes_enable_sysman = getenv("ZES_ENABLE_SYSMAN");
         if (zes_enable_sysman == NULL || strcmp(zes_enable_sysman, "1") != 0) {
             std::cout << "GEOPM Debug: ZES_ENABLE_SYSMAN not set to 1.  Forcing to 1" << std::endl;
@@ -99,54 +99,93 @@ namespace geopm
             check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                             ": LevelZero Device acquisition failed.", __LINE__);
 
-            m_sysman_device.insert(m_sysman_device.end(), device_handle.begin(), device_handle.end());
-            m_num_accelerator = m_num_accelerator + num_device;
+            //TODO: wrap in a property.type = ZE_DEVICE_TYPE_GPU
+            for(unsigned int dev_idx = 0; dev_idx < num_device; ++dev_idx) {
+                ze_device_properties_t property;
+                ze_result = zeDeviceGetProperties(device_handle.at(dev_idx), &property);
+
+                if (property.type == ZE_DEVICE_TYPE_GPU) {
+                    if ((property.flags >> ZE_DEVICE_PROPERTY_FLAG_INTEGRATED) && 1 != 0x1) {
+                        m_sysman_board_gpu.push_back(device_handle.at(dev_idx));
+                        ++m_num_board_gpu;
+                    } else {
+                        m_sysman_integrated_gpu.push_back(device_handle.at(dev_idx));
+                        ++m_num_integrated_gpu;
+                        //throw Exception("LevelZeroDevicePool::" + std::string(__func__) + ": board_gpu_idx " +
+                        //                std::to_string(board_gpu_idx) + "  is an unsupported type of accelerator: " +
+                        //                "Integrated GPU", GEOPM_ERROR_INVALID, __FILE__, __LINE__);
+                        std::cerr << "Warning: <geopm> LevelZeroDevicePool: Integrated GPU access is not "
+                                     "currently supported by GEOPM.\n";
+                    }
+                }
+                else if (property.type == ZE_DEVICE_TYPE_CPU) {
+                    // All CPU functionality is handled by GEOPM & MSR Safe currently
+                    //m_sysman_cpu.push_back(device_handle.at(dev_idx));
+                    //++m_num_cpu;
+                    std::cerr << "Warning: <geopm> LevelZeroDevicePool: CPU access via LevelZero is not "
+                                 "currently supported by GEOPM.\n";
+                }
+                else if (property.type == ZE_DEVICE_TYPE_FPGA) {
+                    // FPGA functionality is not currently supported by GEOPM, but should not cause
+                    // an error if the devices are present
+                    m_sysman_fpga.push_back(device_handle.at(dev_idx));
+                    ++m_num_fpga;
+                    std::cerr << "Warning: <geopm> LevelZeroDevicePool: Field Programmable Gate Arrays are not "
+                                 "currently supported by GEOPM.\n";
+                }
+                else if (property.type == ZE_DEVICE_TYPE_MCA) {
+                    // MCA functionality is not currently supported by GEOPM, but should not cause
+                    // an error if the devices are present
+                    m_sysman_mca.push_back(device_handle.at(dev_idx));
+                    ++m_num_mca;
+                    std::cerr << "Warning: <geopm> LevelZeroDevicePool: Memory Copy Accelerators are not "
+                                 "currently supported by GEOPM.\n";
+                }
+
+                //std::string type_string;
+                //switch(property.type) {
+                //    case ZE_DEVICE_TYPE_CPU: type_string = "Central Processing Unit";
+                //        break;
+                //    case ZE_DEVICE_TYPE_FPGA: type_string = "Field Programmable Gate Array";
+                //        break;
+                //    case ZE_DEVICE_TYPE_MCA: type_string = "Memory Copy Accelerator";
+                //        break;
+                //    default: type_string = "Unknown";
+                //        break;
+                //}
+                //throw Exception("LevelZeroDevicePool::" + std::string(__func__) + ": board_gpu_idx " +
+                //                std::to_string(board_gpu_idx) + "  is an unsupported device type: " +
+                //                type_string, GEOPM_ERROR_INVALID, __FILE__, __LINE__);
+            }
+
+            // This approach is far simpler, but does not allow for functioning in systems with multiple
+            // accelerator types but unsupported accel types OR split accel indexes (i.e. BOARD_ACCELERATOR
+            // vs PACKAGE_ACCELERATOR)
+            //m_sysman_device.insert(m_sysman_device.end(), device_handle.begin(), device_handle.end());
+            //m_num_device = m_num_device + num_device;
         }
+        m_sysman_device = m_sysman_board_gpu;
 
-        //resize domain caching vectors based on number of accelerators
-        m_fan_domain.resize(m_num_accelerator);
-        m_temperature_domain.resize(m_num_accelerator);
-        m_fabric_domain.resize(m_num_accelerator);
-        m_mem_domain.resize(m_num_accelerator);
-        m_standby_domain.resize(m_num_accelerator);
-        m_freq_domain.resize(m_num_accelerator);
-        m_power_domain.resize(m_num_accelerator);
-        m_engine_domain.resize(m_num_accelerator);
-        m_perf_domain.resize(m_num_accelerator);
+        //TODO: cleanup resize of evertyhing to the same size
+        //resize domain caching vectors based on number of board gpu accelerators
+        m_fan_domain.resize(m_num_board_gpu);
+        m_temperature_domain.resize(m_num_board_gpu);
+        m_fabric_domain.resize(m_num_board_gpu);
+        m_mem_domain.resize(m_num_board_gpu);
+        m_standby_domain.resize(m_num_board_gpu);
+        m_freq_domain.resize(m_num_board_gpu);
+        m_power_domain.resize(m_num_board_gpu);
+        m_engine_domain.resize(m_num_board_gpu);
+        m_perf_domain.resize(m_num_board_gpu);
 
-        for (unsigned int accel_idx = 0; accel_idx < m_num_accelerator; accel_idx++) {
+
+        for (unsigned int board_gpu_idx = 0; board_gpu_idx < m_num_board_gpu; board_gpu_idx++) {
             ze_device_properties_t property;
-            ze_result = zeDeviceGetProperties(m_sysman_device.at(accel_idx), &property);
+            ze_result = zeDeviceGetProperties(m_sysman_device.at(board_gpu_idx), &property);
 
             check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                             ": failed to get device properties.", __LINE__);
-
-            if (property.type == ZE_DEVICE_TYPE_GPU) {
-                if ((property.flags >> ZE_DEVICE_PROPERTY_FLAG_INTEGRATED) && 1  == 0x1) {
-
-                    throw Exception("LevelZeroDevicePool::" + std::string(__func__) + ": accel_idx " +
-                                    std::to_string(accel_idx) + "  is an unsupported type of accelerator: " +
-                                    "Integrated GPU", GEOPM_ERROR_INVALID, __FILE__, __LINE__);
-                }
-            }
-            else {
-                std::string type_string;
-                switch(property.type) {
-                    case ZE_DEVICE_TYPE_CPU: type_string = "Central Processing Unit";
-                        break;
-                    case ZE_DEVICE_TYPE_FPGA: type_string = "Field Programmable Gate Array";
-                        break;
-                    case ZE_DEVICE_TYPE_MCA: type_string = "Memory Copy Accelerator";
-                        break;
-                    default: type_string = "Unknown";
-                        break;
-                }
-                throw Exception("LevelZeroDevicePool::" + std::string(__func__) + ": accel_idx " +
-                                std::to_string(accel_idx) + "  is an unsupported type of accelerator: " +
-                                type_string, GEOPM_ERROR_INVALID, __FILE__, __LINE__);
-            }
-
-            domain_cache(accel_idx);
+            domain_cache(board_gpu_idx);
        }
     }
 
@@ -307,12 +346,13 @@ namespace geopm
 
     int LevelZeroDevicePoolImp::num_accelerator() const
     {
-        return m_num_accelerator;
+        return num_accelerator(ZE_DEVICE_TYPE_GPU);
     }
 
     int LevelZeroDevicePoolImp::num_accelerator(ze_device_type_t type) const
     {
         if (type == ZE_DEVICE_TYPE_GPU) {
+            // TODO: add Integrated vs Board nuance
             return m_num_board_gpu;
         }
         else if (type == ZE_DEVICE_TYPE_CPU) {
@@ -332,7 +372,7 @@ namespace geopm
 
     void LevelZeroDevicePoolImp::check_accel_range(unsigned int accel_idx) const
     {
-        if (accel_idx >= m_num_accelerator) {
+        if (accel_idx >= (unsigned int) num_accelerator()) {
             throw Exception("LevelZeroDevicePool::" + std::string(__func__) + ": accel_idx " +
                             std::to_string(accel_idx) + "  is out of range",
                             GEOPM_ERROR_INVALID, __FILE__, __LINE__);
@@ -1023,6 +1063,8 @@ namespace geopm
             }
         }
     }
+
+
 
     void LevelZeroDevicePoolImp::check_ze_result(ze_result_t ze_result, int error, std::string message, int line) const
     {
