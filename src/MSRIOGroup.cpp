@@ -108,54 +108,11 @@ namespace geopm
             parse_json_msrs(data);
         }
 
-        m_hwp_is_enabled = hwp();
+        m_hwp_is_enabled = is_hwp_enabled();
+        register_frequency_signals();
+        register_frequency_controls();
+
         register_signal_alias("TIMESTAMP_COUNTER", "MSR::TIME_STAMP_COUNTER:TIMESTAMP_COUNT");
-
-        if (m_hwp_is_enabled)
-        {
-            // TODO: make a combined signal of min, max, and desired.  This is handled in write_control
-            register_signal_alias("CPU_FREQUENCY_CONTROL", "MSR::HWP_REQUEST:MINIMUM_PERFORMANCE");
-
-            // TODO: this does NOT actually address the issue of Package vs per core HWP
-            register_signal_alias("PACKAGE_FREQUENCY_CONTROL", "MSR::HWP_REQUEST_PKG:DESIRED_PERFORMANCE");
-        } else {
-            register_signal_alias("CPU_FREQUENCY_CONTROL", "MSR::PERF_CTL:FREQ");
-        }
-        register_signal_alias("FREQUENCY", "MSR::PERF_STATUS:FREQ"); // TODO: Remove @ v2.0
-        register_signal_alias("CPU_FREQUENCY_STATUS", "MSR::PERF_STATUS:FREQ");
-        std::string max_turbo_name;
-        switch (m_cpuid) {
-            case MSRIOGroup::M_CPUID_KNL:
-                max_turbo_name = "MSR::TURBO_RATIO_LIMIT:GROUP_0_MAX_RATIO_LIMIT";
-                break;
-            case MSRIOGroup::M_CPUID_SNB:
-            case MSRIOGroup::M_CPUID_IVT:
-            case MSRIOGroup::M_CPUID_HSX:
-            case MSRIOGroup::M_CPUID_BDX:
-                max_turbo_name = "MSR::TURBO_RATIO_LIMIT:MAX_RATIO_LIMIT_1CORE";
-                break;
-            case MSRIOGroup::M_CPUID_SKX:
-            case MSRIOGroup::M_CPUID_ICX:
-                max_turbo_name = "MSR::TURBO_RATIO_LIMIT:MAX_RATIO_LIMIT_0";
-                break;
-            default:
-                throw Exception("MSRIOGroup: Unsupported CPUID",
-                                GEOPM_ERROR_RUNTIME, __FILE__, __LINE__);
-        }
-
-        if (m_hwp_is_enabled)
-        {
-            register_signal_alias("FREQUENCY_MAX", "MSR::HWP_CAPABILITIES:HIGHEST_PERFORMANCE"); // TODO: Remove @ v2.0
-            register_signal_alias("CPU_FREQUENCY_MAX", "MSR::HWP_CAPABILITIES:HIGHEST_PERFORMANCE");
-        }
-        else {
-            register_signal_alias("FREQUENCY_MAX", max_turbo_name); // TODO: Remove @ v2.0
-            register_signal_alias("CPU_FREQUENCY_MAX", max_turbo_name);
-        }
-
-        set_signal_description("FREQUENCY_MAX", "Maximum processor frequency."); // TODO: Remove @ v2.0
-        set_signal_description("CPU_FREQUENCY_MAX", "Maximum processor frequency.");
-
         register_signal_alias("ENERGY_PACKAGE", "MSR::PKG_ENERGY_STATUS:ENERGY");
         register_signal_alias("ENERGY_DRAM", "MSR::DRAM_ENERGY_STATUS:ENERGY");
         register_signal_alias("INSTRUCTIONS_RETIRED", "MSR::FIXED_CTR0:INST_RETIRED_ANY");
@@ -171,20 +128,6 @@ namespace geopm
         register_control_alias("POWER_PACKAGE_LIMIT", "MSR::PKG_POWER_LIMIT:PL1_POWER_LIMIT");
         register_control_alias("POWER_PACKAGE_TIME_WINDOW", "MSR::PKG_POWER_LIMIT:PL1_TIME_WINDOW");
 
-        if (m_hwp_is_enabled)
-        {
-            // TODO: make a combined signal of min, max, and desired
-            register_control_alias("FREQUENCY", "MSR::HWP_REQUEST:MINIMUM_PERFORMANCE"); // TODO: Remove @ v2.0
-            register_control_alias("CPU_FREQUENCY_CONTROL", "MSR::HWP_REQUEST:MINIMUM_PERFORMANCE");
-
-            // TODO: this does NOT actually address the issue of Package vs per core HWP
-            register_control_alias("PACKAGE_FREQUENCY", "MSR::HWP_REQUEST_PKG:MINIMUM_PERFORMANCE"); // TODO: Remove @ v2.0
-            register_control_alias("PACKAGE_FREQUENCY_CONTROL", "MSR::HWP_REQUEST_PKG:MINIMUM_PERFORMANCE");
-        }
-        else {
-            register_control_alias("FREQUENCY", "MSR::PERF_CTL:FREQ"); // TODO: Remove @ v2.0
-            register_control_alias("CPU_FREQUENCY_CONTROL", "MSR::PERF_CTL:FREQ");
-        }
     }
 
     void MSRIOGroup::set_signal_description(const std::string &name,
@@ -255,6 +198,79 @@ namespace geopm
                                                    + ts.msr_name,
                                                    IOGroup::M_SIGNAL_BEHAVIOR_VARIABLE};
             }
+        }
+    }
+
+    void MSRIOGroup::register_frequency_signals(void)
+    {
+        if (m_hwp_is_enabled){
+            register_signal_alias("CPU_FREQUENCY_MIN_CONTROL", "MSR::HWP_REQUEST:MINIMUM_PERFORMANCE");
+            register_signal_alias("CPU_FREQUENCY_DESIRED_CONTROL", "MSR::HWP_REQUEST:DESIRED_PERFORMANCE");
+            register_signal_alias("CPU_FREQUENCY_MAX_CONTROL", "MSR::HWP_REQUEST:MAXIMUM_PERFORMANCE");
+            register_signal_alias("PACKAGE_FREQUENCY_MIN_CONTROL", "MSR::HWP_REQUEST_PKG:MINIMUM_PERFORMANCE");
+            register_signal_alias("PACKAGE_FREQUENCY_DESIRED_CONTROL", "MSR::HWP_REQUEST_PKG:DESIRED_PERFORMANCE");
+            register_signal_alias("PACKAGE_FREQUENCY_MAX_CONTROL", "MSR::HWP_REQUEST_PKG:MAXIMUM_PERFORMANCE");
+        } else {
+            register_signal_alias("CPU_FREQUENCY_CONTROL_MAX", "MSR::PERF_CTL:FREQ");
+        }
+        register_signal_alias("FREQUENCY", "MSR::PERF_STATUS:FREQ"); // TODO: Remove @ v2.0
+        register_signal_alias("CPU_FREQUENCY_STATUS", "MSR::PERF_STATUS:FREQ");
+        std::string max_turbo_name;
+        switch (m_cpuid) {
+            case MSRIOGroup::M_CPUID_KNL:
+                max_turbo_name = "MSR::TURBO_RATIO_LIMIT:GROUP_0_MAX_RATIO_LIMIT";
+                break;
+            case MSRIOGroup::M_CPUID_SNB:
+            case MSRIOGroup::M_CPUID_IVT:
+            case MSRIOGroup::M_CPUID_HSX:
+            case MSRIOGroup::M_CPUID_BDX:
+                max_turbo_name = "MSR::TURBO_RATIO_LIMIT:MAX_RATIO_LIMIT_1CORE";
+                break;
+            case MSRIOGroup::M_CPUID_SKX:
+            case MSRIOGroup::M_CPUID_ICX:
+                max_turbo_name = "MSR::TURBO_RATIO_LIMIT:MAX_RATIO_LIMIT_0";
+                break;
+            default:
+                throw Exception("MSRIOGroup: Unsupported CPUID",
+                                GEOPM_ERROR_RUNTIME, __FILE__, __LINE__);
+        }
+
+        if (m_hwp_is_enabled)
+        {
+            register_signal_alias("FREQUENCY_MAX", "MSR::HWP_CAPABILITIES:HIGHEST_PERFORMANCE"); // TODO: Remove @ v2.0
+            register_signal_alias("CPU_FREQUENCY_MAX", "MSR::HWP_CAPABILITIES:HIGHEST_PERFORMANCE");
+
+            register_signal_alias("FREQUENCY_MIN", "MSR::HWP_CAPABILITIES:LOWEST_PERFORMANCE"); // TODO: Remove @ v2.0
+            register_signal_alias("CPU_FREQUENCY_MIN", "MSR::HWP_CAPABILITIES:LOWEST_PERFORMANCE");
+
+            register_signal_alias("FREQUENCY_GUARANTEED", "MSR::HWP_CAPABILITIES:GUARANTEED_PERFORMANCE"); // TODO: Remove @ v2.0
+            register_signal_alias("CPU_FREQUENCY_EFFICIENT", "MSR::HWP_CAPABILITIES:MOST_EFFICIENT_PERFORMANCE");
+        }
+        else {
+            register_signal_alias("FREQUENCY_MAX", max_turbo_name); // TODO: Remove @ v2.0
+            register_signal_alias("CPU_FREQUENCY_MAX", max_turbo_name);
+        }
+
+        set_signal_description("FREQUENCY_MAX", "Maximum processor frequency."); // TODO: Remove @ v2.0
+        set_signal_description("CPU_FREQUENCY_MAX", "Maximum processor frequency.");
+    }
+
+    void MSRIOGroup::register_frequency_controls(void) {
+        if (m_hwp_is_enabled) {
+            register_control_alias("FREQUENCY_MIN_CONTROL", "MSR::HWP_REQUEST:MINIMUM_PERFORMANCE"); // TODO: Remove @ v2.0
+            register_control_alias("FREQUENCY_DESIRED_CONTROL", "MSR::HWP_REQUEST:DESIRED_PERFORMANCE"); // TODO: Remove @ v2.0
+            register_control_alias("FREQUENCY_MAX_CONTROL", "MSR::HWP_REQUEST:MAXIMUM_PERFORMANCE"); // TODO: Remove @ v2.0
+            register_control_alias("CPU_FREQUENCY_MIN_CONTROL", "MSR::HWP_REQUEST:MINIMUM_PERFORMANCE");
+            register_control_alias("CPU_FREQUENCY_DESIRED_CONTROL", "MSR::HWP_REQUEST:DESIRED_PERFORMANCE");
+            register_control_alias("CPU_FREQUENCY_MAX_CONTROL", "MSR::HWP_REQUEST:MAXIMUM_PERFORMANCE");
+
+            register_control_alias("PACKAGE_FREQUENCY_MIN_CONTROL", "MSR::HWP_REQUEST_PKG:MINIMUM_PERFORMANCE");
+            register_control_alias("PACKAGE_FREQUENCY_DESIRED_CONTROL", "MSR::HWP_REQUEST_PKG:DESIRED_PERFORMANCE");
+            register_control_alias("PACKAGE_FREQUENCY_MAX_CONTROL", "MSR::HWP_REQUEST_PKG:MAXIMUM_PERFORMANCE");
+        }
+        else {
+            register_control_alias("FREQUENCY_MAX_CONTROL", "MSR::PERF_CTL:FREQ"); // TODO: Remove @ v2.0
+            register_control_alias("CPU_FREQUENCY_MAX_CONTROL", "MSR::PERF_CTL:FREQ");
         }
     }
 
@@ -451,17 +467,6 @@ namespace geopm
             write_control("MSR::PKG_POWER_LIMIT:PL1_LIMIT_ENABLE", domain_type, domain_idx, 1.0);
         }
 
-        //HWP Handling
-        if (m_hwp_is_enabled && (control_name == "CPU_FREQUENCY_CONTROL" || control_name == "FREQUENCY")) {
-            push_control("MSR::HWP_REQUEST:MAXIMUM_PERFORMANCE", domain_type, domain_idx);
-            push_control("MSR::HWP_REQUEST:PACKAGE_CONTROL", domain_type, domain_idx);
-        }
-        if (m_hwp_is_enabled && (control_name == "PACKAGE_FREQUENCY_CONTROL" || control_name == "PACKAGE_FREQUENCY")) {
-            push_control("MSR::HWP_REQUEST_PKG:MAXIMUM_PERFORMANCE", domain_type, domain_idx);
-            //TODO: confirm this will write all appropriate CPUs associated with this domain
-            push_control("MSR::HWP_REQUEST:PACKAGE_CONTROL", domain_type, domain_idx);
-        }
-
         if (!is_found) {
             result = m_control_pushed.size();
             m_control_pushed.push_back(control);
@@ -516,8 +521,6 @@ namespace geopm
         }
         m_control_pushed[control_idx]->adjust(setting);
         m_is_adjusted[control_idx] = true;
-
-        //TODO: Call adjust on HWP max freq etc signals if FREQUENCY, CPU_FREQUENCY_CONTROL, etc are set
     }
 
     double MSRIOGroup::read_signal(const std::string &signal_name, int domain_type, int domain_idx)
@@ -564,18 +567,6 @@ namespace geopm
             write_control("MSR::PKG_POWER_LIMIT:PL1_LIMIT_ENABLE", domain_type, domain_idx, 1.0);
         }
 
-        //HWP Handling
-        if (m_hwp_is_enabled) {
-            if (control_name == "CPU_FREQUENCY_CONTROL" || control_name == "FREQUENCY") {
-                write_control("MSR::HWP_REQUEST:MAXIMUM_PERFORMANCE", domain_type, domain_idx, setting);
-                write_control("MSR::HWP_REQUEST:PACKAGE_CONTROL", domain_type, domain_idx, 0.0);
-            }
-            else if (control_name == "PACKAGE_FREQUENCY_CONTROL" || control_name == "PACKAGE_FREQUENCY") {
-                write_control("MSR::HWP_REQUEST_PKG:MAXIMUM_PERFORMANCE", domain_type, domain_idx, setting);
-                //TODO: confirm this will write all appropriate CPUs associated with this domain
-                write_control("MSR::HWP_REQUEST:PACKAGE_CONTROL", domain_type, domain_idx, 1.0);
-            }
-        }
         std::shared_ptr<Control> control = m_control_available.at(control_name).controls[domain_idx];
         control->write(setting);
     }
@@ -608,7 +599,7 @@ namespace geopm
         }
     }
 
-    bool MSRIOGroup::hwp(void)
+    bool MSRIOGroup::is_hwp_enabled(void)
     {
         uint32_t leaf = 6; //thermal and power management features
         uint32_t eax, ebx, ecx, edx;

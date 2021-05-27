@@ -153,6 +153,12 @@ namespace geopm
             /// @brief Add support for power combined signals if underlying
             ///        signals are available.
             void register_power_signals(void);
+            /// @brief Add support for frequency signal aliases if underlying
+            ///        signals are available.
+            void register_frequency_signals(void);
+            /// @brief Add support for frequency control aliases if underlying
+            ///        controls are available.
+            void register_frequency_controls(void);
             /// @brief Write to enable bits for all fixed counters.
             void enable_fixed_counters(void);
             /// @brief Check system configuration and warn if it ma
@@ -209,7 +215,7 @@ namespace geopm
             std::shared_ptr<geopm_time_s> m_time_zero;
             std::shared_ptr<double> m_time_batch;
 
-            bool hwp(void);
+            bool is_hwp_enabled(void);
             bool m_hwp_is_enabled;
 
             // All available signals: map from name to signal_info.
