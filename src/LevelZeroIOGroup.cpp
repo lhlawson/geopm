@@ -324,6 +324,15 @@ namespace geopm
                                     GEOPM_DOMAIN_BOARD_ACCELERATOR,
                                     Agg::average,
                                     string_format_double
+                                    }},
+                                {"LEVELZERO::STANDBY_MODE_CONTROL", {
+                                    "Accelerator Standby Mode."
+                                    "\n  0 indicates the device may go into standby"
+                                    "\n  1 indicates the device will never go into standby",
+                                    {},
+                                    GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                    Agg::average,
+                                    string_format_double
                                     }}
                               })
     {
@@ -757,12 +766,18 @@ namespace geopm
                             GEOPM_ERROR_INVALID, __FILE__, __LINE__);
         }
 
-    //    else {
-    //#ifdef GEOPM_DEBUG
-    //            throw Exception("LevelZeroIOGroup::" + std::string(__func__) + "Handling not defined for "
-    //                            + control_name, GEOPM_ERROR_LOGIC, __FILE__, __LINE__);
-    //#endif
-    //    }
+        if (control_name == "LEVELZERO::FREQUENCY_CONTROL") {
+            m_levelzero_device_pool.frequency_gpu_control(domain_idx, setting/1e6, setting/1e6);
+        }
+        else if (control_name == "LEVELZERO::STANDBY_MODE_CONTROL") {
+            m_levelzero_device_pool.standby_mode_control(domain_idx, setting);
+        }
+        else {
+    #ifdef GEOPM_DEBUG
+                throw Exception("LevelZeroIOGroup::" + std::string(__func__) + "Handling not defined for "
+                                + control_name, GEOPM_ERROR_LOGIC, __FILE__, __LINE__);
+    #endif
+        }
     }
 
     // Implemented to allow an IOGroup to save platform settings before starting

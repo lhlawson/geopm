@@ -91,7 +91,8 @@ namespace geopm
             virtual uint64_t engine_media_encode_domains(unsigned int accel_idx) const override;
 
             virtual void energy_threshold_control(unsigned int accel_idx, double setting) const override;
-            virtual void performance_factor_control(unsigned int accel_idx, double setting) const override;
+            virtual void frequency_gpu_control(unsigned int accel_idx, double min_freq, double max_freq) const override;
+            virtual void standby_mode_control(unsigned int accel_idx, double setting) const override;
 
         private:
             const unsigned int M_NUM_CPU;
@@ -110,6 +111,7 @@ namespace geopm
             virtual std::pair<uint64_t,uint64_t> frequency_min_max(int accel_idx, zes_freq_domain_t type) const;
             virtual double utilization(int accel_idx, zes_engine_group_t engine_type) const;
             virtual uint64_t engine_domain_types(int accel_idx, zes_engine_group_t engine_type) const;
+            virtual void frequency_control(unsigned int accel_idx, double min_freq, double max_freq, zes_freq_domain_t) const;
 
             std::string ze_error_string(ze_result_t result);
 
