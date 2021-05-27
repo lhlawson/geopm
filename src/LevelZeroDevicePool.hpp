@@ -119,7 +119,8 @@ namespace geopm
             /// @param [in] min_freq Target min frequency in MHz.
             /// @param [in] max_freq Target max frequency in MHz.
             virtual void energy_threshold_control(unsigned int accel_idx, double setting) const = 0;
-            virtual void performance_factor_control(unsigned int accel_idx, double setting) const = 0;
+            virtual void frequency_gpu_control(unsigned int accel_idx, double min_freq, double max_freq) const = 0;
+            virtual void standby_mode_control(unsigned int accel_idx, double setting) const = 0;
 
         private:
     };

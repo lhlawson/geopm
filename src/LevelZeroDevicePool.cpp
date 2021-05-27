@@ -1032,27 +1032,67 @@ namespace geopm
         }
     }
 
-    void LevelZeroDevicePoolImp::performance_factor_control(unsigned int accel_idx, double setting) const
+
+    void LevelZeroDevicePoolImp::frequency_gpu_control(unsigned int accel_idx, double min_freq, double max_freq) const
+    {
+        frequency_control(accel_idx, min_freq, max_freq, ZES_FREQ_DOMAIN_GPU);
+    }
+
+    void LevelZeroDevicePoolImp::frequency_control(unsigned int accel_idx, double min_freq, double max_freq, zes_freq_domain_t type) const
     {
         check_accel_range(accel_idx);
-        check_domain_range(m_perf_domain.at(accel_idx).size(), __func__, __LINE__);
-
+        check_domain_range(m_freq_domain.at(accel_idx).size(), __func__, __LINE__);
         ze_result_t ze_result;
 
-        for (auto handle : m_perf_domain.at(accel_idx)) {
-            zes_perf_properties_t property;
-            ze_result = zesPerformanceFactorGetProperties(handle, &property);
-            check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
-                                                            ": Sysman failed to get domain performance factor properties",
-                                                             __LINE__);
+        zes_freq_properties_t property;
+        zes_freq_range_t range;
+        range.min = min_freq;
+        range.max = max_freq;
+        //zes_freq_range_t range_check;
 
-            ze_result = zesPerformanceFactorSetConfig(handle, setting);
+        for (auto handle : m_freq_domain.at(accel_idx)) {
+            //zes_freq_properties_t properts = {ZES_STRUCTURE_TYPE_FREQ_PROPERTIES,
+            ze_result = zesFrequencyGetProperties(handle, &property);
             check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
-                                                              ": Sysman failed to get performance factor", __LINE__);
+                                                            ": Sysman failed to get domain properties.", __LINE__);
+
+            if (property.type == type) {
+                if (property.canControl == 0) {
+                    throw Exception("LevelZeroDevicePool::" + std::string(__func__) + ": Attempted to set frequency " +
+                                    "for non controllable domain",
+                                    GEOPM_ERROR_INVALID, __FILE__, __LINE__);
+                }
+//#ifdef GEOPM_DEBUG
+                std::cout << "Writing freq range.min: "  << std::to_string(min_freq) << ", range.max; " << std::to_string(max_freq) << std::endl;
+//#endif
+                ze_result = zesFrequencySetRange(handle, &range);
+                check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
+                                                                ": Sysman failed to set frequency.", __LINE__);
+//#ifdef GEOPM_DEBUG
+                std::cout << "\tWrite complete" << std::endl;
+//#endif
+            }
         }
     }
 
+    void LevelZeroDevicePoolImp::standby_mode_control(unsigned int accel_idx, double setting) const
+    {
+        check_accel_range(accel_idx);
+        check_domain_range(m_standby_domain.at(accel_idx).size(), __func__, __LINE__);
 
+        ze_result_t ze_result;
+        for (auto handle : m_standby_domain.at(accel_idx)) {
+            zes_standby_properties_t property;
+            ze_result = zesStandbyGetProperties(handle, &property);
+            check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
+                                                            ": Sysman failed to get domain standby properties",
+                                                             __LINE__);
+
+            ze_result = zesStandbySetMode(handle, (zes_standby_promo_mode_t)setting);
+            check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
+                                                          ": Sysman failed to set standby mode", __LINE__);
+        }
+    }
 
     void LevelZeroDevicePoolImp::check_ze_result(ze_result_t ze_result, int error, std::string message, int line) const
     {
