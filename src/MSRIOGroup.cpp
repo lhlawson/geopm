@@ -237,18 +237,13 @@ namespace geopm
 
         if (m_hwp_is_enabled)
         {
-            register_signal_alias("FREQUENCY_MAX", "MSR::HWP_CAPABILITIES:HIGHEST_PERFORMANCE"); // TODO: Remove @ v2.0
             register_signal_alias("CPU_FREQUENCY_MAX", "MSR::HWP_CAPABILITIES:HIGHEST_PERFORMANCE");
-
-            register_signal_alias("FREQUENCY_MIN", "MSR::HWP_CAPABILITIES:LOWEST_PERFORMANCE"); // TODO: Remove @ v2.0
-            register_signal_alias("CPU_FREQUENCY_MIN", "MSR::HWP_CAPABILITIES:LOWEST_PERFORMANCE");
 
         }
         else {
             register_signal_alias("CPU_FREQUENCY_MAX_CONTROL", max_turbo_name);
         }
 
-        set_signal_description("FREQUENCY_MAX", "Maximum processor frequency."); // TODO: Remove @ v2.0
         set_signal_description("CPU_FREQUENCY_MAX", "Maximum processor frequency.");
     }
 
