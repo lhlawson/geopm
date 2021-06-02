@@ -210,10 +210,10 @@ namespace geopm
             register_signal_alias("PACKAGE_FREQUENCY_MIN_CONTROL", "MSR::HWP_REQUEST_PKG:MINIMUM_PERFORMANCE");
             register_signal_alias("PACKAGE_FREQUENCY_DESIRED_CONTROL", "MSR::HWP_REQUEST_PKG:DESIRED_PERFORMANCE");
             register_signal_alias("PACKAGE_FREQUENCY_MAX_CONTROL", "MSR::HWP_REQUEST_PKG:MAXIMUM_PERFORMANCE");
-        } else {
-            register_signal_alias("CPU_FREQUENCY_CONTROL_MAX", "MSR::PERF_CTL:FREQ");
         }
-        register_signal_alias("FREQUENCY", "MSR::PERF_STATUS:FREQ"); // TODO: Remove @ v2.0
+        else {
+            register_signal_alias("CPU_FREQUENCY_MAX_CONTROL", "MSR::PERF_CTL:FREQ");
+        }
         register_signal_alias("CPU_FREQUENCY_STATUS", "MSR::PERF_STATUS:FREQ");
         std::string max_turbo_name;
         switch (m_cpuid) {
@@ -243,12 +243,9 @@ namespace geopm
             register_signal_alias("FREQUENCY_MIN", "MSR::HWP_CAPABILITIES:LOWEST_PERFORMANCE"); // TODO: Remove @ v2.0
             register_signal_alias("CPU_FREQUENCY_MIN", "MSR::HWP_CAPABILITIES:LOWEST_PERFORMANCE");
 
-            register_signal_alias("FREQUENCY_GUARANTEED", "MSR::HWP_CAPABILITIES:GUARANTEED_PERFORMANCE"); // TODO: Remove @ v2.0
-            register_signal_alias("CPU_FREQUENCY_EFFICIENT", "MSR::HWP_CAPABILITIES:MOST_EFFICIENT_PERFORMANCE");
         }
         else {
-            register_signal_alias("FREQUENCY_MAX", max_turbo_name); // TODO: Remove @ v2.0
-            register_signal_alias("CPU_FREQUENCY_MAX", max_turbo_name);
+            register_signal_alias("CPU_FREQUENCY_MAX_CONTROL", max_turbo_name);
         }
 
         set_signal_description("FREQUENCY_MAX", "Maximum processor frequency."); // TODO: Remove @ v2.0
@@ -257,19 +254,9 @@ namespace geopm
 
     void MSRIOGroup::register_frequency_controls(void) {
         if (m_hwp_is_enabled) {
-            register_control_alias("FREQUENCY_MIN_CONTROL", "MSR::HWP_REQUEST:MINIMUM_PERFORMANCE"); // TODO: Remove @ v2.0
-            register_control_alias("FREQUENCY_DESIRED_CONTROL", "MSR::HWP_REQUEST:DESIRED_PERFORMANCE"); // TODO: Remove @ v2.0
-            register_control_alias("FREQUENCY_MAX_CONTROL", "MSR::HWP_REQUEST:MAXIMUM_PERFORMANCE"); // TODO: Remove @ v2.0
-            register_control_alias("CPU_FREQUENCY_MIN_CONTROL", "MSR::HWP_REQUEST:MINIMUM_PERFORMANCE");
-            register_control_alias("CPU_FREQUENCY_DESIRED_CONTROL", "MSR::HWP_REQUEST:DESIRED_PERFORMANCE");
             register_control_alias("CPU_FREQUENCY_MAX_CONTROL", "MSR::HWP_REQUEST:MAXIMUM_PERFORMANCE");
-
-            register_control_alias("PACKAGE_FREQUENCY_MIN_CONTROL", "MSR::HWP_REQUEST_PKG:MINIMUM_PERFORMANCE");
-            register_control_alias("PACKAGE_FREQUENCY_DESIRED_CONTROL", "MSR::HWP_REQUEST_PKG:DESIRED_PERFORMANCE");
-            register_control_alias("PACKAGE_FREQUENCY_MAX_CONTROL", "MSR::HWP_REQUEST_PKG:MAXIMUM_PERFORMANCE");
         }
         else {
-            register_control_alias("FREQUENCY_MAX_CONTROL", "MSR::PERF_CTL:FREQ"); // TODO: Remove @ v2.0
             register_control_alias("CPU_FREQUENCY_MAX_CONTROL", "MSR::PERF_CTL:FREQ");
         }
     }
