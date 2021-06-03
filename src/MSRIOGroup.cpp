@@ -204,12 +204,7 @@ namespace geopm
     void MSRIOGroup::register_frequency_signals(void)
     {
         if (m_hwp_is_enabled){
-            register_signal_alias("CPU_FREQUENCY_MIN_CONTROL", "MSR::HWP_REQUEST:MINIMUM_PERFORMANCE");
-            register_signal_alias("CPU_FREQUENCY_DESIRED_CONTROL", "MSR::HWP_REQUEST:DESIRED_PERFORMANCE");
             register_signal_alias("CPU_FREQUENCY_MAX_CONTROL", "MSR::HWP_REQUEST:MAXIMUM_PERFORMANCE");
-            register_signal_alias("PACKAGE_FREQUENCY_MIN_CONTROL", "MSR::HWP_REQUEST_PKG:MINIMUM_PERFORMANCE");
-            register_signal_alias("PACKAGE_FREQUENCY_DESIRED_CONTROL", "MSR::HWP_REQUEST_PKG:DESIRED_PERFORMANCE");
-            register_signal_alias("PACKAGE_FREQUENCY_MAX_CONTROL", "MSR::HWP_REQUEST_PKG:MAXIMUM_PERFORMANCE");
         }
         else {
             register_signal_alias("CPU_FREQUENCY_MAX_CONTROL", "MSR::PERF_CTL:FREQ");
