@@ -53,7 +53,7 @@ namespace geopm
             /// @return Number of LevelZero accelerators.
             virtual int num_accelerator(void) const = 0;
             /// @brief Get the LevelZero device core clock rate
-            //         in MHz.
+            ///        in MHz.
             /// @param [in] accel_idx The index indicating a particular
             ///        accelerator.
             /// @return Accelerator device core clock rate in MHz.
@@ -64,11 +64,20 @@ namespace geopm
             virtual uint64_t frequency_max_gpu(unsigned int accel_idx) const = 0;
             virtual uint64_t frequency_min_mem(unsigned int accel_idx) const = 0;
             virtual uint64_t frequency_max_mem(unsigned int accel_idx) const = 0;
+
+            /// @brief Get the LevelZero device temperature.
+            /// @param [in] accel_idx The index indicating a particular
+            ///        accelerator.
+            /// @return temperature in degrees Celsius
+            virtual double temperature(unsigned int accel_idx) const = 0;
+            virtual double temperature_gpu(unsigned int accel_idx) const = 0;
+            virtual double temperature_memory(unsigned int accel_idx) const = 0;
+
             /// @brief Get the LevelZero device utilization metric.
             /// @param [in] accel_idx The index indicating a particular
             ///        accelerator.
             /// @return Accelerator streaming multiprocessor utilization
-            //          percentage as a whole number from 0 to 100.
+            ///          percentage
             virtual double utilization(unsigned int accel_idx) const = 0;
             virtual double utilization_compute(unsigned int accel_idx) const = 0;
             virtual double utilization_copy(unsigned int accel_idx) const = 0;
@@ -99,19 +108,6 @@ namespace geopm
             virtual std::vector<uint32_t> active_process_list(unsigned int accel_idx) const = 0;
             virtual uint64_t standby_mode(unsigned int accel_idx) const = 0;
             virtual double memory_allocated(unsigned int accel_idx) const = 0;
-            virtual uint64_t frequency_domains(unsigned int accel_idx) const = 0;
-            virtual uint64_t power_domains(unsigned int accel_idx) const = 0;
-            virtual uint64_t engine_domains(unsigned int accel_idx) const = 0;
-            virtual uint64_t performance_domains(unsigned int accel_idx) const = 0;
-            virtual uint64_t standby_domains(unsigned int accel_idx) const = 0;
-            virtual uint64_t memory_domains(unsigned int accel_idx) const = 0;
-            virtual uint64_t fabric_domains(unsigned int accel_idx) const = 0;
-            virtual uint64_t temperature_domains(unsigned int accel_idx) const = 0;
-            virtual uint64_t fan_domains(unsigned int accel_idx) const = 0;
-            virtual uint64_t engine_compute_domains(unsigned int accel_idx) const = 0;
-            virtual uint64_t engine_copy_domains(unsigned int accel_idx) const = 0;
-            virtual uint64_t engine_media_decode_domains(unsigned int accel_idx) const = 0;
-            virtual uint64_t engine_media_encode_domains(unsigned int accel_idx) const = 0;
 
             /// @brief Set min and max frequency for LevelZero device.
             /// @param [in] accel_idx The index indicating a particular
