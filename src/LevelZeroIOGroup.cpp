@@ -560,19 +560,19 @@ namespace geopm
         double result = NAN;
 
         if (signal_name == "LEVELZERO::FREQUENCY_GPU" || signal_name == "FREQUENCY_ACCELERATOR") {
-            result = m_levelzero_device_pool.frequency_status_gpu(domain_idx)*1e6;
+            result = m_levelzero_device_pool.frequency_gpu_status(domain_idx)*1e6;
         }
         else if (signal_name == "LEVELZERO::FREQUENCY_MEMORY") {
-            result = m_levelzero_device_pool.frequency_status_mem(domain_idx)*1e6;
+            result = m_levelzero_device_pool.frequency_mem_status(domain_idx)*1e6;
         }
         else if (signal_name == "LEVELZERO::CORE_CLOCK_RATE") {
             result = m_levelzero_device_pool.core_clock_rate(domain_idx)*1e6;
         }
         else if (signal_name == "LEVELZERO::FREQUENCY_GPU_MIN") {
-            result = m_levelzero_device_pool.frequency_min_gpu(domain_idx)*1e6;
+            result = m_levelzero_device_pool.frequency_gpu_min(domain_idx)*1e6;
         }
         else if (signal_name == "LEVELZERO::FREQUENCY_GPU_MAX") {
-            result = m_levelzero_device_pool.frequency_max_gpu(domain_idx)*1e6;
+            result = m_levelzero_device_pool.frequency_gpu_max(domain_idx)*1e6;
         }
         else if (signal_name == "LEVELZERO::TEMPERATURE") {
             result = m_levelzero_device_pool.temperature(domain_idx);

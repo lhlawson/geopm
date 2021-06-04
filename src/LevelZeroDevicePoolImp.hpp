@@ -48,13 +48,13 @@ namespace geopm
             LevelZeroDevicePoolImp(const int num_cpu);
             virtual ~LevelZeroDevicePoolImp();
             virtual int num_accelerator(void) const override;
-            virtual uint64_t frequency_status_gpu(unsigned int accel_idx) const;
-            virtual uint64_t frequency_status_mem(unsigned int accel_idx) const;
+            virtual uint64_t frequency_gpu_status(unsigned int accel_idx) const;
+            virtual uint64_t frequency_mem_status(unsigned int accel_idx) const;
             virtual double core_clock_rate(unsigned int accel_idx) const;
-            virtual uint64_t frequency_min_gpu(unsigned int accel_idx) const override;
-            virtual uint64_t frequency_max_gpu(unsigned int accel_idx) const override;
-            virtual uint64_t frequency_min_mem(unsigned int accel_idx) const override;
-            virtual uint64_t frequency_max_mem(unsigned int accel_idx) const override;
+            virtual uint64_t frequency_gpu_min(unsigned int accel_idx) const override;
+            virtual uint64_t frequency_gpu_max(unsigned int accel_idx) const override;
+            virtual uint64_t frequency_mem_min(unsigned int accel_idx) const override;
+            virtual uint64_t frequency_mem_max(unsigned int accel_idx) const override;
             virtual double temperature(unsigned int accel_idx) const override;
             virtual double temperature_gpu(unsigned int accel_idx) const override;
             virtual double temperature_memory(unsigned int accel_idx) const override;
@@ -113,14 +113,12 @@ namespace geopm
             uint32_t m_num_mca;
 
             std::vector<ze_driver_handle_t> m_levelzero_driver;
-            std::vector<ze_device_handle_t> m_levelzero_device;
+            // TODO: This will need to be a map or vector of vectors if we're supporting multiple
+            //       types of sysman devices such as <BOARD GPU devices, PACKAGE GPU device, FPGA device>
             std::vector<zes_device_handle_t> m_sysman_device;
-            std::vector<zes_device_handle_t> m_sysman_board_gpu;
-            std::vector<zes_device_handle_t> m_sysman_integrated_gpu;
-            std::vector<zes_device_handle_t> m_sysman_cpu;
-            std::vector<zes_device_handle_t> m_sysman_fpga;
-            std::vector<zes_device_handle_t> m_sysman_mca;
 
+            // TODO: These will need to be something like a map of vector of vectors if we're supporting multiple
+            //       types of sysman devices such as <Temperature<device<Board GPU, Package GPU, FPGA>>>
             std::vector<std::vector<zes_freq_handle_t> > m_freq_domain;
             std::vector<std::vector<zes_pwr_handle_t> > m_power_domain;
             std::vector<std::vector<zes_engine_handle_t> > m_engine_domain;
