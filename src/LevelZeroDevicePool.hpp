@@ -57,13 +57,13 @@ namespace geopm
             /// @param [in] accel_idx The index indicating a particular
             ///        accelerator.
             /// @return Accelerator device core clock rate in MHz.
-            virtual uint64_t frequency_gpu_status(unsigned int accel_idx) const = 0;
-            virtual uint64_t frequency_mem_status(unsigned int accel_idx) const = 0;
+            virtual double frequency_gpu_status(unsigned int accel_idx) const = 0;
+            virtual double frequency_mem_status(unsigned int accel_idx) const = 0;
             virtual double core_clock_rate(unsigned int accel_idx) const = 0;
-            virtual uint64_t frequency_gpu_min(unsigned int accel_idx) const = 0;
-            virtual uint64_t frequency_gpu_max(unsigned int accel_idx) const = 0;
-            virtual uint64_t frequency_mem_min(unsigned int accel_idx) const = 0;
-            virtual uint64_t frequency_mem_max(unsigned int accel_idx) const = 0;
+            virtual double frequency_gpu_min(unsigned int accel_idx) const = 0;
+            virtual double frequency_gpu_max(unsigned int accel_idx) const = 0;
+            virtual double frequency_mem_min(unsigned int accel_idx) const = 0;
+            virtual double frequency_mem_max(unsigned int accel_idx) const = 0;
 
             /// @brief Get the LevelZero device temperature.
             /// @param [in] accel_idx The index indicating a particular
@@ -87,26 +87,24 @@ namespace geopm
             ///        accelerator.
             /// @return Accelerator power consumption in milliwatts.
             virtual double power(unsigned int accel_idx) const = 0;
-            virtual uint64_t power_tdp(unsigned int accel_idx) const = 0;
-            virtual uint64_t power_limit_min(unsigned int accel_idx) const = 0;
-            virtual uint64_t power_limit_max(unsigned int accel_idx) const = 0;
-            virtual uint64_t power_limit_sustained_enabled(unsigned int accel_idx) const = 0;
-            virtual uint64_t power_limit_sustained_power(unsigned int accel_idx) const = 0;
-            virtual uint64_t power_limit_sustained_interval(unsigned int accel_idx) const = 0;
-            virtual uint64_t power_limit_burst_enabled(unsigned int accel_idx) const = 0;
-            virtual uint64_t power_limit_burst_power(unsigned int accel_idx) const = 0;
-            virtual uint64_t power_limit_peak_ac(unsigned int accel_idx) const = 0;
+            virtual int32_t power_tdp(unsigned int accel_idx) const = 0;
+            virtual int32_t power_limit_min(unsigned int accel_idx) const = 0;
+            virtual int32_t power_limit_max(unsigned int accel_idx) const = 0;
+            virtual bool  power_limit_sustained_enabled(unsigned int accel_idx) const = 0;
+            virtual int32_t power_limit_sustained_power(unsigned int accel_idx) const = 0;
+            virtual int32_t power_limit_sustained_interval(unsigned int accel_idx) const = 0;
+            virtual bool  power_limit_burst_enabled(unsigned int accel_idx) const = 0;
+            virtual int32_t power_limit_burst_power(unsigned int accel_idx) const = 0;
+            virtual int32_t power_limit_peak_ac(unsigned int accel_idx) const = 0;
 
             /// @brief Get the LevelZero device energy in ???.
             /// @param [in] accel_idx The index indicating a particular
             ///        accelerator.
             /// @return Accelerator power consumption in milliwatts.
             virtual uint64_t energy (unsigned int accel_idx) const = 0;
-            virtual uint64_t performance_factor(unsigned int accel_idx) const = 0;
-            virtual uint64_t performance_factor_gpu(unsigned int accel_idx) const = 0;
-            virtual uint64_t performance_factor_mem(unsigned int accel_idx) const = 0;
+            virtual double performance_factor(unsigned int accel_idx) const = 0;
             virtual std::vector<uint32_t> active_process_list(unsigned int accel_idx) const = 0;
-            virtual uint64_t standby_mode(unsigned int accel_idx) const = 0;
+            virtual double standby_mode(unsigned int accel_idx) const = 0;
             virtual double memory_allocated(unsigned int accel_idx) const = 0;
 
             /// @brief Set min and max frequency for LevelZero device.

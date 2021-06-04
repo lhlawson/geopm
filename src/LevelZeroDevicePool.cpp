@@ -400,14 +400,14 @@ namespace geopm
         }
     }
 
-    uint64_t LevelZeroDevicePoolImp::frequency_gpu_status(unsigned int accel_idx) const
+    double LevelZeroDevicePoolImp::frequency_gpu_status(unsigned int accel_idx) const
     {
-        return (uint64_t)frequency_status(accel_idx, ZES_FREQ_DOMAIN_GPU);
+        return frequency_status(accel_idx, ZES_FREQ_DOMAIN_GPU);
     }
 
-    uint64_t LevelZeroDevicePoolImp::frequency_mem_status(unsigned int accel_idx) const
+    double LevelZeroDevicePoolImp::frequency_mem_status(unsigned int accel_idx) const
     {
-        return (uint64_t)frequency_status(accel_idx, ZES_FREQ_DOMAIN_MEMORY);
+        return frequency_status(accel_idx, ZES_FREQ_DOMAIN_MEMORY);
     }
 
     //TODO: provide frequency: efficient (analogous to sticker?), tdp, and requested.
@@ -447,33 +447,33 @@ namespace geopm
         return result.coreClockRate;
     }
 
-    uint64_t LevelZeroDevicePoolImp::frequency_gpu_min(unsigned int accel_idx) const
+    double LevelZeroDevicePoolImp::frequency_gpu_min(unsigned int accel_idx) const
     {
         return frequency_min_max(accel_idx, ZES_FREQ_DOMAIN_GPU).first;
     }
 
-    uint64_t LevelZeroDevicePoolImp::frequency_gpu_max(unsigned int accel_idx) const
+    double LevelZeroDevicePoolImp::frequency_gpu_max(unsigned int accel_idx) const
     {
         return frequency_min_max(accel_idx, ZES_FREQ_DOMAIN_GPU).second;
     }
 
-    uint64_t LevelZeroDevicePoolImp::frequency_mem_min(unsigned int accel_idx) const
+    double LevelZeroDevicePoolImp::frequency_mem_min(unsigned int accel_idx) const
     {
         return frequency_min_max(accel_idx, ZES_FREQ_DOMAIN_MEMORY).first;
     }
 
-    uint64_t LevelZeroDevicePoolImp::frequency_mem_max(unsigned int accel_idx) const
+    double LevelZeroDevicePoolImp::frequency_mem_max(unsigned int accel_idx) const
     {
         return frequency_min_max(accel_idx, ZES_FREQ_DOMAIN_MEMORY).second;
     }
 
-    std::pair<uint64_t, uint64_t> LevelZeroDevicePoolImp::frequency_min_max(int accel_idx, zes_freq_domain_t type) const
+    std::pair<double, double> LevelZeroDevicePoolImp::frequency_min_max(int accel_idx, zes_freq_domain_t type) const
     {
         check_accel_range(accel_idx);
         check_domain_range(m_freq_domain.at(accel_idx).size(), __func__, __LINE__);
         ze_result_t ze_result;
-        uint64_t result_min = 0;
-        uint64_t result_max = 0;
+        double result_min = 0;
+        double result_max = 0;
         double result_cnt = 0;
 
         for (auto handle : m_freq_domain.at(accel_idx)) {
@@ -667,22 +667,22 @@ namespace geopm
         return result;
     }
 
-    uint64_t LevelZeroDevicePoolImp::power_limit_min(unsigned int accel_idx) const
+    int32_t LevelZeroDevicePoolImp::power_limit_min(unsigned int accel_idx) const
     {
         return std::get<0>(power_limit_default(accel_idx));
     }
 
-    uint64_t LevelZeroDevicePoolImp::power_limit_max(unsigned int accel_idx) const
+    int32_t LevelZeroDevicePoolImp::power_limit_max(unsigned int accel_idx) const
     {
         return std::get<1>(power_limit_default(accel_idx));
     }
 
-    uint64_t LevelZeroDevicePoolImp::power_tdp(unsigned int accel_idx) const
+    int32_t LevelZeroDevicePoolImp::power_tdp(unsigned int accel_idx) const
     {
         return std::get<2>(power_limit_default(accel_idx));
     }
 
-    std::tuple<uint64_t, uint64_t, uint64_t> LevelZeroDevicePoolImp::power_limit_default(unsigned int accel_idx) const
+    std::tuple<int32_t, int32_t, int32_t> LevelZeroDevicePoolImp::power_limit_default(unsigned int accel_idx) const
     {
         check_accel_range(accel_idx);
         check_domain_range(m_power_domain.at(accel_idx).size(), __func__, __LINE__);
@@ -702,16 +702,9 @@ namespace geopm
             //For initial GEOPM support we're only providing device level power
             //finding non-subdevice domain.
             if (property.onSubdevice == 0) {
-                // Generally -1 indicates a lack of support for querying this value
-                if (property.defaultLimit != -1) {
-                    tdp = property.defaultLimit;
-                }
-                if (property.minLimit != -1) {
-                    min_power_limit = property.minLimit;
-                }
-                if (property.maxLimit != -1) {
-                    max_power_limit = property.maxLimit;
-                }
+                tdp = property.defaultLimit;
+                min_power_limit = property.minLimit;
+                max_power_limit = property.maxLimit;
             }
         }
 
@@ -719,74 +712,51 @@ namespace geopm
     }
 
     //TODO: move power limits to cache.  Add refresh signal in IO Group
-    uint64_t LevelZeroDevicePoolImp::power_limit_peak_ac(unsigned int accel_idx) const
+    int32_t LevelZeroDevicePoolImp::power_limit_peak_ac(unsigned int accel_idx) const
     {
-        uint64_t result = 0;
         zes_power_peak_limit_t peak = {};
         peak = std::get<2>(power_limit(accel_idx));
-        // Generally -1 indicates a lack of support for querying this value
-        if (peak.powerDC != -1) {
-            result = (uint64_t)peak.powerDC;
-        }
-        return result;
+        return peak.powerAC;
     }
 
     //TODO: move power limits to cache.  Add refresh signal in IO Group
-    uint64_t LevelZeroDevicePoolImp::power_limit_burst_enabled(unsigned int accel_idx) const
+    bool LevelZeroDevicePoolImp::power_limit_burst_enabled(unsigned int accel_idx) const
     {
         zes_power_burst_limit_t burst = {};
         burst = std::get<1>(power_limit(accel_idx));
-        return (uint64_t)burst.enabled;
+        return (bool)burst.enabled;
     }
 
     //TODO: move power limits to cache.  Add refresh signal in IO Group
-    uint64_t LevelZeroDevicePoolImp::power_limit_burst_power(unsigned int accel_idx) const
+    int32_t LevelZeroDevicePoolImp::power_limit_burst_power(unsigned int accel_idx) const
     {
-        uint64_t result = 0;
         zes_power_burst_limit_t burst = {};
         burst = std::get<1>(power_limit(accel_idx));
-
-        // Generally -1 indicates a lack of support for querying this value
-        if (burst.power != -1) {
-            result = (uint64_t)burst.power;
-        }
-        return result;
+        return burst.power;
     }
 
     //TODO: move power limits to cache.  Add refresh signal in IO Group
-    uint64_t LevelZeroDevicePoolImp::power_limit_sustained_enabled(unsigned int accel_idx) const
+    bool LevelZeroDevicePoolImp::power_limit_sustained_enabled(unsigned int accel_idx) const
     {
         zes_power_sustained_limit_t sustained = {};
         sustained = std::get<0>(power_limit(accel_idx));
-        return (uint64_t)sustained.enabled;
+        return (bool)sustained.enabled;
     }
 
     //TODO: move power limits to cache.  Add refresh signal in IO Group
-    uint64_t LevelZeroDevicePoolImp::power_limit_sustained_power(unsigned int accel_idx) const
+    int32_t LevelZeroDevicePoolImp::power_limit_sustained_power(unsigned int accel_idx) const
     {
-        uint64_t result = 0;
         zes_power_sustained_limit_t sustained = {};
         sustained = std::get<0>(power_limit(accel_idx));
-
-        // Generally -1 indicates a lack of support for querying this value
-        if (sustained.power != -1) {
-            result = (uint64_t)sustained.power;
-        }
-        return result;
+        return sustained.power;
     }
 
     //TODO: move power limits to cache.  Add refresh signal in IO Group
-    uint64_t LevelZeroDevicePoolImp::power_limit_sustained_interval(unsigned int accel_idx) const
+    int32_t LevelZeroDevicePoolImp::power_limit_sustained_interval(unsigned int accel_idx) const
     {
-        uint64_t result = 0;
         zes_power_sustained_limit_t sustained = {};
         sustained = std::get<0>(power_limit(accel_idx));
-
-        // Generally -1 indicates a lack of support for querying this value
-        if (sustained.interval != -1) {
-            result = (uint64_t)sustained.interval;
-        }
-        return result;
+        return sustained.interval;
     }
 
     //TODO: move power limits to cache.  Add refresh signal in IO Group
@@ -800,6 +770,7 @@ namespace geopm
         zes_power_sustained_limit_t sustained = {};
         zes_power_burst_limit_t burst = {};
         zes_power_peak_limit_t peak = {};
+
         //TODO: replace with finding non-subdevice domain.
         for (auto handle : m_power_domain.at(accel_idx)) {
             zes_power_properties_t property;
@@ -858,7 +829,7 @@ namespace geopm
             }
         }
 
-        return (uint64_t)result;
+        return result;
     }
 
     void LevelZeroDevicePoolImp::check_domain_range(int size, const char *func, int line) const
@@ -869,7 +840,7 @@ namespace geopm
         }
     }
 
-    uint64_t LevelZeroDevicePoolImp::performance_factor(unsigned int accel_idx) const
+    double LevelZeroDevicePoolImp::performance_factor(unsigned int accel_idx) const
     {
         check_accel_range(accel_idx);
         check_domain_range(m_perf_domain.at(accel_idx).size(), __func__, __LINE__);
@@ -886,28 +857,16 @@ namespace geopm
                                                             ": Sysman failed to get domain performance factor properties",
                                                              __LINE__);
 
+            // TODO: Additional splitting of performance factor into type based upon zes_engine_type_flags_t
+            // may be required
             ze_result = zesPerformanceFactorGetConfig(handle, &performance_factor);
             check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                           ": Sysman failed to get performance factor", __LINE__);
             result += performance_factor;
             ++result_cnt;
         }
-        //TODO: this will probably cause problems, uint/double casted to uint
-        return (uint64_t) result/result_cnt;
-    }
 
-    uint64_t LevelZeroDevicePoolImp::performance_factor_gpu(unsigned int accel_idx) const
-    {
-        //TODO: add passing argument for GPU.  Untested so forcing error for now
-        check_domain_range(0, __func__, __LINE__);
-        return performance_factor(accel_idx);
-    }
-
-    uint64_t LevelZeroDevicePoolImp::performance_factor_mem(unsigned int accel_idx) const
-    {
-        //TODO: add passing argument for MEM.  Untested so forcing error for now
-        check_domain_range(0, __func__, __LINE__);
-        return performance_factor(accel_idx);
+        return result/result_cnt;
     }
 
     std::vector<uint32_t> LevelZeroDevicePoolImp::active_process_list(unsigned int accel_idx) const
@@ -938,7 +897,7 @@ namespace geopm
         return result;
     }
 
-    uint64_t LevelZeroDevicePoolImp::standby_mode(unsigned int accel_idx) const
+    double LevelZeroDevicePoolImp::standby_mode(unsigned int accel_idx) const
     {
         check_accel_range(accel_idx);
         check_domain_range(m_standby_domain.at(accel_idx).size(), __func__, __LINE__);
@@ -961,7 +920,7 @@ namespace geopm
             ++result_cnt;
         }
         //TODO: this will probably cause problems, uint/double casted to uint
-        return (uint64_t)result/result_cnt;
+        return result/result_cnt;
     }
 
     double LevelZeroDevicePoolImp::memory_allocated(unsigned int accel_idx) const
