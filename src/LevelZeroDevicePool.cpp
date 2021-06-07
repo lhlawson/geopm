@@ -48,9 +48,6 @@
 #include "Helper.hpp"
 #include "geopm_sched.h"
 
-#include <level_zero/ze_api.h>
-#include <level_zero/zes_api.h>
-
 #include "LevelZeroDevicePoolImp.hpp"
 
 namespace geopm
