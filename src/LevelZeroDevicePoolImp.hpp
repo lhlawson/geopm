@@ -48,9 +48,9 @@ namespace geopm
             LevelZeroDevicePoolImp(const int num_cpu);
             virtual ~LevelZeroDevicePoolImp();
             virtual int num_accelerator(void) const override;
-            virtual double frequency_gpu_status(unsigned int accel_idx) const;
-            virtual double frequency_mem_status(unsigned int accel_idx) const;
-            virtual double core_clock_rate(unsigned int accel_idx) const;
+            virtual double frequency_gpu_status(unsigned int accel_idx) const override;
+            virtual double frequency_mem_status(unsigned int accel_idx) const override;
+            virtual double core_clock_rate(unsigned int accel_idx) const override;
             virtual double frequency_gpu_min(unsigned int accel_idx) const override;
             virtual double frequency_gpu_max(unsigned int accel_idx) const override;
             virtual double frequency_mem_min(unsigned int accel_idx) const override;
