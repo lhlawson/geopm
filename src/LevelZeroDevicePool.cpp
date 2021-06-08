@@ -490,6 +490,46 @@ namespace geopm
         return {result_min/result_cnt, result_max/result_cnt};
     }
 
+    double LevelZeroDevicePoolImp::frequency_gpu_range_min(unsigned int accel_idx) const
+    {
+        return frequency_min_max(accel_idx, ZES_FREQ_DOMAIN_GPU).first;
+    }
+
+    double LevelZeroDevicePoolImp::frequency_gpu_range_max(unsigned int accel_idx) const
+    {
+        return frequency_min_max(accel_idx, ZES_FREQ_DOMAIN_GPU).second;
+    }
+
+    std::pair<double, double> LevelZeroDevicePoolImp::frequency_range(int accel_idx, zes_freq_domain_t type) const
+    {
+        check_accel_range(accel_idx);
+        check_domain_range(m_freq_domain.at(accel_idx).size(), __func__, __LINE__);
+        ze_result_t ze_result;
+        zes_freq_range_t range;
+        double result_min = 0;
+        double result_max = 0;
+        double result_cnt = 0;
+
+        for (auto handle : m_freq_domain.at(accel_idx)) {
+            zes_freq_properties_t property;
+            //TODO: it may be necessary to switch this to zesFrequencyGetRange instead of using properties min and max
+            ze_result = zesFrequencyGetProperties(handle, &property);
+            check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
+                                                            ": Sysman failed to get domain properties.", __LINE__);
+            if (type == property.type) { //For initial GEOPM support we're not handling sub-devices
+                ze_result = zesFrequencyGetRange(handle, &range);
+                check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
+                                                                ": Sysman failed to set frequency.", __LINE__);
+                result_min += range.min;
+                result_max += range.max;
+                ++result_cnt;
+            }
+        }
+
+        //TODO: this will probably cause problems, uint/double casted to uint
+        return {result_min/result_cnt, result_max/result_cnt};
+    }
+
     //TODO: add zesFrequencyGetAvailableClocks for getting all available frequencies?
 
     double LevelZeroDevicePoolImp::temperature(unsigned int accel_idx) const
@@ -996,15 +1036,15 @@ namespace geopm
                                     "for non controllable domain",
                                     GEOPM_ERROR_INVALID, __FILE__, __LINE__);
                 }
-//#ifdef GEOPM_DEBUG
+#ifdef GEOPM_DEBUG
                 std::cout << "Writing freq range.min: "  << std::to_string(min_freq) << ", range.max; " << std::to_string(max_freq) << std::endl;
-//#endif
+#endif
                 ze_result = zesFrequencySetRange(handle, &range);
                 check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                                 ": Sysman failed to set frequency.", __LINE__);
-//#ifdef GEOPM_DEBUG
+#ifdef GEOPM_DEBUG
                 std::cout << "\tWrite complete" << std::endl;
-//#endif
+#endif
             }
         }
     }

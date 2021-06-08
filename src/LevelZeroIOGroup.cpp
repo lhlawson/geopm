@@ -68,6 +68,20 @@ namespace geopm
                                   Agg::average,
                                   string_format_double
                                   }},
+                              {"LEVELZERO::FREQUENCY_GPU_RANGE_MIN_CONTROL", {
+                                  "Accelerator compute/GPU domain user specified min frequency in hertz",
+                                  {},
+                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                  Agg::average,
+                                  string_format_double
+                                  }},
+                              {"LEVELZERO::FREQUENCY_GPU_RANGE_MAX_CONTROL", {
+                                  "Accelerator compute/GPU domain user specified max frequency in hertz",
+                                  {},
+                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                  Agg::average,
+                                  string_format_double
+                                  }},
                               {"LEVELZERO::FREQUENCY_MEMORY", {
                                   "Accelerator memory domain frequency in hertz",
                                   {},
@@ -486,10 +500,14 @@ namespace geopm
         for (auto &sv : m_signal_available) {
             for (unsigned int domain_idx = 0; domain_idx < sv.second.signals.size(); ++domain_idx) {
                 if (sv.second.signals.at(domain_idx)->m_do_read) {
-                    //TODO: numerous optimizations are possible, including:
+                    // TODO: numerous optimizations are possible, including:
                     //          grouped power limit reads
                     //          grouped min/max reads
                     //          grouped frequency domain reads (with device pool modification)
+                    //
+                    //  The majority of these require caching of generally static values in the devicepool,
+                    //  more in-depth level zero data types being understood by the IOGroup, OR new data structures
+                    //  being defined in the devicepool that replicate the underlying level zero data structs.
                     sv.second.signals.at(domain_idx)->m_value = read_signal(sv.first, sv.second.domain, domain_idx);
                 }
             }
@@ -502,9 +520,12 @@ namespace geopm
         for (auto &sv : m_control_available) {
             for (unsigned int domain_idx = 0; domain_idx < sv.second.controls.size(); ++domain_idx) {
                 if (sv.second.controls.at(domain_idx)->m_is_adjusted) {
-                    //TODO: numerous optimizations are possible, including:
+                    // TODO: numerous optimizations are possible, including:
                     //          grouped power limit writes
                     //          grouped freqeuncy writes (with device pool modification)
+                    //
+                    //  The majority of these require more in-depth level zero data types being understood by the
+                    //  IOGroup, OR new data structures
                     write_control(sv.first, sv.second.domain, domain_idx, sv.second.controls.at(domain_idx)->m_setting);
                 }
             }
@@ -558,12 +579,17 @@ namespace geopm
         }
 
         double result = NAN;
-
         if (signal_name == "LEVELZERO::FREQUENCY_GPU" || signal_name == "FREQUENCY_ACCELERATOR") {
             result = m_levelzero_device_pool.frequency_gpu_status(domain_idx)*1e6;
         }
         else if (signal_name == "LEVELZERO::FREQUENCY_MEMORY") {
             result = m_levelzero_device_pool.frequency_mem_status(domain_idx)*1e6;
+        }
+        else if (signal_name == "LEVELZERO::FREQUENCY_GPU_RANGE_MIN_CONTROL") {
+            result = m_levelzero_device_pool.frequency_gpu_range_min(domain_idx)*1e6;
+        }
+        else if (signal_name == "LEVELZERO::FREQUENCY_GPU_RANGE_MAX_CONTROL") {
+            result = m_levelzero_device_pool.frequency_gpu_range_max(domain_idx)*1e6;
         }
         else if (signal_name == "LEVELZERO::CORE_CLOCK_RATE") {
             result = m_levelzero_device_pool.core_clock_rate(domain_idx)*1e6;
@@ -754,7 +780,7 @@ namespace geopm
     int LevelZeroIOGroup::signal_behavior(const std::string &signal_name) const
     {
         // TODO: fix me
-        return IOGroup::M_SIGNAL_BEHAVIOR_LABEL;
+        return IOGroup::M_SIGNAL_BEHAVIOR_VARIABLE;
     }
 
     // Function used by the factory to create objects of this type

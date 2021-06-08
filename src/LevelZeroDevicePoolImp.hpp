@@ -35,6 +35,9 @@
 
 #include <string>
 
+#include <level_zero/ze_api.h>
+#include <level_zero/zes_api.h>
+
 #include "LevelZeroDevicePool.hpp"
 
 #include "geopm_time.h"
@@ -55,6 +58,8 @@ namespace geopm
             virtual double frequency_gpu_max(unsigned int accel_idx) const override;
             virtual double frequency_mem_min(unsigned int accel_idx) const override;
             virtual double frequency_mem_max(unsigned int accel_idx) const override;
+            virtual double frequency_gpu_range_min(unsigned int accel_idx) const override;
+            virtual double frequency_gpu_range_max(unsigned int accel_idx) const override;
             virtual double temperature(unsigned int accel_idx) const override;
             virtual double temperature_gpu(unsigned int accel_idx) const override;
             virtual double temperature_memory(unsigned int accel_idx) const override;
@@ -96,6 +101,7 @@ namespace geopm
             virtual std::tuple<int32_t, int32_t, int32_t> power_limit_default(unsigned int accel_idx) const;
             virtual double frequency_status(int accel_idx, zes_freq_domain_t) const;
             virtual std::pair<double, double> frequency_min_max(int accel_idx, zes_freq_domain_t type) const;
+            virtual std::pair<double, double> frequency_range(int accel_idx, zes_freq_domain_t type) const;
             virtual double utilization(int accel_idx, zes_engine_group_t engine_type) const;
             virtual double temperature(int accel_idx, zes_temp_sensors_t sensor_type) const;
             virtual void frequency_control(unsigned int accel_idx, double min_freq, double max_freq, zes_freq_domain_t) const;
