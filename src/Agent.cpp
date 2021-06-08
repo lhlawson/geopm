@@ -50,6 +50,10 @@
 #include "FrequencyMapAgent.hpp"
 #include "Environment.hpp"
 #include "Helper.hpp"
+#ifdef GEOPM_ENABLE_LEVELZERO
+#include "LevelZeroBoardUtilizationAgent.hpp"
+#endif
+
 
 namespace geopm
 {
@@ -77,6 +81,12 @@ namespace geopm
                         FrequencyMapAgent::make_plugin,
                         Agent::make_dictionary(FrequencyMapAgent::policy_names(),
                                                FrequencyMapAgent::sample_names()));
+#ifdef GEOPM_ENABLE_LEVELZERO
+        register_plugin(LevelZeroBoardUtilizationAgent::plugin_name(),
+                        LevelZeroBoardUtilizationAgent::make_plugin,
+                        Agent::make_dictionary(LevelZeroBoardUtilizationAgent::policy_names(),
+                                               LevelZeroBoardUtilizationAgent::sample_names()));
+#endif
     }
 
 

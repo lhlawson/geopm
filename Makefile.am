@@ -647,6 +647,8 @@ if ENABLE_LEVELZERO
                                  src/LevelZeroDevicePoolImp.hpp \
                                  src/LevelZeroIOGroup.cpp \
                                  src/LevelZeroIoGroup.hpp \
+                                 src/LevelZeroBoardUtilizationAgent.cpp \
+                                 src/LevelZeroBoardUtilizationAgent.hpp \
                                  #end
 endif
 
