@@ -658,6 +658,17 @@ nvml_source_files = src/NVMLDevicePool.cpp \
                     src/NVMLDevicePoolImp.hpp \
                     #end
 
+if ENABLE_LEVELZERO
+    libgeopmpolicy_la_SOURCES += src/LevelZeroAcceleratorTopo.cpp \
+                                 src/LevelZeroAcceleratorTopo.hpp \
+                                 src/LevelZeroDevicePool.cpp \
+                                 src/LevelZeroDevicePool.hpp \
+                                 src/LevelZeroDevicePoolImp.hpp \
+                                 src/LevelZeroIOGroup.cpp \
+                                 src/LevelZeroIoGroup.hpp \
+                                 #end
+endif
+
 if ENABLE_NVML
     libgeopmpolicy_la_SOURCES += $(nvml_source_files)
 else

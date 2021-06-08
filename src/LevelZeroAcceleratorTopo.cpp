@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 - 2021, Intel Corporation
+ * Copyright (c) 2015, 2016, 2017, 2018, 2019, 2020, Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,33 +30,43 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
-
 #include <fstream>
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <map>
 
+#include "config.h"
 #include "Exception.hpp"
-#include "AcceleratorTopoNull.hpp"
-
-#ifdef GEOPM_ENABLE_NVML
-#include "NVMLAcceleratorTopo.hpp"
-#elif defined(GEOPM_ENABLE_LEVELZERO)
+#include "LevelZeroDevicePool.hpp"
 #include "LevelZeroAcceleratorTopo.hpp"
-#endif
 
 namespace geopm
 {
-    const AcceleratorTopo &accelerator_topo(void)
+    LevelZeroAcceleratorTopo::LevelZeroAcceleratorTopo()
+        : LevelZeroAcceleratorTopo(levelzero_device_pool(geopm_sched_num_cpu()), geopm_sched_num_cpu())
     {
-#ifdef GEOPM_ENABLE_NVML
-        static NVMLAcceleratorTopo instance;
-#elif defined(GEOPM_ENABLE_LEVELZERO)
-        static LevelZeroAcceleratorTopo instance;
-#else
-        static AcceleratorTopoNull instance;
-#endif
-        return instance;
+    }
+
+    LevelZeroAcceleratorTopo::LevelZeroAcceleratorTopo(const LevelZeroDevicePool &device_pool, const int num_cpu)
+        : m_levelzero_device_pool(device_pool)
+        , m_num_accelerator(m_levelzero_device_pool.num_accelerator())
+    {
+        if (m_num_accelerator == 0) {
+            std::cerr << "Warning: <geopm> LevelZeroAcceleratorTopo: No levelZero accelerators detected.\n";
+        }
+        else {
+        }
+        //TODO: Add cpu to accelerator affinitization
+    }
+
+    int LevelZeroAcceleratorTopo::num_accelerator(void) const
+    {
+        return m_num_accelerator;
+    }
+
+    std::set<int> LevelZeroAcceleratorTopo::cpu_affinity_ideal(int accel_idx) const
+    {
+        return {};
     }
 }
