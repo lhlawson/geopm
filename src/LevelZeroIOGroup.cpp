@@ -104,21 +104,27 @@ namespace geopm
                                   string_format_double
                                   }},
                               {"LEVELZERO::UTILIZATION_COMPUTE", {
-                                  "Compute engine utilization",
+                                  "Compute engine utilization"
+                                  "\n  Level Zero logical engines may may to the same hardware"
+                                  "\n  resulting in a reduced signal range (i.e. not 0 to 1)",
                                   {},
                                   GEOPM_DOMAIN_BOARD_ACCELERATOR,
                                   Agg::average,
                                   string_format_double
                                   }},
                               {"LEVELZERO::UTILIZATION_COPY", {
-                                  "Copy engine utilization",
+                                  "Copy engine utilization"
+                                  "\n  Level Zero logical engines may may to the same hardware"
+                                  "\n  resulting in a reduced signal range (i.e. not 0 to 1)",
                                   {},
                                   GEOPM_DOMAIN_BOARD_ACCELERATOR,
                                   Agg::average,
                                   string_format_double
                                   }},
                               {"LEVELZERO::UTILIZATION_MEDIA_DECODE", {
-                                  "Media decode engine utilization",
+                                  "Media decode engine utilization"
+                                  "\n  Level Zero logical engines may may to the same hardware"
+                                  "\n  resulting in a reduced signal range (i.e. not 0 to 1)",
                                   {},
                                   GEOPM_DOMAIN_BOARD_ACCELERATOR,
                                   Agg::average,

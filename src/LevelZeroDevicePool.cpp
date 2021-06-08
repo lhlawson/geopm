@@ -429,7 +429,7 @@ namespace geopm
                 check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                                 ": Sysman failed to get frequency state", __LINE__);
                 result += state.actual;
-                ++result_cnt; //multi-tile support
+                ++result_cnt; //TODO: change for official multi-tile support
             }
         }
 
@@ -482,7 +482,7 @@ namespace geopm
             if (type == property.type) { //For initial GEOPM support we're not handling sub-devices
                 result_min += property.min;
                 result_max += property.max;
-                ++result_cnt;
+                ++result_cnt; //TODO: change for official multi-tile support
             }
         }
 
@@ -522,7 +522,7 @@ namespace geopm
                                                                 ": Sysman failed to set frequency.", __LINE__);
                 result_min += range.min;
                 result_max += range.max;
-                ++result_cnt;
+                ++result_cnt; //TODO: change for official multi-tile support
             }
         }
 
@@ -571,7 +571,7 @@ namespace geopm
                 check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                                 ": Sysman failed to get temperature sensor reading.", __LINE__);
                 result += temp;
-                ++result_cnt;
+                ++result_cnt; //TODO: change for official multi-tile support
             }
         }
 
@@ -653,7 +653,7 @@ namespace geopm
                     //      to a _ALL variant (COMPUTE_ALL etc).
                     // see: https://spec.oneapi.com/level-zero/latest/sysman/api.html#zes-engine-group-t
                     result += double(stats_curr.activeTime - stats_prev.activeTime) / double(stats_curr.timestamp - stats_prev.timestamp);
-                    ++result_cnt;
+                    ++result_cnt; //TODO: change for official multi-tile support
                 }
             }
         }
@@ -866,6 +866,7 @@ namespace geopm
             }
         }
 
+        //energy_timestamp
         return result;
     }
 
@@ -900,7 +901,7 @@ namespace geopm
             check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                           ": Sysman failed to get performance factor", __LINE__);
             result += performance_factor;
-            ++result_cnt;
+            ++result_cnt; //TODO: change for official multi-tile support
         }
 
         return result/result_cnt;
@@ -954,7 +955,7 @@ namespace geopm
             result += mode;
             check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                           ": Sysman failed to get standby mode", __LINE__);
-            ++result_cnt;
+            ++result_cnt; //TODO: change for official multi-tile support
         }
         //TODO: this will probably cause problems, uint/double casted to uint
         return result/result_cnt;
@@ -984,7 +985,7 @@ namespace geopm
             //TODO: Fix the assumption that there's only a single domain. For now we're assuming 1 or
             //      taking the last domain basically...could be HBM, DDR3/4/5, LPDDR, SRAM, GRF, ...
             allocated_ratio += (double)(state.size - state.free) / (double)state.size;
-            ++result_cnt;
+            ++result_cnt; //TODO: change for official multi-tile support
         }
         return allocated_ratio/result_cnt;
     }
