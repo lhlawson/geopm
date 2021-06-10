@@ -62,6 +62,14 @@ class MockLevelZeroDevicePool : public geopm::LevelZeroDevicePool
                            double(unsigned int));
         MOCK_CONST_METHOD1(utilization,
                            double(unsigned int));
+        MOCK_CONST_METHOD3(active_time,
+                           int(unsigned int,
+                           std::vector<uint64_t>&,
+                           std::vector<uint64_t>&));
+        MOCK_CONST_METHOD3(energy,
+                           int(unsigned int,
+                           std::vector<uint64_t>&,
+                           std::vector<uint64_t>&));
         MOCK_CONST_METHOD1(temperature,
                            double(unsigned int));
         MOCK_CONST_METHOD1(temperature_gpu,

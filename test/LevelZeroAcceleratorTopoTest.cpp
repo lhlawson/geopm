@@ -82,8 +82,7 @@ TEST_F(LevelZeroAcceleratorTopoTest, no_gpu_config)
     GEOPM_EXPECT_THROW_MESSAGE(topo.cpu_affinity_ideal(num_accelerator), GEOPM_ERROR_INVALID, "accel_idx 0 is out of range");
 }
 
-//Test case: The HPE SX40 default system configuration
-TEST_F(LevelZeroAcceleratorTopoTest, hpe_sx40_default_config)
+TEST_F(LevelZeroAcceleratorTopoTest, four_forty_config)
 {
     const int num_accelerator = 4;
     const int num_cpu = 40;
@@ -101,82 +100,6 @@ TEST_F(LevelZeroAcceleratorTopoTest, hpe_sx40_default_config)
     for (int accel_idx = 0; accel_idx < num_accelerator; ++accel_idx) {
         ASSERT_THAT(topo.cpu_affinity_ideal(accel_idx), cpus_allowed_set[accel_idx]);
     }
-}
-
-//Test case: All cpus are associated with one and only one GPUs
-TEST_F(LevelZeroAcceleratorTopoTest, mutex_affinitization_config)
-{
-    const int num_accelerator = 4;
-    const int num_cpu = 40;
-
-    EXPECT_CALL(*m_device_pool, num_accelerator()).WillOnce(Return(num_accelerator));
-
-    LevelZeroAcceleratorTopo topo(*m_device_pool, num_cpu);
-    EXPECT_EQ(num_accelerator, topo.num_accelerator());
-    std::set<int> cpus_allowed_set[num_accelerator];
-    cpus_allowed_set[0] = {0,1,2,3,4,5,6,7,8,9};
-    cpus_allowed_set[1] = {10,11,12,13,14,15,16,17,18,19};
-    cpus_allowed_set[2] = {20,21,22,23,24,25,26,27,28,29};
-    cpus_allowed_set[3] = {30,31,32,33,34,35,36,37,38,39};
-
-    for (int accel_idx = 0; accel_idx < num_accelerator; ++accel_idx) {
-        ASSERT_THAT(topo.cpu_affinity_ideal(accel_idx), cpus_allowed_set[accel_idx]);
-    }
-}
-
-//Test case: All cpus are associated with all GPUs
-TEST_F(LevelZeroAcceleratorTopoTest, equidistant_affinitization_config)
-{
-    const int num_accelerator = 4;
-    const int num_cpu = 40;
-
-    EXPECT_CALL(*m_device_pool, num_accelerator()).WillOnce(Return(num_accelerator));
-
-    LevelZeroAcceleratorTopo topo(*m_device_pool, num_cpu);
-
-    EXPECT_EQ(num_accelerator, topo.num_accelerator());
-    std::set<int> cpus_allowed_set[num_accelerator];
-    cpus_allowed_set[0] = {0,1,2,3,4,5,6,7,8,9};
-    cpus_allowed_set[1] = {10,11,12,13,14,15,16,17,18,19};
-    cpus_allowed_set[2] = {20,21,22,23,24,25,26,27,28,29};
-    cpus_allowed_set[3] = {30,31,32,33,34,35,36,37,38,39};
-
-    for (int accel_idx = 0; accel_idx < num_accelerator; ++accel_idx) {
-        ASSERT_THAT(topo.cpu_affinity_ideal(accel_idx), cpus_allowed_set[accel_idx]);
-    }
-}
-
-//Test case:  Accel N+1 associates with all CPUs of Accel N, but not vice versa
-TEST_F(LevelZeroAcceleratorTopoTest, n1_superset_n_affinitization_config)
-{
-    const int num_accelerator = 4;
-    const int num_cpu = 40;
-
-    EXPECT_CALL(*m_device_pool, num_accelerator()).WillOnce(Return(num_accelerator));
-
-    LevelZeroAcceleratorTopo topo(*m_device_pool, num_cpu);
-
-    EXPECT_EQ(num_accelerator, topo.num_accelerator());
-    std::set<int> cpus_allowed_set[num_accelerator];
-    cpus_allowed_set[0] = {12,13,14,15,16,17,18,19,20,21};
-    cpus_allowed_set[1] = {8 ,9 ,10,11,22,23,24,25,26,27};
-    cpus_allowed_set[2] = {4 ,5 ,6 ,7 ,28,29,30,31,32,33};
-    cpus_allowed_set[3] = {0 ,1 ,2 ,3 ,34,35,36,37,38,39};
-
-    for (int accel_idx = 0; accel_idx < num_accelerator; ++accel_idx) {
-        ASSERT_THAT(topo.cpu_affinity_ideal(accel_idx), cpus_allowed_set[accel_idx]);
-    }
-}
-
-//Test case:  Last accelerator has the smallest map, and the entire map will be 'stolen' to cause starvation
-TEST_F(LevelZeroAcceleratorTopoTest, greedbuster_affinitization_config)
-{
-    const int num_accelerator = 4;
-    const int num_cpu = 40;
-
-    EXPECT_CALL(*m_device_pool, num_accelerator()).WillOnce(Return(num_accelerator));
-
-    GEOPM_EXPECT_THROW_MESSAGE(LevelZeroAcceleratorTopo topo(*m_device_pool, num_cpu), GEOPM_ERROR_INVALID, "Failed to affinitize all valid CPUs to Accelerators");
 }
 
 //Test case: Different GPU/CPU count, namely an approximation of the HPE Apollo 6500
@@ -218,8 +141,8 @@ TEST_F(LevelZeroAcceleratorTopoTest, uneven_affinitization_config)
 
     EXPECT_EQ(num_accelerator, topo.num_accelerator());
     std::set<int> cpus_allowed_set[num_accelerator];
-    cpus_allowed_set[0] = {0 ,1 ,2 ,3 ,4 ,5 ,18,19};
-    cpus_allowed_set[1] = {6 ,7 ,8 ,9 ,10,11};
+    cpus_allowed_set[0] = {0 ,1 ,2 ,3 ,4 ,5 ,18};
+    cpus_allowed_set[1] = {6 ,7 ,8 ,9 ,10,11,19};
     cpus_allowed_set[2] = {12,13,14,15,16,17};
 
     for (int accel_idx = 0; accel_idx < num_accelerator; ++accel_idx) {
@@ -246,32 +169,6 @@ TEST_F(LevelZeroAcceleratorTopoTest, high_cpu_count_config)
             cpus_allowed_set[accel_idx].insert(cpu_idx+(accel_idx*16));
         }
 
-        ASSERT_THAT(topo.cpu_affinity_ideal(accel_idx), cpus_allowed_set[accel_idx]);
-    }
-}
-
-//Test case: High Core count system with sparse affinitization, to test uneven distribution with gaps.
-TEST_F(LevelZeroAcceleratorTopoTest, high_cpu_count_gaps_config)
-{
-    const int num_accelerator = 8;
-    const int num_cpu = 128;
-
-    EXPECT_CALL(*m_device_pool, num_accelerator()).WillOnce(Return(num_accelerator));
-
-    LevelZeroAcceleratorTopo topo(*m_device_pool, num_cpu);
-
-    EXPECT_EQ(num_accelerator, topo.num_accelerator());
-    std::set<int> cpus_allowed_set[num_accelerator];
-    cpus_allowed_set[0] = {0 ,1 ,2 ,3 ,4 ,5 ,6 ,7};
-    cpus_allowed_set[1] = {8 ,9 ,10,11,12,13,14,15};
-    cpus_allowed_set[2] = {16,17,18,19,20,21,22,23};
-    cpus_allowed_set[3] = {24,25,26,27,64,65,66,67};
-    cpus_allowed_set[4] = {28,29,30,31,32,33,34,35,127};
-    cpus_allowed_set[5] = {36,37,38,39,40,41,42,43};
-    cpus_allowed_set[6] = {44,45,46,47,48,49,50,51};
-    cpus_allowed_set[7] = {52,53,54,55,123,124,125,126};
-
-    for (int accel_idx = 0; accel_idx < num_accelerator; ++accel_idx) {
         ASSERT_THAT(topo.cpu_affinity_ideal(accel_idx), cpus_allowed_set[accel_idx]);
     }
 }

@@ -280,14 +280,10 @@ GTEST_TESTS = test/gtest_links/AcceleratorTopoNullTest.default_config \
               test/gtest_links/IOGroupTest.signals_have_format_functions \
               test/gtest_links/IOGroupTest.string_to_behavior \
               test/gtest_links/LevelZeroAcceleratorTopoTest.no_gpu_config \
-              test/gtest_links/LevelZeroAcceleratorTopoTest.mutex_affinitization_config \
-              test/gtest_links/LevelZeroAcceleratorTopoTest.equidistant_affinitization_config \
-              test/gtest_links/LevelZeroAcceleratorTopoTest.n1_superset_n_affinitization_config \
-              test/gtest_links/LevelZeroAcceleratorTopoTest.greedbuster_affinitization_config \
+              test/gtest_links/LevelZeroAcceleratorTopoTest.four_forty_config \
               test/gtest_links/LevelZeroAcceleratorTopoTest.hpe_6500_affinitization_config \
               test/gtest_links/LevelZeroAcceleratorTopoTest.uneven_affinitization_config \
               test/gtest_links/LevelZeroAcceleratorTopoTest.high_cpu_count_config \
-              test/gtest_links/LevelZeroAcceleratorTopoTest.high_cpu_count_gaps_config \
               test/gtest_links/MSRIOGroupTest.adjust \
               test/gtest_links/MSRIOGroupTest.control_error \
               test/gtest_links/MSRIOGroupTest.cpuid \
