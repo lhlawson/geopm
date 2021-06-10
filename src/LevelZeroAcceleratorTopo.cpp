@@ -70,11 +70,19 @@ namespace geopm
             }
 
             if ((num_cpu % m_num_accelerator) != 0) {
-                throw Exception("LevelZeroAcceleratorTopo::" + std::string(__func__) +
-                                ": Failed to affinitize all valid CPUs to Accelerators.  Number of CPUs was" +
-                                " not evenly divisible by number of accelerators",
-                                GEOPM_ERROR_INVALID, __FILE__, __LINE__);
+                unsigned int accel_idx = 0;
+                for (int cpu_idx = num_cpu_per_accelerator*m_num_accelerator; cpu_idx < num_cpu; ++cpu_idx) {
+                    m_cpu_affinity_ideal.at(accel_idx%m_num_accelerator).insert(cpu_idx);
+                    ++accel_idx;
+                }
             }
+
+            //if ((num_cpu % m_num_accelerator) != 0) {
+            //    throw Exception("LevelZeroAcceleratorTopo::" + std::string(__func__) +
+            //                    ": Failed to affinitize all valid CPUs to Accelerators.  Number of CPUs was" +
+            //                    " not evenly divisible by number of accelerators",
+            //                    GEOPM_ERROR_INVALID, __FILE__, __LINE__);
+            //}
         }
     }
 
