@@ -130,6 +130,13 @@ namespace geopm
                                   Agg::average,
                                   string_format_double
                                   }},
+                              {"LEVELZERO::ACTIVE_TIME_COMPUTE", {
+                                  "Compue engine active time",
+                                  {},
+                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                  Agg::average,
+                                  string_format_double
+                                  }},
                               {"LEVELZERO::MEMORY_ALLOCATED", {
                                   "Memory usage as a ratio of total memory",
                                   {},
@@ -260,8 +267,15 @@ namespace geopm
                                   Agg::average,
                                   string_format_double
                                   }},
+                              {"LEVELZERO::POWER_RAW", {
+                                  "Accelerator power usage in watts, calculated as specified by oneAPI",
+                                  {},
+                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                  Agg::sum,
+                                  string_format_double
+                                  }},
                               {"LEVELZERO::POWER", {
-                                  "Accelerator power usage in watts",
+                                  "Accelerator power usage in watts, calculated using derivative signal",
                                   {},
                                   GEOPM_DOMAIN_BOARD_ACCELERATOR,
                                   Agg::sum,
@@ -627,7 +641,28 @@ namespace geopm
         else if (signal_name == "LEVELZERO::UTILIZATION_MEDIA_DECODE") {
             result = m_levelzero_device_pool.utilization_media_decode(domain_idx);
         }
+        else if (signal_name == "LEVELZERO::ACTIVE_TIME_COMPUTE") {
+            std::vector<uint64_t> active_time;
+            std::vector<uint64_t> timestamp;
+            result = m_levelzero_device_pool.active_time(domain_idx, active_time, timestamp);
+            if (result == -1) {
+                throw Exception("LevelZeroIOGroup::" + std::string(__func__) + ": Handling failed for " +
+                                signal_name, GEOPM_ERROR_LOGIC, __FILE__, __LINE__);
+            }
+            //TODO: we want to do a derivative signal of active time over timestamp here for each returned 'pair', then average them.
+            result = active_time.at(0);
+        }
         else if (signal_name == "LEVELZERO::POWER" || signal_name == "POWER_ACCELERATOR") {
+            std::vector<uint64_t> energy;
+            std::vector<uint64_t> timestamp;
+            result = m_levelzero_device_pool.energy(domain_idx, energy, timestamp);
+            if (result == -1) {
+                throw Exception("LevelZeroIOGroup::" + std::string(__func__) + ": Handling failed for " +
+                                signal_name, GEOPM_ERROR_LOGIC, __FILE__, __LINE__);
+            }
+            result = energy.at(0);
+        }
+        else if (signal_name == "LEVELZERO::POWER_RAW") {
             result = m_levelzero_device_pool.power(domain_idx);
         }
         else if (signal_name == "LEVELZERO::ENERGY") {

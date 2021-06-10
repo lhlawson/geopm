@@ -67,7 +67,13 @@ namespace geopm
             virtual double utilization_compute(unsigned int accel_idx) const override;
             virtual double utilization_copy(unsigned int accel_idx) const override;
             virtual double utilization_media_decode(unsigned int accel_idx) const override;
+            virtual int active_time(unsigned int accel_idx,
+                                       std::vector<uint64_t> &active_time,
+                                       std::vector<uint64_t> &timestamp) const override;
             virtual double power(unsigned int accel_idx) const override;
+            virtual int energy(unsigned int accel_idx,
+                                       std::vector<uint64_t> &energy,
+                                       std::vector<uint64_t> &timestamp) const override;
             virtual int32_t power_tdp(unsigned int accel_idx) const override;
             virtual int32_t power_limit_min(unsigned int accel_idx) const override;
             virtual int32_t power_limit_max(unsigned int accel_idx) const override;
@@ -112,7 +118,6 @@ namespace geopm
             uint32_t m_num_device;
             uint32_t m_num_integrated_gpu;
             uint32_t m_num_board_gpu;
-            uint32_t m_num_cpu;
             uint32_t m_num_fpga;
             uint32_t m_num_mca;
 

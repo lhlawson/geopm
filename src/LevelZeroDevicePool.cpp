@@ -374,7 +374,7 @@ namespace geopm
             return m_num_board_gpu;
         }
         else if (type == ZE_DEVICE_TYPE_CPU) {
-            return m_num_cpu;
+            return M_NUM_CPU;
         }
         else if (type == ZE_DEVICE_TYPE_FPGA) {
             return m_num_fpga;
@@ -424,7 +424,7 @@ namespace geopm
                                                             ": Sysman failed to get domain properties.", __LINE__);
 
             if (type == property.type) {
-                zes_freq_state_t state; // = {ZES_STRUCTURE_TYPE_FREQ_STATE, nullptr}; TODO: this does not appear necessary?
+                zes_freq_state_t state;
                 ze_result = zesFrequencyGetState(handle, &state);
                 check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                                 ": Sysman failed to get frequency state", __LINE__);
@@ -640,7 +640,6 @@ namespace geopm
                 //TODO: wait approach?  May use geopm spin wait.
                 std::this_thread::sleep_for(std::chrono::milliseconds(5));
 
-                //TODO: track if any engine group met the criteria, throw if none?
                 ze_result = zesEngineGetActivity(handle, &stats_curr);
                 check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                                 ": Sysman failed to get engine group activity.", __LINE__);
@@ -648,10 +647,6 @@ namespace geopm
                 if (stats_prev.timestamp >= stats_curr.timestamp) {
                     result = -1;
                 } else {
-                    //TODO: this is currently aggregating all instances reported, but never dividing by number of instances.
-                    //      this is to get around issues with the same hardware being reported multiple times and not having access
-                    //      to a _ALL variant (COMPUTE_ALL etc).
-                    // see: https://spec.oneapi.com/level-zero/latest/sysman/api.html#zes-engine-group-t
                     result += double(stats_curr.activeTime - stats_prev.activeTime) / double(stats_curr.timestamp - stats_prev.timestamp);
                     ++result_cnt; //TODO: change for official multi-tile support
                 }
@@ -663,6 +658,37 @@ namespace geopm
         }
 
         return result/result_cnt;
+    }
+
+    int LevelZeroDevicePoolImp::active_time(unsigned int accel_idx, std::vector<uint64_t> &active_time, std::vector<uint64_t> &timestamp) const
+    {
+        check_accel_range(accel_idx);
+        check_domain_range(m_engine_domain.at(accel_idx).size(), __func__, __LINE__);
+        ze_result_t ze_result;
+        int result = -1;
+
+        zes_engine_properties_t property;
+        zes_engine_stats_t stats;
+
+        //TODO: pass this in similar to the utilization function
+        zes_engine_group_t engine_type = ZES_ENGINE_GROUP_COMPUTE_SINGLE;
+
+        //for each engine group
+        for (auto handle : m_engine_domain.at(accel_idx)) {
+            ze_result = zesEngineGetProperties(handle, &property);
+            check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
+                                                            ": Sysman failed to get engine properties.", __LINE__);
+            if (engine_type == property.type) {
+                ze_result = zesEngineGetActivity(handle, &stats);
+                check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
+                                                                ": Sysman failed to get engine group activity.", __LINE__);
+                active_time.push_back(stats.activeTime);
+                active_time.push_back(stats.timestamp);
+                result = 0;
+            }
+        }
+
+        return result;
     }
 
     double LevelZeroDevicePoolImp::power(unsigned int accel_idx) const
@@ -730,7 +756,6 @@ namespace geopm
         uint64_t min_power_limit = 0;
         uint64_t max_power_limit = 0;
 
-        //TODO: replace with finding non-subdevice domain.
         for (auto handle : m_power_domain.at(accel_idx)) {
             ze_result = zesPowerGetProperties(handle, &property);
             check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
@@ -748,7 +773,6 @@ namespace geopm
         return std::make_tuple(min_power_limit, max_power_limit, tdp);
     }
 
-    //TODO: move power limits to cache.  Add refresh signal in IO Group
     int32_t LevelZeroDevicePoolImp::power_limit_peak_ac(unsigned int accel_idx) const
     {
         zes_power_peak_limit_t peak = {};
@@ -756,7 +780,6 @@ namespace geopm
         return peak.powerAC;
     }
 
-    //TODO: move power limits to cache.  Add refresh signal in IO Group
     bool LevelZeroDevicePoolImp::power_limit_burst_enabled(unsigned int accel_idx) const
     {
         zes_power_burst_limit_t burst = {};
@@ -764,7 +787,6 @@ namespace geopm
         return (bool)burst.enabled;
     }
 
-    //TODO: move power limits to cache.  Add refresh signal in IO Group
     int32_t LevelZeroDevicePoolImp::power_limit_burst_power(unsigned int accel_idx) const
     {
         zes_power_burst_limit_t burst = {};
@@ -772,7 +794,6 @@ namespace geopm
         return burst.power;
     }
 
-    //TODO: move power limits to cache.  Add refresh signal in IO Group
     bool LevelZeroDevicePoolImp::power_limit_sustained_enabled(unsigned int accel_idx) const
     {
         zes_power_sustained_limit_t sustained = {};
@@ -780,7 +801,6 @@ namespace geopm
         return (bool)sustained.enabled;
     }
 
-    //TODO: move power limits to cache.  Add refresh signal in IO Group
     int32_t LevelZeroDevicePoolImp::power_limit_sustained_power(unsigned int accel_idx) const
     {
         zes_power_sustained_limit_t sustained = {};
@@ -788,7 +808,6 @@ namespace geopm
         return sustained.power;
     }
 
-    //TODO: move power limits to cache.  Add refresh signal in IO Group
     int32_t LevelZeroDevicePoolImp::power_limit_sustained_interval(unsigned int accel_idx) const
     {
         zes_power_sustained_limit_t sustained = {};
@@ -796,7 +815,6 @@ namespace geopm
         return sustained.interval;
     }
 
-    //TODO: move power limits to cache.  Add refresh signal in IO Group
     std::tuple<zes_power_sustained_limit_t, zes_power_burst_limit_t,
                zes_power_peak_limit_t> LevelZeroDevicePoolImp::power_limit(unsigned int accel_idx) const
     {
@@ -808,7 +826,6 @@ namespace geopm
         zes_power_burst_limit_t burst = {};
         zes_power_peak_limit_t peak = {};
 
-        //TODO: replace with finding non-subdevice domain.
         for (auto handle : m_power_domain.at(accel_idx)) {
             zes_power_properties_t property;
             ze_result = zesPowerGetProperties(handle, &property);
@@ -841,6 +858,37 @@ namespace geopm
         return std::make_tuple(sustained, burst, peak);
     }
 
+    int LevelZeroDevicePoolImp::energy(unsigned int accel_idx, std::vector<uint64_t> &energy,
+                                            std::vector<uint64_t> &timestamp) const
+    {
+        check_accel_range(accel_idx);
+        check_domain_range(m_power_domain.at(accel_idx).size(), __func__, __LINE__);
+        ze_result_t ze_result;
+        int result = -1;
+
+        for (auto handle : m_power_domain.at(accel_idx)) {
+            zes_power_energy_counter_t energy_counter;
+            zes_power_properties_t property;
+            ze_result = zesPowerGetProperties(handle, &property);
+            check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
+                                                            ": Sysman failed to get domain power properties", __LINE__);
+
+            //For initial GEOPM support we're only providing device level power
+            //finding non-subdevice domain.
+            if (property.onSubdevice == 0) {
+                ze_result = zesPowerGetEnergyCounter(handle, &energy_counter);
+                check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
+                                                                ": Sysman failed to get energy_counter values", __LINE__);
+                energy.push_back(energy_counter.energy);
+                timestamp.push_back(energy_counter.timestamp);
+                result = 0;
+            }
+        }
+
+        //energy_timestamp
+        return result;
+    }
+
     uint64_t LevelZeroDevicePoolImp::energy(unsigned int accel_idx) const
     {
         check_accel_range(accel_idx);
@@ -848,7 +896,6 @@ namespace geopm
         ze_result_t ze_result;
         uint64_t result = 0;
 
-        //TODO: replace with finding non-subdevice domain.
         for (auto handle : m_power_domain.at(accel_idx)) {
             zes_power_energy_counter_t energy_counter;
             zes_power_properties_t property;
