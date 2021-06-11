@@ -666,7 +666,7 @@ namespace geopm
             result = m_levelzero_device_pool.power(domain_idx);
         }
         else if (signal_name == "LEVELZERO::ENERGY") {
-            result = m_levelzero_device_pool.energy(domain_idx)/1e3;
+            result = m_levelzero_device_pool.energy(domain_idx)/1e6;
         }
         else if (signal_name == "LEVELZERO::POWER_LIMIT_SUSTAINED") {
             result = m_levelzero_device_pool.power_limit_sustained_power(domain_idx)/1e3;

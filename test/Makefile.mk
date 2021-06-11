@@ -284,6 +284,9 @@ GTEST_TESTS = test/gtest_links/AcceleratorTopoNullTest.default_config \
               test/gtest_links/LevelZeroAcceleratorTopoTest.hpe_6500_affinitization_config \
               test/gtest_links/LevelZeroAcceleratorTopoTest.uneven_affinitization_config \
               test/gtest_links/LevelZeroAcceleratorTopoTest.high_cpu_count_config \
+              test/gtest_links/LevelZeroIOGroupTest.read_signal_and_batch \
+              test/gtest_links/LevelZeroIOGroupTest.read_signal \
+              test/gtest_links/LevelZeroIOGroupTest.error_path \
               test/gtest_links/MSRIOGroupTest.adjust \
               test/gtest_links/MSRIOGroupTest.control_error \
               test/gtest_links/MSRIOGroupTest.cpuid \
@@ -672,6 +675,7 @@ test_geopm_test_SOURCES = test/AcceleratorTopoNullTest.cpp \
                           test/MonitorAgentTest.cpp \
                           test/NVMLAcceleratorTopoTest.cpp \
                           test/LevelZeroAcceleratorTopoTest.cpp \
+                          test/LevelZeroIOGroupTest.cpp \
                           test/NVMLIOGroupTest.cpp \
                           test/OptionParserTest.cpp \
                           test/PlatformIOTest.cpp \
