@@ -666,6 +666,8 @@ if ENABLE_LEVELZERO
                                  src/LevelZeroDevicePoolImp.hpp \
                                  src/LevelZeroIOGroup.cpp \
                                  src/LevelZeroIoGroup.hpp \
+                                 src/LevelZeroSignal.cpp \
+                                 src/LevelZeroSignal.hpp \
                                  #end
 endif
 

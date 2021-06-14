@@ -39,6 +39,7 @@
 #include <memory>
 
 #include "IOGroup.hpp"
+#include "LevelZeroSignal.hpp"
 
 namespace geopm
 {
@@ -78,6 +79,7 @@ namespace geopm
         private:
             void init(void);
 
+            void register_derivative_signals(void);
             void register_signal_alias(const std::string &alias_name, const std::string &signal_name);
             void register_control_alias(const std::string &alias_name, const std::string &control_name);
 
@@ -107,6 +109,8 @@ namespace geopm
                 int domain;
                 std::function<double(const std::vector<double> &)> m_agg_function;
                 std::function<std::string(double)> m_format_function;
+                std::vector<std::shared_ptr<LevelZeroSignal>> l0_signals;
+                double (geopm::LevelZeroDevicePool::*function)(unsigned int) const;
             };
 
             struct control_info {
