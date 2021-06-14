@@ -82,6 +82,8 @@ namespace geopm
             virtual double utilization_compute(unsigned int accel_idx) const = 0;
             virtual double utilization_copy(unsigned int accel_idx) const = 0;
             virtual double utilization_media_decode(unsigned int accel_idx) const = 0;
+            virtual double active_time(unsigned int accel_idx) const = 0;
+            virtual double active_time_timestamp(unsigned int accel_idx) const = 0;
             virtual int active_time(unsigned int accel_idx,
                                        std::vector<uint64_t> &active_time,
                                        std::vector<uint64_t> &timestamp) const = 0;
@@ -108,6 +110,7 @@ namespace geopm
             ///        accelerator.
             /// @return Accelerator power consumption in milliwatts.
             virtual uint64_t energy (unsigned int accel_idx) const = 0;
+            virtual uint64_t energy_timestamp (unsigned int accel_idx) const = 0;
             virtual double performance_factor(unsigned int accel_idx) const = 0;
             virtual std::vector<uint32_t> active_process_list(unsigned int accel_idx) const = 0;
             virtual double standby_mode(unsigned int accel_idx) const = 0;

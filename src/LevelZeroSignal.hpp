@@ -38,6 +38,7 @@
 
 #include <string>
 #include <memory>
+#include <functional>
 
 #include "Signal.hpp"
 #include "LevelZeroDevicePool.hpp"
@@ -51,24 +52,15 @@ namespace geopm
     {
         public:
             virtual ~LevelZeroSignal() = default;
-            LevelZeroSignal(const LevelZeroDevicePool* ldp, double (geopm::LevelZeroDevicePool::*function)(unsigned int) const,
+            LevelZeroSignal(std::function<double (unsigned int)> devpool_func,
                          unsigned int accelerator);
             LevelZeroSignal(const LevelZeroSignal &other) = delete;
             void setup_batch(void) override;
             double sample(void) override;
             double read(void) const override;
         private:
-            /// MSRIO object shared by all MSR signals in the same
-            /// batch.  This object should outlive all other data in
-            /// the Signal.
-            /// std::shared_ptr<MSRIO> m_msrio;
-            const LevelZeroDevicePool *m_ldp;
-            double (geopm::LevelZeroDevicePool::*m_func)(unsigned int) const;
+            std::function<double (unsigned int)> m_devpool_func;
             unsigned int m_accel;
-            //uint64_t m_offset;
-            /// Index to the data that will be updated by the
-            /// MSRIO's read_batch() calls.
-            //int m_data_idx;
             bool m_is_batch_ready;
     };
 }

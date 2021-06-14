@@ -67,6 +67,9 @@ namespace geopm
             virtual double utilization_compute(unsigned int accel_idx) const override;
             virtual double utilization_copy(unsigned int accel_idx) const override;
             virtual double utilization_media_decode(unsigned int accel_idx) const override;
+            virtual double active_time(unsigned int accel_idx) const override;
+            virtual double active_time_timestamp(unsigned int accel_idx) const override;
+
             virtual int active_time(unsigned int accel_idx,
                                        std::vector<uint64_t> &active_time,
                                        std::vector<uint64_t> &timestamp) const override;
@@ -84,6 +87,7 @@ namespace geopm
             virtual int32_t power_limit_burst_power(unsigned int accel_idx) const override;
             virtual int32_t power_limit_peak_ac(unsigned int accel_idx) const override;
             virtual uint64_t energy(unsigned int accel_idx) const override;
+            virtual uint64_t energy_timestamp(unsigned int accel_idx) const override;
             virtual double performance_factor(unsigned int accel_idx) const override;
             virtual std::vector<uint32_t> active_process_list(unsigned int accel_idx) const override;
             virtual double standby_mode(unsigned int accel_idx) const override;

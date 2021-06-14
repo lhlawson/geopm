@@ -37,6 +37,7 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <functional>
 
 #include "IOGroup.hpp"
 #include "LevelZeroSignal.hpp"
@@ -106,11 +107,12 @@ namespace geopm
             struct signal_info {
                 std::string m_description;
                 std::vector<std::shared_ptr<signal_s> > signals;
-                int domain;
+                int domain; //TODO: rename domain_type
                 std::function<double(const std::vector<double> &)> m_agg_function;
                 std::function<std::string(double)> m_format_function;
-                std::vector<std::shared_ptr<LevelZeroSignal>> l0_signals;
-                double (geopm::LevelZeroDevicePool::*function)(unsigned int) const;
+                std::vector<std::shared_ptr<Signal> > l0_signals; //TODO: become m_signals
+                std::function<double (unsigned int)> m_devpool_func;
+                double scalar;
             };
 
             struct control_info {
