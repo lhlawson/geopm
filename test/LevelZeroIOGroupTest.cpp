@@ -234,12 +234,14 @@ TEST_F(LevelZeroIOGroupTest, read_signal_and_batch)
 
 TEST_F(LevelZeroIOGroupTest, read_signal)
 {
+    //EXPECT_CALL(*m_platform_topo, num_domain(GEOPM_DOMAIN_BOARD_ACCELERATOR)).WillRepeatedly(Return(4));
     const int num_accelerator = m_platform_topo->num_domain(GEOPM_DOMAIN_BOARD_ACCELERATOR);
 
     std::vector<double> mock_freq_gpu = {1530, 1320, 420, 135};
-    std::vector<double> mock_utilization_compute = {1.00, 0.90, 0.50, 0};
-    std::vector<double> mock_power = {153, 70, 300, 50};
-    std::vector<double> mock_energy = {630000000, 280000000, 470000000, 950000000};
+    std::vector<uint64_t> mock_active_time_compute = {1, 90, 50, 0};
+    std::vector<uint64_t> mock_active_time_timestamp_compute = {12, 90, 150, 3};
+    std::vector<uint64_t> mock_energy = {630000000, 280000000, 470000000, 950000000};
+    std::vector<uint64_t> mock_energy_timestamp = {153, 70, 300, 50};
 
     //std::vector<double> mock_freq_mem = {877, 877, 877, 877};
     //std::vector<double> mock_core_clock_rate = {800, 900, 1000, 2000};
@@ -257,11 +259,16 @@ TEST_F(LevelZeroIOGroupTest, read_signal)
     //std::vector<double> mock_temperature = {45, 60, 68, 92};
     //std::vector<int> active_process_list = {40961, 40962, 40963};
 
+
+
     for (int accel_idx = 0; accel_idx < num_accelerator; ++accel_idx) {
         EXPECT_CALL(*m_device_pool, frequency_gpu_status(accel_idx)).WillRepeatedly(Return(mock_freq_gpu.at(accel_idx)));
-        EXPECT_CALL(*m_device_pool, power(accel_idx)).WillRepeatedly(Return(mock_power.at(accel_idx)));;
+        //EXPECT_CALL(*m_device_pool, power(accel_idx)).WillRepeatedly(Return(mock_power.at(accel_idx)));;
         EXPECT_CALL(*m_device_pool, energy(accel_idx)).WillRepeatedly(Return(mock_energy.at(accel_idx)));
-        EXPECT_CALL(*m_device_pool, utilization_compute(accel_idx)).WillRepeatedly(Return(mock_utilization_compute.at(accel_idx)));
+        EXPECT_CALL(*m_device_pool, energy_timestamp(accel_idx)).WillRepeatedly(Return(mock_energy_timestamp.at(accel_idx)));
+        //EXPECT_CALL(*m_device_pool, utilization_compute(accel_idx)).WillRepeatedly(Return(mock_utilization_compute.at(accel_idx)));
+        EXPECT_CALL(*m_device_pool, active_time(accel_idx)).WillRepeatedly(Return(mock_active_time_compute.at(accel_idx)));
+        EXPECT_CALL(*m_device_pool, active_time_timestamp_compute(accel_idx)).WillRepeatedly(Return(mock_active_time_timestamp_compute.at(accel_idx)));
         //TODO: Test ALL Signals
     }
 
@@ -278,17 +285,17 @@ TEST_F(LevelZeroIOGroupTest, read_signal)
         EXPECT_DOUBLE_EQ(frequency, frequency_alias);
         EXPECT_DOUBLE_EQ(frequency, mock_freq_gpu.at(accel_idx)*1e6);
 
-        double utilization_accelerator = levelzero_io.read_signal("LEVELZERO::UTILIZATION_COMPUTE", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
-        EXPECT_DOUBLE_EQ(utilization_accelerator, mock_utilization_compute.at(accel_idx));
-
-        //TODO: update to include derivative LEVELZERO::POWER signal
-        double power = levelzero_io.read_signal("LEVELZERO::POWER_RAW", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
-        //double power_alias = levelzero_io.read_signal("POWER_ACCELERATOR", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
-        //EXPECT_DOUBLE_EQ(power, power_alias);
-        EXPECT_DOUBLE_EQ(power, mock_power.at(accel_idx));
+        double active_time_compute = levelzero_io.read_signal("LEVELZERO::ACTIVE_TIME_COMPUTE", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
+        EXPECT_DOUBLE_EQ(active_time_compute, mock_active_time_compute.at(accel_idx));
+        double active_time_timestamp_compute = levelzero_io.read_signal("LEVELZERO::ACTIVE_TIME_TIMESTAMP_COMPUTE", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
+        EXPECT_DOUBLE_EQ(active_time_timestamp_compute, mock_active_time_timestamp_compute.at(accel_idx));
 
         double energy = levelzero_io.read_signal("LEVELZERO::ENERGY", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
         EXPECT_DOUBLE_EQ(energy, mock_energy.at(accel_idx)/1e6);
+
+        double energy_timestamp = levelzero_io.read_signal("LEVELZERO::ENERGY_TIMESTAMP", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
+        EXPECT_DOUBLE_EQ(energy_timestamp, mock_energy_timestamp.at(accel_idx));
+
 
     }
 

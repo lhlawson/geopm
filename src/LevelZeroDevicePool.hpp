@@ -82,19 +82,19 @@ namespace geopm
             virtual double utilization_compute(unsigned int accel_idx) const = 0;
             virtual double utilization_copy(unsigned int accel_idx) const = 0;
             virtual double utilization_media_decode(unsigned int accel_idx) const = 0;
-            virtual double active_time(unsigned int accel_idx) const = 0;
-            virtual double active_time_timestamp(unsigned int accel_idx) const = 0;
-            virtual int active_time(unsigned int accel_idx,
-                                       std::vector<uint64_t> &active_time,
-                                       std::vector<uint64_t> &timestamp) const = 0;
+            virtual uint64_t active_time(unsigned int accel_idx) const = 0;
+            virtual uint64_t active_time_compute(unsigned int accel_idx) const = 0;
+            virtual uint64_t active_time_copy(unsigned int accel_idx) const = 0;
+            virtual uint64_t active_time_media_decode(unsigned int accel_idx) const = 0;
+            virtual uint64_t active_time_timestamp(unsigned int accel_idx) const = 0;
+            virtual uint64_t active_time_timestamp_compute(unsigned int accel_idx) const = 0;
+            virtual uint64_t active_time_timestamp_copy(unsigned int accel_idx) const = 0;
+            virtual uint64_t active_time_timestamp_media_decode(unsigned int accel_idx) const = 0;
             /// @brief Get the LevelZero device power in ???.
             /// @param [in] accel_idx The index indicating a particular
             ///        accelerator.
             /// @return Accelerator power consumption in milliwatts.
             virtual double power(unsigned int accel_idx) const = 0;
-            virtual int energy(unsigned int accel_idx,
-                                       std::vector<uint64_t> &energy,
-                                       std::vector<uint64_t> &timestamp) const = 0;
             virtual int32_t power_tdp(unsigned int accel_idx) const = 0;
             virtual int32_t power_limit_min(unsigned int accel_idx) const = 0;
             virtual int32_t power_limit_max(unsigned int accel_idx) const = 0;

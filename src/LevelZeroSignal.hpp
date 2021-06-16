@@ -53,7 +53,7 @@ namespace geopm
         public:
             virtual ~LevelZeroSignal() = default;
             LevelZeroSignal(std::function<double (unsigned int)> devpool_func,
-                         unsigned int accelerator);
+                         unsigned int accelerator, double scalar);
             LevelZeroSignal(const LevelZeroSignal &other) = delete;
             void setup_batch(void) override;
             double sample(void) override;
@@ -61,6 +61,7 @@ namespace geopm
         private:
             std::function<double (unsigned int)> m_devpool_func;
             unsigned int m_accel;
+            double m_scalar;
             bool m_is_batch_ready;
     };
 }

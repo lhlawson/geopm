@@ -62,14 +62,22 @@ class MockLevelZeroDevicePool : public geopm::LevelZeroDevicePool
                            double(unsigned int));
         MOCK_CONST_METHOD1(utilization,
                            double(unsigned int));
-        MOCK_CONST_METHOD3(active_time,
-                           int(unsigned int,
-                           std::vector<uint64_t>&,
-                           std::vector<uint64_t>&));
-        MOCK_CONST_METHOD3(energy,
-                           int(unsigned int,
-                           std::vector<uint64_t>&,
-                           std::vector<uint64_t>&));
+        MOCK_CONST_METHOD1(active_time,
+                           uint64_t(unsigned int));
+        MOCK_CONST_METHOD1(active_time_timestamp,
+                           uint64_t(unsigned int));
+        MOCK_CONST_METHOD1(active_time_compute,
+                           uint64_t(unsigned int));
+        MOCK_CONST_METHOD1(active_time_timestamp_compute,
+                           uint64_t(unsigned int));
+        MOCK_CONST_METHOD1(active_time_copy,
+                           uint64_t(unsigned int));
+        MOCK_CONST_METHOD1(active_time_timestamp_copy,
+                           uint64_t(unsigned int));
+        MOCK_CONST_METHOD1(active_time_media_decode,
+                           uint64_t(unsigned int));
+        MOCK_CONST_METHOD1(active_time_timestamp_media_decode,
+                           uint64_t(unsigned int));
         MOCK_CONST_METHOD1(temperature,
                            double(unsigned int));
         MOCK_CONST_METHOD1(temperature_gpu,
@@ -103,6 +111,8 @@ class MockLevelZeroDevicePool : public geopm::LevelZeroDevicePool
         MOCK_CONST_METHOD1(power_limit_peak_ac,
                            int32_t(unsigned int));
         MOCK_CONST_METHOD1(energy,
+                           uint64_t(unsigned int));
+        MOCK_CONST_METHOD1(energy_timestamp,
                            uint64_t(unsigned int));
         MOCK_CONST_METHOD1(performance_factor,
                            double(unsigned int));

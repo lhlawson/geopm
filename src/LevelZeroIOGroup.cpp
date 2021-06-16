@@ -141,7 +141,7 @@ namespace geopm
                                   {
                                       return this->m_levelzero_device_pool.power(domain_idx);
                                   },
-                                  1/1e6
+                                  1
                                   }},
                               {"LEVELZERO::FREQUENCY_GPU_RANGE_MIN_CONTROL", {
                                   "Accelerator compute/GPU domain user specified min frequency in hertz",
@@ -436,34 +436,111 @@ namespace geopm
                                       return this->m_levelzero_device_pool.power_limit_max(domain_idx);
                                   },
                                   1/1e3
-                                  }}
-
-                              //{"LEVELZERO::ACTIVE_TIME_COMPUTE", {
-                              //    "Compue engine active time",
-                              //    {},
-                              //    GEOPM_DOMAIN_BOARD_ACCELERATOR,
-                              //    Agg::average,
-                              //    string_format_double,
-                              //    {},
-                              //    [this](unsigned int domain_idx) -> double
-                              //    {
-                              //        return this->m_levelzero_device_pool.active_time(domain_idx);
-                              //    },
-                              //    1
-                              //    }},
-                              //{"LEVELZERO::ACTIVE_TIME_COMPUTE_TIMESTAMP", {
-                              //    "Compue engine active time",
-                              //    {},
-                              //    GEOPM_DOMAIN_BOARD_ACCELERATOR,
-                              //    Agg::average,
-                              //    string_format_double,
-                              //    {},
-                              //    [this](unsigned int domain_idx) -> double
-                              //    {
-                              //        return this->m_levelzero_device_pool.active_time_timestamp(domain_idx);
-                              //    },
-                              //    1
-                              //    }},
+                                  }},
+                              {"LEVELZERO::ACTIVE_TIME", {
+                                  "GPU active time",
+                                  {},
+                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                  Agg::average,
+                                  string_format_double,
+                                  {},
+                                  [this](unsigned int domain_idx) -> double
+                                  {
+                                      return this->m_levelzero_device_pool.active_time(domain_idx);
+                                  },
+                                  1
+                                  }},
+                              {"LEVELZERO::ACTIVE_TIME_TIMESTAMP", {
+                                  "GPU active time reading timestamp",
+                                  {},
+                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                  Agg::average,
+                                  string_format_double,
+                                  {},
+                                  [this](unsigned int domain_idx) -> double
+                                  {
+                                      return this->m_levelzero_device_pool.active_time_timestamp(domain_idx);
+                                  },
+                                  1
+                                  }},
+                              {"LEVELZERO::ACTIVE_TIME_COMPUTE", {
+                                  "GPU Compute engine active time",
+                                  {},
+                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                  Agg::average,
+                                  string_format_double,
+                                  {},
+                                  [this](unsigned int domain_idx) -> double
+                                  {
+                                      return this->m_levelzero_device_pool.active_time_compute(domain_idx);
+                                  },
+                                  1
+                                  }},
+                              {"LEVELZERO::ACTIVE_TIME_TIMESTAMP_COMPUTE", {
+                                  "GPU Compute engine active time reading timestamp",
+                                  {},
+                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                  Agg::average,
+                                  string_format_double,
+                                  {},
+                                  [this](unsigned int domain_idx) -> double
+                                  {
+                                      return this->m_levelzero_device_pool.active_time_timestamp_compute(domain_idx);
+                                  },
+                                  1
+                                  }},
+                              {"LEVELZERO::ACTIVE_TIME_COPY", {
+                                  "GPU Copy engine active time",
+                                  {},
+                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                  Agg::average,
+                                  string_format_double,
+                                  {},
+                                  [this](unsigned int domain_idx) -> double
+                                  {
+                                      return this->m_levelzero_device_pool.active_time_copy(domain_idx);
+                                  },
+                                  1
+                                  }},
+                              {"LEVELZERO::ACTIVE_TIME_TIMESTAMP_COPY", {
+                                  "GPU Copy engine active time timestamp",
+                                  {},
+                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                  Agg::average,
+                                  string_format_double,
+                                  {},
+                                  [this](unsigned int domain_idx) -> double
+                                  {
+                                      return this->m_levelzero_device_pool.active_time_timestamp_copy(domain_idx);
+                                  },
+                                  1
+                                  }},
+                              {"LEVELZERO::ACTIVE_TIME_MEDIA_DECODE", {
+                                  "Compue engine active time",
+                                  {},
+                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                  Agg::average,
+                                  string_format_double,
+                                  {},
+                                  [this](unsigned int domain_idx) -> double
+                                  {
+                                      return this->m_levelzero_device_pool.active_time_media_decode(domain_idx);
+                                  },
+                                  1
+                                  }},
+                              {"LEVELZERO::ACTIVE_TIME_TIMESTAMP_MEDIA_DECODE", {
+                                  "Compue engine active time",
+                                  {},
+                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                  Agg::average,
+                                  string_format_double,
+                                  {},
+                                  [this](unsigned int domain_idx) -> double
+                                  {
+                                      return this->m_levelzero_device_pool.active_time_timestamp_media_decode(domain_idx);
+                                  },
+                                  1
+                                  }},
                               //{"LEVELZERO::CPU_ACCELERATOR_ACTIVE_AFFINITIZATION", {
                               //    "Returns the associated accelerator for a given CPU as determined by running processes."
                               //    "\n  If no accelerators map to the CPU then -1 is returned"
@@ -507,7 +584,7 @@ namespace geopm
                 result.push_back(sgnl);
 
                 std::shared_ptr<Signal> l0_signal =
-                        std::make_shared<LevelZeroSignal>(sv.second.m_devpool_func, domain_idx);
+                        std::make_shared<LevelZeroSignal>(sv.second.m_devpool_func, domain_idx, sv.second.scalar);
                 l0_result.push_back(l0_signal);
             }
             sv.second.signals = result;
@@ -516,8 +593,8 @@ namespace geopm
 
         register_derivative_signals();
 
-        //register_signal_alias("POWER_ACCELERATOR", "LEVELZERO::POWER");
-        //register_signal_alias("FREQUENCY_ACCELERATOR", "LEVELZERO::FREQUENCY_GPU");
+        register_signal_alias("FREQUENCY_ACCELERATOR", "LEVELZERO::FREQUENCY_GPU");
+        register_signal_alias("POWER_ACCELERATOR", "LEVELZERO::POWER");
 
         // populate controls for each domain
         for (auto &sv : m_control_available) {
@@ -547,12 +624,30 @@ namespace geopm
                     "Average accelerator power over 40 ms or 8 control loop iterations",
                     "LEVELZERO::ENERGY",
                     "LEVELZERO::ENERGY_TIMESTAMP"},
+            {"LEVELZERO::UTILIZATION",
+                    "Compute engine utilization"
+                        "n  Level Zero logical engines may may to the same hardware"
+                        "\n  resulting in a reduced signal range (i.e. not 0 to 1)",
+                    "LEVELZERO::ACTIVE_TIME",
+                    "LEVELZERO::ACTIVE_TIME_TIMESTAMP"},
             {"LEVELZERO::UTILIZATION_COMPUTE",
                     "Compute engine utilization"
                         "n  Level Zero logical engines may may to the same hardware"
                         "\n  resulting in a reduced signal range (i.e. not 0 to 1)",
                     "LEVELZERO::ACTIVE_TIME_COMPUTE",
-                    "LEVELZERO::ACTIVE_TIME_COMPUTE_TIMESTAMP"}
+                    "LEVELZERO::ACTIVE_TIME_TIMESTAMP_COMPUTE"},
+            {"LEVELZERO::UTILIZATION_COMPUTE",
+                    "Compute engine utilization"
+                        "n  Level Zero logical engines may may to the same hardware"
+                        "\n  resulting in a reduced signal range (i.e. not 0 to 1)",
+                    "LEVELZERO::ACTIVE_TIME_COMPUTE",
+                    "LEVELZERO::ACTIVE_TIME_TIMESTAMP_COMPUTE"},
+            {"LEVELZERO::UTILIZATION_COMPUTE",
+                    "Compute engine utilization"
+                        "n  Level Zero logical engines may may to the same hardware"
+                        "\n  resulting in a reduced signal range (i.e. not 0 to 1)",
+                    "LEVELZERO::ACTIVE_TIME_COMPUTE",
+                    "LEVELZERO::ACTIVE_TIME_TIMESTAMP_COMPUTE"}
         };
         //std::shared_ptr<Signal> time_sig = std::make_shared<TimeSignal>(m_time_zero, m_time_batch);
         //m_signal_available[time_name] = {std::vector<std::shared_ptr<Signal> >({time_sig}),
@@ -568,8 +663,7 @@ namespace geopm
                                    " does not match number of signals available.");
 
                 auto time_sig = time_it->second.l0_signals;
-                int time_domain = time_it->second.domain;
-                GEOPM_DEBUG_ASSERT(time_domain == domain,
+                GEOPM_DEBUG_ASSERT(time_it->second.domain == domain,
                                    "domain for " + ds.time_name +
                                    " does not match " + ds.base_name);
 
@@ -674,12 +768,11 @@ namespace geopm
 
         int result = -1;
         bool is_found = false;
-        std::shared_ptr<signal_s> signal = m_signal_available.at(signal_name).signals.at(domain_idx);
+        std::shared_ptr<Signal> signal = m_signal_available.at(signal_name).l0_signals.at(domain_idx);
 
-        // Check if signal was already pushed
+        // Check if signal was already pushed.
         for (size_t ii = 0; !is_found && ii < m_signal_pushed.size(); ++ii) {
-            // same location means this signal or its alias was already pushed
-            if (m_signal_pushed[ii].get() == signal.get()) {
+            if (m_signal_pushed[ii] == signal) {
                 result = ii;
                 is_found = true;
             }
@@ -687,8 +780,8 @@ namespace geopm
         if (!is_found) {
             // If not pushed, add to pushed signals and configure for batch reads
             result = m_signal_pushed.size();
-            signal->m_do_read = true;
             m_signal_pushed.push_back(signal);
+            signal->setup_batch();
         }
 
         return result;
@@ -789,22 +882,7 @@ namespace geopm
     // Parse and update saved values for signals
     void LevelZeroIOGroup::read_batch(void)
     {
-        m_is_batch_read = true;
-        for (auto &sv : m_signal_available) {
-            for (unsigned int domain_idx = 0; domain_idx < sv.second.signals.size(); ++domain_idx) {
-                if (sv.second.signals.at(domain_idx)->m_do_read) {
-                    // TODO: numerous optimizations are possible, including:
-                    //          grouped power limit reads
-                    //          grouped min/max reads
-                    //          grouped frequency domain reads (with device pool modification)
-                    //
-                    //  The majority of these require caching of generally static values in the devicepool,
-                    //  more in-depth level zero data types being understood by the IOGroup, OR new data structures
-                    //  being defined in the devicepool that replicate the underlying level zero data structs.
-                    sv.second.signals.at(domain_idx)->m_value = read_signal(sv.first, sv.second.domain, domain_idx);
-                }
-            }
-        }
+        m_is_batch_read = true; //TODO: may remove?
     }
 
     // Write all controls that have been pushed and adjusted
@@ -828,17 +906,16 @@ namespace geopm
     // Return the latest value read by read_batch()
     double LevelZeroIOGroup::sample(int batch_idx)
     {
-        // Do conversion of signal values stored in read batch
         if (batch_idx < 0 || batch_idx >= (int)m_signal_pushed.size()) {
             throw Exception("LevelZeroIOGroup::" + std::string(__func__) + ": batch_idx " +std::to_string(batch_idx)+ " out of range",
                             GEOPM_ERROR_INVALID, __FILE__, __LINE__);
         }
-        if (!m_is_batch_read) {
+        if (!m_is_batch_read) { //Not strictly necessary, but keeping to enforce general flow of read_batch followed by sample.
             throw Exception("LevelZeroIOGroup::" + std::string(__func__) + ": signal has not been read.",
                             GEOPM_ERROR_INVALID, __FILE__, __LINE__);
         }
 
-        return m_signal_pushed[batch_idx]->m_value;
+        return m_signal_pushed[batch_idx]->sample();
     }
 
     // Save a setting to be written by a future write_batch()
@@ -872,165 +949,13 @@ namespace geopm
         }
 
         double result = NAN;
-        if (signal_name == "LEVELZERO::FREQUENCY_GPU" || signal_name == "FREQUENCY_ACCELERATOR") {
-            //first try at signal
-            //std::shared_ptr<LevelZeroSignal> l0_signal =
-            //    std::make_shared<LevelZeroSignal>(&m_levelzero_device_pool, &geopm::LevelZeroDevicePool::frequency_gpu_status, 0);
-            //std::cout << "LevelZeroSignal says: " << std::to_string(l0_signal->read()*1e6) << std::endl;
-
-            //second (and third) try at signal
-            auto it = m_signal_available.find(signal_name);
-            if (it != m_signal_available.end()) {
-                result = (it->second.l0_signals.at(domain_idx))->read()*it->second.scalar;
-                std::cout << "LevelZeroSignal says: " << std::to_string(result) << std::endl;
-            }
-            //old way
-            result = m_levelzero_device_pool.frequency_gpu_status(domain_idx)*1e6;
-        }
-        else if (signal_name == "LEVELZERO::FREQUENCY_MEMORY") {
-            result = m_levelzero_device_pool.frequency_mem_status(domain_idx)*1e6;
-        }
-        else if (signal_name == "LEVELZERO::FREQUENCY_GPU_RANGE_MIN_CONTROL") {
-            result = m_levelzero_device_pool.frequency_gpu_range_min(domain_idx)*1e6;
-        }
-        else if (signal_name == "LEVELZERO::FREQUENCY_GPU_RANGE_MAX_CONTROL") {
-            result = m_levelzero_device_pool.frequency_gpu_range_max(domain_idx)*1e6;
-        }
-        else if (signal_name == "LEVELZERO::CORE_CLOCK_RATE") {
-            result = m_levelzero_device_pool.core_clock_rate(domain_idx)*1e6;
-        }
-        else if (signal_name == "LEVELZERO::FREQUENCY_GPU_MIN") {
-            result = m_levelzero_device_pool.frequency_gpu_min(domain_idx)*1e6;
-        }
-        else if (signal_name == "LEVELZERO::FREQUENCY_GPU_MAX") {
-            auto it = m_signal_available.find(signal_name);
-            if (it != m_signal_available.end()) {
-                result = (it->second.l0_signals.at(domain_idx))->read()*1e6;
-                std::cout << "LevelZeroSignal says: " << std::to_string(result) << std::endl;
-            }
-            //old way
-            result = m_levelzero_device_pool.frequency_gpu_max(domain_idx)*1e6;
-        }
-        else if (signal_name == "LEVELZERO::POWER" || signal_name == "POWER_ACCELERATOR") {
-            auto it = m_signal_available.find(signal_name);
-            if (it != m_signal_available.end()) {
-                result = (it->second.l0_signals.at(domain_idx))->read();
-                std::cout << "LevelZeroSignal derivative POWER says: " << std::to_string(result) << std::endl;
-            }
-            result = m_levelzero_device_pool.power(domain_idx);
-            std::cout << "LevelZeroSignal POWER_RAW says: " << std::to_string(result) << std::endl;
-        }
-        else if (signal_name == "LEVELZERO::UTILIZATION_COMPUTE") {
-            auto it = m_signal_available.find(signal_name);
-            if (it != m_signal_available.end()) {
-                result = (it->second.l0_signals.at(domain_idx))->read();
-                std::cout << "LevelZeroSignal derivative UTILIZATION says: " << std::to_string(result) << std::endl;
-            }
-            result = m_levelzero_device_pool.utilization_compute(domain_idx);
-            std::cout << "LevelZeroSignal UTILIZATION_COMPUTE_RAW says: " << std::to_string(result) << std::endl;
-        }
-
-        else if (signal_name == "LEVELZERO::TEMPERATURE") {
-            result = m_levelzero_device_pool.temperature(domain_idx);
-        }
-        else if (signal_name == "LEVELZERO::TEMPERATURE_GPU") {
-            result = m_levelzero_device_pool.temperature_gpu(domain_idx);
-        }
-        else if (signal_name == "LEVELZERO::TEMPERATURE_MEMORY") {
-            result = m_levelzero_device_pool.temperature_memory(domain_idx);
-        }
-        else if (signal_name == "LEVELZERO::UTILIZATION_RAW") {
-            result = m_levelzero_device_pool.utilization(domain_idx);
-        }
-        else if (signal_name == "LEVELZERO::UTILIZATION_COMPUTE_RAW") {
-            result = m_levelzero_device_pool.utilization_compute(domain_idx);
-        }
-        else if (signal_name == "LEVELZERO::UTILIZATION_COPY_RAW") {
-            result = m_levelzero_device_pool.utilization_copy(domain_idx);
-        }
-        else if (signal_name == "LEVELZERO::UTILIZATION_MEDIA_DECODE_RAW") {
-            result = m_levelzero_device_pool.utilization_media_decode(domain_idx);
-        }
-        else if (signal_name == "LEVELZERO::ACTIVE_TIME_COMPUTE_TIMESTAMP") {
-            result = m_levelzero_device_pool.active_time_timestamp(domain_idx);
-        }
-        else if (signal_name == "LEVELZERO::ACTIVE_TIME_COMPUTE") {
-            std::vector<uint64_t> active_time;
-            std::vector<uint64_t> timestamp;
-            result = m_levelzero_device_pool.active_time(domain_idx, active_time, timestamp);
-            if (result == -1) {
-                throw Exception("LevelZeroIOGroup::" + std::string(__func__) + ": Handling failed for " +
-                                signal_name, GEOPM_ERROR_LOGIC, __FILE__, __LINE__);
-            }
-            //TODO: we want to do a derivative signal of active time over timestamp here for each returned 'pair', then average them.
-            result = active_time.at(0);
-        }
-        //else if (signal_name == "LEVELZERO::POWER" || signal_name == "POWER_ACCELERATOR") {
-        else if (signal_name == "LEVELZERO::ENERGY_TIMESTAMP") {
-            std::vector<uint64_t> energy;
-            std::vector<uint64_t> timestamp;
-            result = m_levelzero_device_pool.energy(domain_idx, energy, timestamp);
-            if (result == -1) {
-                throw Exception("LevelZeroIOGroup::" + std::string(__func__) + ": Handling failed for " +
-                                signal_name, GEOPM_ERROR_LOGIC, __FILE__, __LINE__);
-            }
-            //This assumes one domain timestamp only, or that the first timestamp works for all domains
-            result = timestamp.at(0);
-            std::cout << "ENERGY_TIMESTAMP: " << std::to_string(result) << std::endl;
-        }
-        else if (signal_name == "LEVELZERO::POWER_RAW") {
-            result = m_levelzero_device_pool.power(domain_idx);
-        }
-        else if (signal_name == "LEVELZERO::ENERGY") {
-            //the simpler approach...
-            //result = m_levelzero_device_pool.energy(domain_idx)/1e6;
-            std::vector<uint64_t> energy;
-            std::vector<uint64_t> timestamp;
-            result = m_levelzero_device_pool.energy(domain_idx, energy, timestamp);
-            if (result == -1) {
-                throw Exception("LevelZeroIOGroup::" + std::string(__func__) + ": Handling failed for " +
-                                signal_name, GEOPM_ERROR_LOGIC, __FILE__, __LINE__);
-            }
-            //Right now this should only ever return a single value.  But let's be safe and accumulate.
-            result = std::accumulate(energy.begin(), energy.end(), 0.0)/1e6;
-            std::cout << "ENERGY: " << std::to_string(result) << std::endl;
-        }
-        else if (signal_name == "LEVELZERO::POWER_LIMIT_SUSTAINED") {
-            result = m_levelzero_device_pool.power_limit_sustained_power(domain_idx)/1e3;
-        }
-        else if (signal_name == "LEVELZERO::POWER_LIMIT_SUSTAINED_INTERVAL") {
-            result = m_levelzero_device_pool.power_limit_sustained_interval(domain_idx)/1e3;
-        }
-        else if (signal_name == "LEVELZERO::POWER_LIMIT_SUSTAINED_ENABLED") {
-            result = m_levelzero_device_pool.power_limit_sustained_enabled(domain_idx);
-        }
-        else if (signal_name == "LEVELZERO::POWER_LIMIT_BURST") {
-            result = m_levelzero_device_pool.power_limit_burst_power(domain_idx)/1e3;
-        }
-        else if (signal_name == "LEVELZERO::POWER_LIMIT_BURST_ENABLED") {
-            result = m_levelzero_device_pool.power_limit_burst_enabled(domain_idx);
-        }
-        else if (signal_name == "LEVELZERO::POWER_LIMIT_PEAK_AC") {
-            result = m_levelzero_device_pool.power_limit_peak_ac(domain_idx)/1e3;
-        }
-        else if (signal_name == "LEVELZERO::POWER_LIMIT_MIN") {
-            result = m_levelzero_device_pool.power_limit_min(domain_idx)/1e3;
-        }
-        else if (signal_name == "LEVELZERO::POWER_LIMIT_MAX") {
-            result = m_levelzero_device_pool.power_limit_max(domain_idx)/1e3;
-        }
-        else if (signal_name == "LEVELZERO::POWER_LIMIT_DEFAULT") {
-            result = m_levelzero_device_pool.power_tdp(domain_idx)/1e3;
+        auto it = m_signal_available.find(signal_name);
+        if (it != m_signal_available.end()) {
+            result = (it->second.l0_signals.at(domain_idx))->read();
         }
         else if (signal_name == "LEVELZERO::CPU_ACCELERATOR_ACTIVE_AFFINITIZATION") {
             std::map<pid_t, double> process_map = accelerator_process_map();
             result = cpu_accelerator_affinity(domain_idx, process_map);
-        }
-        else if (signal_name == "LEVELZERO::STANDBY_MODE") {
-            result = m_levelzero_device_pool.standby_mode(domain_idx);
-        }
-        else if (signal_name == "LEVELZERO::MEMORY_ALLOCATED") {
-            result = m_levelzero_device_pool.memory_allocated(domain_idx);
         }
         else {
     #ifdef GEOPM_DEBUG

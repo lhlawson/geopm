@@ -43,9 +43,10 @@
 namespace geopm
 {
     LevelZeroSignal::LevelZeroSignal(std::function<double (unsigned int)> devpool_func,
-                                     unsigned int accelerator)
+                                     unsigned int accelerator, double scalar)
         : m_devpool_func(devpool_func)
         , m_accel(accelerator)
+        , m_scalar(scalar)
         , m_is_batch_ready(false)
     {
     }
@@ -63,11 +64,11 @@ namespace geopm
             throw Exception("setup_batch() must be called before sample().",
                             GEOPM_ERROR_RUNTIME, __FILE__, __LINE__);
         }
-        return m_devpool_func(m_accel);
+        return read();
     }
 
     double LevelZeroSignal::read(void) const
     {
-        return m_devpool_func(m_accel);
+        return m_devpool_func(m_accel)*m_scalar;
     }
 }

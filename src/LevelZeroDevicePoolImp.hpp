@@ -67,16 +67,17 @@ namespace geopm
             virtual double utilization_compute(unsigned int accel_idx) const override;
             virtual double utilization_copy(unsigned int accel_idx) const override;
             virtual double utilization_media_decode(unsigned int accel_idx) const override;
-            virtual double active_time(unsigned int accel_idx) const override;
-            virtual double active_time_timestamp(unsigned int accel_idx) const override;
+            virtual uint64_t active_time(unsigned int accel_idx) const override;
+            virtual uint64_t active_time_compute(unsigned int accel_idx) const override;
+            virtual uint64_t active_time_copy(unsigned int accel_idx) const override;
+            virtual uint64_t active_time_media_decode(unsigned int accel_idx) const override;
+            virtual uint64_t active_time_timestamp(unsigned int accel_idx) const override;
+            virtual uint64_t active_time_timestamp_compute(unsigned int accel_idx) const override;
+            virtual uint64_t active_time_timestamp_copy(unsigned int accel_idx) const override;
+            virtual uint64_t active_time_timestamp_media_decode(unsigned int accel_idx) const override;
+            /// @brief Get the LevelZero device power in ???.
 
-            virtual int active_time(unsigned int accel_idx,
-                                       std::vector<uint64_t> &active_time,
-                                       std::vector<uint64_t> &timestamp) const override;
             virtual double power(unsigned int accel_idx) const override;
-            virtual int energy(unsigned int accel_idx,
-                                       std::vector<uint64_t> &energy,
-                                       std::vector<uint64_t> &timestamp) const override;
             virtual int32_t power_tdp(unsigned int accel_idx) const override;
             virtual int32_t power_limit_min(unsigned int accel_idx) const override;
             virtual int32_t power_limit_max(unsigned int accel_idx) const override;
@@ -112,7 +113,9 @@ namespace geopm
             virtual double frequency_status(int accel_idx, zes_freq_domain_t) const;
             virtual std::pair<double, double> frequency_min_max(int accel_idx, zes_freq_domain_t type) const;
             virtual std::pair<double, double> frequency_range(int accel_idx, zes_freq_domain_t type) const;
+            virtual std::pair<uint64_t, uint64_t> energy_pair(unsigned int accel_idx) const;
             virtual double utilization(int accel_idx, zes_engine_group_t engine_type) const;
+            virtual std::pair<uint64_t, uint64_t> active_time(unsigned int accel_idx, zes_engine_group_t engine_type) const;
             virtual double temperature(int accel_idx, zes_temp_sensors_t sensor_type) const;
             virtual void frequency_control(unsigned int accel_idx, double min_freq, double max_freq, zes_freq_domain_t) const;
 
