@@ -92,12 +92,6 @@ namespace geopm
             bool m_is_batch_read;
             std::vector<uint64_t> m_initial_power_limit;
 
-            struct signal_s
-            {
-                double m_value;
-                bool m_do_read;
-            };
-
             struct control_s
             {
                 double m_setting;
@@ -106,11 +100,10 @@ namespace geopm
 
             struct signal_info {
                 std::string m_description;
-                std::vector<std::shared_ptr<signal_s> > signals;
                 int domain; //TODO: rename domain_type
                 std::function<double(const std::vector<double> &)> m_agg_function;
                 std::function<std::string(double)> m_format_function;
-                std::vector<std::shared_ptr<Signal> > l0_signals; //TODO: become m_signals
+                std::vector<std::shared_ptr<Signal> > m_signals;
                 std::function<double (unsigned int)> m_devpool_func;
                 double scalar;
             };
@@ -125,7 +118,6 @@ namespace geopm
 
             std::map<std::string, signal_info> m_signal_available;
             std::map<std::string, control_info> m_control_available;
-            //std::vector<std::shared_ptr<signal_s> > m_signal_pushed;
             std::vector<std::shared_ptr<Signal> > m_signal_pushed;
             std::vector<std::shared_ptr<control_s> > m_control_pushed;
     };

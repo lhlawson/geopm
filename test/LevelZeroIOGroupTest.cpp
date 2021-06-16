@@ -203,7 +203,7 @@ TEST_F(LevelZeroIOGroupTest, read_signal_and_batch)
     LevelZeroIOGroup levelzero_io(*m_platform_topo, *m_device_pool);
 
     for (int accel_idx = 0; accel_idx < num_accelerator; ++accel_idx) {
-        EXPECT_CALL(*m_device_pool, frequency_gpu_status(accel_idx)).WillRepeatedly(Return(mock_freq.at(accel_idx)));
+        EXPECT_CALL(*m_device_pool, frequency_status_gpu(accel_idx)).WillRepeatedly(Return(mock_freq.at(accel_idx)));
     }
     for (int accel_idx = 0; accel_idx < num_accelerator; ++accel_idx) {
         batch_idx.push_back(levelzero_io.push_signal("LEVELZERO::FREQUENCY_GPU", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx));
@@ -220,7 +220,7 @@ TEST_F(LevelZeroIOGroupTest, read_signal_and_batch)
     mock_freq = {1630, 1420, 520, 235};
     //second round of testing with a modified value
     for (int accel_idx = 0; accel_idx < num_accelerator; ++accel_idx) {
-        EXPECT_CALL(*m_device_pool, frequency_gpu_status(accel_idx)).WillRepeatedly(Return(mock_freq.at(accel_idx)));
+        EXPECT_CALL(*m_device_pool, frequency_status_gpu(accel_idx)).WillRepeatedly(Return(mock_freq.at(accel_idx)));
     }
     levelzero_io.read_batch();
     for (int accel_idx = 0; accel_idx < num_accelerator; ++accel_idx) {
@@ -262,12 +262,12 @@ TEST_F(LevelZeroIOGroupTest, read_signal)
 
 
     for (int accel_idx = 0; accel_idx < num_accelerator; ++accel_idx) {
-        EXPECT_CALL(*m_device_pool, frequency_gpu_status(accel_idx)).WillRepeatedly(Return(mock_freq_gpu.at(accel_idx)));
+        EXPECT_CALL(*m_device_pool, frequency_status_gpu(accel_idx)).WillRepeatedly(Return(mock_freq_gpu.at(accel_idx)));
         //EXPECT_CALL(*m_device_pool, power(accel_idx)).WillRepeatedly(Return(mock_power.at(accel_idx)));;
         EXPECT_CALL(*m_device_pool, energy(accel_idx)).WillRepeatedly(Return(mock_energy.at(accel_idx)));
         EXPECT_CALL(*m_device_pool, energy_timestamp(accel_idx)).WillRepeatedly(Return(mock_energy_timestamp.at(accel_idx)));
         //EXPECT_CALL(*m_device_pool, utilization_compute(accel_idx)).WillRepeatedly(Return(mock_utilization_compute.at(accel_idx)));
-        EXPECT_CALL(*m_device_pool, active_time(accel_idx)).WillRepeatedly(Return(mock_active_time_compute.at(accel_idx)));
+        EXPECT_CALL(*m_device_pool, active_time_compute(accel_idx)).WillRepeatedly(Return(mock_active_time_compute.at(accel_idx)));
         EXPECT_CALL(*m_device_pool, active_time_timestamp_compute(accel_idx)).WillRepeatedly(Return(mock_active_time_timestamp_compute.at(accel_idx)));
         //TODO: Test ALL Signals
     }
@@ -317,7 +317,7 @@ TEST_F(LevelZeroIOGroupTest, error_path)
 
     std::vector<double> mock_freq = {1530, 1320, 420, 135};
     for (int accel_idx = 0; accel_idx < num_accelerator; ++accel_idx) {
-        EXPECT_CALL(*m_device_pool, frequency_gpu_status(accel_idx)).WillRepeatedly(Return(mock_freq.at(accel_idx)));
+        EXPECT_CALL(*m_device_pool, frequency_status_gpu(accel_idx)).WillRepeatedly(Return(mock_freq.at(accel_idx)));
     }
     LevelZeroIOGroup levelzero_io(*m_platform_topo, *m_device_pool);
 

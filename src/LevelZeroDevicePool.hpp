@@ -55,15 +55,14 @@ namespace geopm
             /// @param [in] accel_idx The index indicating a particular
             ///        accelerator.
             /// @return Accelerator device core clock rate in MHz.
-            virtual double core_clock_rate(unsigned int accel_idx) const = 0;
-            virtual double frequency_gpu_status(unsigned int accel_idx) const = 0;
-            virtual double frequency_mem_status(unsigned int accel_idx) const = 0;
-            virtual double frequency_gpu_min(unsigned int accel_idx) const = 0;
-            virtual double frequency_gpu_max(unsigned int accel_idx) const = 0;
-            virtual double frequency_mem_min(unsigned int accel_idx) const = 0;
-            virtual double frequency_mem_max(unsigned int accel_idx) const = 0;
-            virtual double frequency_gpu_range_min(unsigned int accel_idx) const = 0;
-            virtual double frequency_gpu_range_max(unsigned int accel_idx) const = 0;
+            virtual double frequency_status_gpu(unsigned int accel_idx) const = 0;
+            virtual double frequency_status_mem(unsigned int accel_idx) const = 0;
+            virtual double frequency_min_gpu(unsigned int accel_idx) const = 0;
+            virtual double frequency_max_gpu(unsigned int accel_idx) const = 0;
+            virtual double frequency_min_mem(unsigned int accel_idx) const = 0;
+            virtual double frequency_max_mem(unsigned int accel_idx) const = 0;
+            virtual double frequency_range_min_gpu(unsigned int accel_idx) const = 0;
+            virtual double frequency_range_max_gpu(unsigned int accel_idx) const = 0;
 
             /// @brief Get the LevelZero device temperature.
             /// @param [in] accel_idx The index indicating a particular
@@ -73,15 +72,6 @@ namespace geopm
             virtual double temperature_gpu(unsigned int accel_idx) const = 0;
             virtual double temperature_memory(unsigned int accel_idx) const = 0;
 
-            /// @brief Get the LevelZero device utilization metric.
-            /// @param [in] accel_idx The index indicating a particular
-            ///        accelerator.
-            /// @return Accelerator streaming multiprocessor utilization
-            ///          percentage
-            virtual double utilization(unsigned int accel_idx) const = 0;
-            virtual double utilization_compute(unsigned int accel_idx) const = 0;
-            virtual double utilization_copy(unsigned int accel_idx) const = 0;
-            virtual double utilization_media_decode(unsigned int accel_idx) const = 0;
             virtual uint64_t active_time(unsigned int accel_idx) const = 0;
             virtual uint64_t active_time_compute(unsigned int accel_idx) const = 0;
             virtual uint64_t active_time_copy(unsigned int accel_idx) const = 0;
@@ -94,15 +84,14 @@ namespace geopm
             /// @param [in] accel_idx The index indicating a particular
             ///        accelerator.
             /// @return Accelerator power consumption in milliwatts.
-            virtual double power(unsigned int accel_idx) const = 0;
-            virtual int32_t power_tdp(unsigned int accel_idx) const = 0;
+            virtual int32_t power_limit_tdp(unsigned int accel_idx) const = 0;
             virtual int32_t power_limit_min(unsigned int accel_idx) const = 0;
             virtual int32_t power_limit_max(unsigned int accel_idx) const = 0;
-            virtual bool  power_limit_sustained_enabled(unsigned int accel_idx) const = 0;
-            virtual int32_t power_limit_sustained_power(unsigned int accel_idx) const = 0;
-            virtual int32_t power_limit_sustained_interval(unsigned int accel_idx) const = 0;
-            virtual bool  power_limit_burst_enabled(unsigned int accel_idx) const = 0;
-            virtual int32_t power_limit_burst_power(unsigned int accel_idx) const = 0;
+            virtual bool  power_limit_enabled_sustained(unsigned int accel_idx) const = 0;
+            virtual int32_t power_limit_sustained(unsigned int accel_idx) const = 0;
+            virtual int32_t power_limit_interval_sustained(unsigned int accel_idx) const = 0;
+            virtual bool  power_limit_enabled_burst(unsigned int accel_idx) const = 0;
+            virtual int32_t power_limit_burst(unsigned int accel_idx) const = 0;
             virtual int32_t power_limit_peak_ac(unsigned int accel_idx) const = 0;
 
             /// @brief Get the LevelZero device energy in ???.
@@ -122,7 +111,7 @@ namespace geopm
             /// @param [in] min_freq Target min frequency in MHz.
             /// @param [in] max_freq Target max frequency in MHz.
             virtual void energy_threshold_control(unsigned int accel_idx, double setting) const = 0;
-            virtual void frequency_gpu_control(unsigned int accel_idx, double min_freq, double max_freq) const = 0;
+            virtual void frequency_control_gpu(unsigned int accel_idx, double min_freq, double max_freq) const = 0;
             virtual void standby_mode_control(unsigned int accel_idx, double setting) const = 0;
 
         private:

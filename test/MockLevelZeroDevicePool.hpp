@@ -42,23 +42,21 @@ class MockLevelZeroDevicePool : public geopm::LevelZeroDevicePool
     public:
         MOCK_CONST_METHOD0(num_accelerator,
                            int(void));
-        MOCK_CONST_METHOD1(frequency_gpu_status,
+        MOCK_CONST_METHOD1(frequency_status_gpu,
                            double(unsigned int));
-        MOCK_CONST_METHOD1(frequency_mem_status,
+        MOCK_CONST_METHOD1(frequency_status_mem,
                            double(unsigned int));
-        MOCK_CONST_METHOD1(core_clock_rate,
+        MOCK_CONST_METHOD1(frequency_min_gpu,
                            double(unsigned int));
-        MOCK_CONST_METHOD1(frequency_gpu_min,
+        MOCK_CONST_METHOD1(frequency_max_gpu,
                            double(unsigned int));
-        MOCK_CONST_METHOD1(frequency_gpu_max,
+        MOCK_CONST_METHOD1(frequency_min_mem,
                            double(unsigned int));
-        MOCK_CONST_METHOD1(frequency_mem_min,
+        MOCK_CONST_METHOD1(frequency_max_mem,
                            double(unsigned int));
-        MOCK_CONST_METHOD1(frequency_mem_max,
+        MOCK_CONST_METHOD1(frequency_range_min_gpu,
                            double(unsigned int));
-        MOCK_CONST_METHOD1(frequency_gpu_range_min,
-                           double(unsigned int));
-        MOCK_CONST_METHOD1(frequency_gpu_range_max,
+        MOCK_CONST_METHOD1(frequency_range_max_gpu,
                            double(unsigned int));
         MOCK_CONST_METHOD1(utilization,
                            double(unsigned int));
@@ -84,29 +82,21 @@ class MockLevelZeroDevicePool : public geopm::LevelZeroDevicePool
                            double(unsigned int));
         MOCK_CONST_METHOD1(temperature_memory,
                            double(unsigned int));
-        MOCK_CONST_METHOD1(utilization_compute,
-                           double(unsigned int));
-        MOCK_CONST_METHOD1(utilization_copy,
-                           double(unsigned int));
-        MOCK_CONST_METHOD1(utilization_media_decode,
-                           double(unsigned int));
-        MOCK_CONST_METHOD1(power,
-                           double(unsigned int));
-        MOCK_CONST_METHOD1(power_tdp,
+        MOCK_CONST_METHOD1(power_limit_tdp,
                            int32_t(unsigned int));
         MOCK_CONST_METHOD1(power_limit_min,
                            int32_t(unsigned int));
         MOCK_CONST_METHOD1(power_limit_max,
                            int32_t(unsigned int));
-        MOCK_CONST_METHOD1(power_limit_sustained_enabled,
+        MOCK_CONST_METHOD1(power_limit_enabled_sustained,
                            bool(unsigned int));
-        MOCK_CONST_METHOD1(power_limit_sustained_power,
+        MOCK_CONST_METHOD1(power_limit_sustained,
                            int32_t(unsigned int));
-        MOCK_CONST_METHOD1(power_limit_sustained_interval,
+        MOCK_CONST_METHOD1(power_limit_interval_sustained,
                            int32_t(unsigned int));
-        MOCK_CONST_METHOD1(power_limit_burst_enabled,
+        MOCK_CONST_METHOD1(power_limit_enabled_burst,
                            bool(unsigned int));
-        MOCK_CONST_METHOD1(power_limit_burst_power,
+        MOCK_CONST_METHOD1(power_limit_burst,
                            int32_t(unsigned int));
         MOCK_CONST_METHOD1(power_limit_peak_ac,
                            int32_t(unsigned int));
@@ -124,7 +114,7 @@ class MockLevelZeroDevicePool : public geopm::LevelZeroDevicePool
                            double(unsigned int));
         MOCK_CONST_METHOD2(energy_threshold_control,
                            void(unsigned int, double));
-        MOCK_CONST_METHOD3(frequency_gpu_control,
+        MOCK_CONST_METHOD3(frequency_control_gpu,
                            void(unsigned int, double, double));
         MOCK_CONST_METHOD2(standby_mode_control,
                            void(unsigned int, double));

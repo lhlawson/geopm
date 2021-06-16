@@ -397,12 +397,12 @@ namespace geopm
         }
     }
 
-    double LevelZeroDevicePoolImp::frequency_gpu_status(unsigned int accel_idx) const
+    double LevelZeroDevicePoolImp::frequency_status_gpu(unsigned int accel_idx) const
     {
         return frequency_status(accel_idx, ZES_FREQ_DOMAIN_GPU);
     }
 
-    double LevelZeroDevicePoolImp::frequency_mem_status(unsigned int accel_idx) const
+    double LevelZeroDevicePoolImp::frequency_status_mem(unsigned int accel_idx) const
     {
         return frequency_status(accel_idx, ZES_FREQ_DOMAIN_MEMORY);
     }
@@ -436,30 +436,22 @@ namespace geopm
         return result/result_cnt;
     }
 
-    //TODO: Determine if coreClockRate is the 'actual' frequency, or if the sysman result should be used
-    double LevelZeroDevicePoolImp::core_clock_rate(unsigned int accel_idx) const
-    {
-        ze_device_properties_t result;
-        zeDeviceGetProperties(m_sysman_device.at(accel_idx), &result);
-        return result.coreClockRate;
-    }
-
-    double LevelZeroDevicePoolImp::frequency_gpu_min(unsigned int accel_idx) const
+    double LevelZeroDevicePoolImp::frequency_min_gpu(unsigned int accel_idx) const
     {
         return frequency_min_max(accel_idx, ZES_FREQ_DOMAIN_GPU).first;
     }
 
-    double LevelZeroDevicePoolImp::frequency_gpu_max(unsigned int accel_idx) const
+    double LevelZeroDevicePoolImp::frequency_max_gpu(unsigned int accel_idx) const
     {
         return frequency_min_max(accel_idx, ZES_FREQ_DOMAIN_GPU).second;
     }
 
-    double LevelZeroDevicePoolImp::frequency_mem_min(unsigned int accel_idx) const
+    double LevelZeroDevicePoolImp::frequency_min_mem(unsigned int accel_idx) const
     {
         return frequency_min_max(accel_idx, ZES_FREQ_DOMAIN_MEMORY).first;
     }
 
-    double LevelZeroDevicePoolImp::frequency_mem_max(unsigned int accel_idx) const
+    double LevelZeroDevicePoolImp::frequency_max_mem(unsigned int accel_idx) const
     {
         return frequency_min_max(accel_idx, ZES_FREQ_DOMAIN_MEMORY).second;
     }
@@ -490,12 +482,12 @@ namespace geopm
         return {result_min/result_cnt, result_max/result_cnt};
     }
 
-    double LevelZeroDevicePoolImp::frequency_gpu_range_min(unsigned int accel_idx) const
+    double LevelZeroDevicePoolImp::frequency_range_min_gpu(unsigned int accel_idx) const
     {
         return frequency_min_max(accel_idx, ZES_FREQ_DOMAIN_GPU).first;
     }
 
-    double LevelZeroDevicePoolImp::frequency_gpu_range_max(unsigned int accel_idx) const
+    double LevelZeroDevicePoolImp::frequency_range_max_gpu(unsigned int accel_idx) const
     {
         return frequency_min_max(accel_idx, ZES_FREQ_DOMAIN_GPU).second;
     }
@@ -582,84 +574,6 @@ namespace geopm
         return result/result_cnt;
     }
 
-    double LevelZeroDevicePoolImp::utilization(unsigned int accel_idx) const
-    {
-        return utilization(accel_idx, ZES_ENGINE_GROUP_ALL);
-    }
-
-    double LevelZeroDevicePoolImp::utilization_compute(unsigned int accel_idx) const
-    {
-        //TODO: identify if compute_all exists, if not use compute_single and aggregate
-        //TODO: transition to return utilization(accel_idx, ZES_ENGINE_GROUP_COMPUTE_ALL)
-        //      or return utilization(accel_idx, ZES_ENGINE_GROUP_3D_RENDER_COMPUTE_ALL)?
-        return utilization(accel_idx, ZES_ENGINE_GROUP_COMPUTE_SINGLE);
-    }
-
-
-    double LevelZeroDevicePoolImp::utilization_media_decode(unsigned int accel_idx) const
-    {
-        //TODO: identify if copy_all exists, if not use copy_single and aggregate
-        //return utilization(accel_idx, ZES_ENGINE_GROUP_COPY_ALL);
-        return utilization(accel_idx, ZES_ENGINE_GROUP_MEDIA_DECODE_SINGLE);
-    }
-
-
-    double LevelZeroDevicePoolImp::utilization_copy(unsigned int accel_idx) const
-    {
-        //TODO: identify if copy_all exists, if not use copy_single and aggregate
-        //return utilization(accel_idx, ZES_ENGINE_GROUP_COPY_ALL);
-        return utilization(accel_idx, ZES_ENGINE_GROUP_COPY_SINGLE);
-    }
-
-    double LevelZeroDevicePoolImp::utilization(int accel_idx, zes_engine_group_t engine_type) const
-    {
-        check_accel_range(accel_idx);
-        check_domain_range(m_engine_domain.at(accel_idx).size(), __func__, __LINE__);
-        ze_result_t ze_result;
-        double result = 0;
-        double result_cnt = 0;
-        bool domain_match = false;
-
-        zes_engine_properties_t property;
-        zes_engine_stats_t stats_prev;
-        zes_engine_stats_t stats_curr;
-
-        //for each engine group
-        for (auto handle : m_engine_domain.at(accel_idx)) {
-            ze_result = zesEngineGetProperties(handle, &property);
-            check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
-                                                            ": Sysman failed to get engine properties.", __LINE__);
-
-            if (engine_type == property.type) {
-                domain_match = true;
-
-                ze_result = zesEngineGetActivity(handle, &stats_prev);
-                check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
-                                                                ": Sysman failed to get engine group activity.", __LINE__);
-
-                //TODO: wait approach?  May use geopm spin wait.
-                std::this_thread::sleep_for(std::chrono::milliseconds(5));
-
-                ze_result = zesEngineGetActivity(handle, &stats_curr);
-                check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
-                                                                ": Sysman failed to get engine group activity.", __LINE__);
-
-                if (stats_prev.timestamp >= stats_curr.timestamp) {
-                    result = -1;
-                } else {
-                    result += double(stats_curr.activeTime - stats_prev.activeTime) / double(stats_curr.timestamp - stats_prev.timestamp);
-                    ++result_cnt; //TODO: change for official multi-tile support
-                }
-            }
-        }
-
-        if (!domain_match) {
-            result = NAN;
-        }
-
-        return result/result_cnt;
-    }
-
     uint64_t LevelZeroDevicePoolImp::active_time_timestamp(unsigned int accel_idx) const
     {
         return active_time(accel_idx, ZES_ENGINE_GROUP_ALL).second;
@@ -734,45 +648,6 @@ namespace geopm
         return {result_active, result_timestamp};
     }
 
-    double LevelZeroDevicePoolImp::power(unsigned int accel_idx) const
-    {
-        check_accel_range(accel_idx);
-        check_domain_range(m_power_domain.at(accel_idx).size(), __func__, __LINE__);
-        ze_result_t ze_result;
-        double result = NAN;
-
-        zes_power_energy_counter_t energy_prev;
-        zes_power_energy_counter_t energy_curr;
-
-        for (auto handle : m_power_domain.at(accel_idx)) {
-            zes_power_properties_t property; // = {ZES_STRUCTURE_TYPE_POWER_PROPERTIES, nullptr};
-            ze_result = zesPowerGetProperties(handle, &property);
-            check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
-                                                            ": Sysman failed to get domain power properties", __LINE__);
-
-            //For initial GEOPM support we're only providing device level power
-            //finding non-subdevice domain.
-            if (property.onSubdevice == 0) {
-                ze_result = zesPowerGetEnergyCounter(handle, &energy_prev);
-                check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
-                                                                ": Sysman failed to get energy_counter value for power", __LINE__);
-                //TODO: wait approach?  May use geopm spin wait.
-                std::this_thread::sleep_for(std::chrono::milliseconds(5));
-
-                ze_result = zesPowerGetEnergyCounter(handle, &energy_curr);
-                check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
-                                                                ": Sysman failed to get energy_counter value for power", __LINE__);
-                if (energy_prev.timestamp >= energy_curr.timestamp) {
-                    result = -1;
-                } else {
-                    result = double(energy_curr.energy - energy_prev.energy) / double(energy_curr.timestamp - energy_prev.timestamp);
-                }
-            }
-        }
-
-        return result;
-    }
-
     int32_t LevelZeroDevicePoolImp::power_limit_min(unsigned int accel_idx) const
     {
         return std::get<0>(power_limit_default(accel_idx));
@@ -783,7 +658,7 @@ namespace geopm
         return std::get<1>(power_limit_default(accel_idx));
     }
 
-    int32_t LevelZeroDevicePoolImp::power_tdp(unsigned int accel_idx) const
+    int32_t LevelZeroDevicePoolImp::power_limit_tdp(unsigned int accel_idx) const
     {
         return std::get<2>(power_limit_default(accel_idx));
     }
@@ -823,35 +698,35 @@ namespace geopm
         return peak.powerAC;
     }
 
-    bool LevelZeroDevicePoolImp::power_limit_burst_enabled(unsigned int accel_idx) const
+    bool LevelZeroDevicePoolImp::power_limit_enabled_burst(unsigned int accel_idx) const
     {
         zes_power_burst_limit_t burst = {};
         burst = std::get<1>(power_limit(accel_idx));
         return (bool)burst.enabled;
     }
 
-    int32_t LevelZeroDevicePoolImp::power_limit_burst_power(unsigned int accel_idx) const
+    int32_t LevelZeroDevicePoolImp::power_limit_burst(unsigned int accel_idx) const
     {
         zes_power_burst_limit_t burst = {};
         burst = std::get<1>(power_limit(accel_idx));
         return burst.power;
     }
 
-    bool LevelZeroDevicePoolImp::power_limit_sustained_enabled(unsigned int accel_idx) const
+    bool LevelZeroDevicePoolImp::power_limit_enabled_sustained(unsigned int accel_idx) const
     {
         zes_power_sustained_limit_t sustained = {};
         sustained = std::get<0>(power_limit(accel_idx));
         return (bool)sustained.enabled;
     }
 
-    int32_t LevelZeroDevicePoolImp::power_limit_sustained_power(unsigned int accel_idx) const
+    int32_t LevelZeroDevicePoolImp::power_limit_sustained(unsigned int accel_idx) const
     {
         zes_power_sustained_limit_t sustained = {};
         sustained = std::get<0>(power_limit(accel_idx));
         return sustained.power;
     }
 
-    int32_t LevelZeroDevicePoolImp::power_limit_sustained_interval(unsigned int accel_idx) const
+    int32_t LevelZeroDevicePoolImp::power_limit_interval_sustained(unsigned int accel_idx) const
     {
         zes_power_sustained_limit_t sustained = {};
         sustained = std::get<0>(power_limit(accel_idx));
@@ -1079,7 +954,7 @@ namespace geopm
     }
 
 
-    void LevelZeroDevicePoolImp::frequency_gpu_control(unsigned int accel_idx, double min_freq, double max_freq) const
+    void LevelZeroDevicePoolImp::frequency_control_gpu(unsigned int accel_idx, double min_freq, double max_freq) const
     {
         frequency_control(accel_idx, min_freq, max_freq, ZES_FREQ_DOMAIN_GPU);
     }
