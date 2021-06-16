@@ -542,7 +542,7 @@ namespace geopm
                     "LEVELZERO::ENERGY",
                     "LEVELZERO::ENERGY_TIMESTAMP"},
             {"LEVELZERO::UTILIZATION",
-                    "Compute engine utilization"
+                    "GPU utilization"
                         "n  Level Zero logical engines may may to the same hardware"
                         "\n  resulting in a reduced signal range (i.e. not 0 to 1)",
                     "LEVELZERO::ACTIVE_TIME",
@@ -553,18 +553,18 @@ namespace geopm
                         "\n  resulting in a reduced signal range (i.e. not 0 to 1)",
                     "LEVELZERO::ACTIVE_TIME_COMPUTE",
                     "LEVELZERO::ACTIVE_TIME_TIMESTAMP_COMPUTE"},
-            {"LEVELZERO::UTILIZATION_COMPUTE",
-                    "Compute engine utilization"
+            {"LEVELZERO::UTILIZATION_COPY",
+                    "Copy engine utilization"
                         "n  Level Zero logical engines may may to the same hardware"
                         "\n  resulting in a reduced signal range (i.e. not 0 to 1)",
-                    "LEVELZERO::ACTIVE_TIME_COMPUTE",
-                    "LEVELZERO::ACTIVE_TIME_TIMESTAMP_COMPUTE"},
-            {"LEVELZERO::UTILIZATION_COMPUTE",
-                    "Compute engine utilization"
+                    "LEVELZERO::ACTIVE_TIME_COPY",
+                    "LEVELZERO::ACTIVE_TIME_TIMESTAMP_COPY"},
+            {"LEVELZERO::UTILIZATION_MEDIA_DECODE",
+                    "Media decode engine utilization"
                         "n  Level Zero logical engines may may to the same hardware"
                         "\n  resulting in a reduced signal range (i.e. not 0 to 1)",
-                    "LEVELZERO::ACTIVE_TIME_COMPUTE",
-                    "LEVELZERO::ACTIVE_TIME_TIMESTAMP_COMPUTE"}
+                    "LEVELZERO::ACTIVE_TIME_MEDIA_DECODE",
+                    "LEVELZERO::ACTIVE_TIME_TIMESTAMP_MEDIA_DECODE"}
         };
         //std::shared_ptr<Signal> time_sig = std::make_shared<TimeSignal>(m_time_zero, m_time_batch);
         //m_signal_available[time_name] = {std::vector<std::shared_ptr<Signal> >({time_sig}),

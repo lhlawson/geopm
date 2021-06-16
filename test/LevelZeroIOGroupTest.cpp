@@ -401,7 +401,7 @@ TEST_F(LevelZeroIOGroupTest, read_signal)
         double energy = levelzero_io.read_signal("LEVELZERO::ENERGY", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
         EXPECT_DOUBLE_EQ(energy, mock_energy.at(accel_idx)/1e6);
         double energy_timestamp = levelzero_io.read_signal("LEVELZERO::ENERGY_TIMESTAMP", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
-        EXPECT_DOUBLE_EQ(energy_timestamp, mock_energy_timestamp.at(accel_idx));
+        EXPECT_DOUBLE_EQ(energy_timestamp, mock_energy_timestamp.at(accel_idx)/1e6);
 
         //Misc
         double misc = levelzero_io.read_signal("LEVELZERO::PERFORMANCE_FACTOR", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
