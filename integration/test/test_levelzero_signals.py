@@ -44,6 +44,7 @@ import geopm_context
 import geopmpy.agent
 import geopm_test_launcher
 import util
+import time
 import geopmpy.topo
 
 
@@ -70,24 +71,39 @@ class TestIntegrationLevelZeroSignals(unittest.TestCase):
         power = geopm_test_launcher.geopmread("LEVELZERO::POWER board_accelerator 0")
         power_max = geopm_test_launcher.geopmread("LEVELZERO::POWER_LIMIT_MAX board_accelerator 0")
 
-        print("Power: {}".format(power));
-        print("Power max: {}".format(power_max));
+        sys.stdout.write("Power:\n");
+        sys.stdout.write("\tPower: {}\n".format(power));
+        sys.stdout.write("\tPower max: {}\n".format(power_max));
 
+        #Checks
         self.assertGreater(power, 0)
 
         if(power_max > 0): #Negative value indicates max was not supported
             self.assertLessEqual(power, power_max)
+
+    def test_energy(self):
+        energy_prev = geopm_test_launcher.geopmread("LEVELZERO::ENERGY board_accelerator 0")
+        energy_timestamp_prev = geopm_test_launcher.geopmread("LEVELZERO::ENERGY_TIMESTAMP board_accelerator 0")
+        time.sleep(5)
+        energy_curr = geopm_test_launcher.geopmread("LEVELZERO::ENERGY board_accelerator 0")
+        energy_timestamp_curr = geopm_test_launcher.geopmread("LEVELZERO::ENERGY_TIMESTAMP board_accelerator 0")
+
+        self.assertNotEqual(energy_prev, energy_curr)
+        self.assertNotEqual(energy_timestamp_prev, energy_timestamp_curr)
 
     def test_frequency(self):
         standby_mode = geopm_test_launcher.geopmread("LEVELZERO::STANDBY_MODE board_accelerator 0")
         frequency_gpu = geopm_test_launcher.geopmread("LEVELZERO::FREQUENCY_GPU board_accelerator 0")
         frequency_min_gpu = geopm_test_launcher.geopmread("LEVELZERO::FREQUENCY_MIN_GPU board_accelerator 0")
         frequency_max_gpu = geopm_test_launcher.geopmread("LEVELZERO::FREQUENCY_MAX_GPU board_accelerator 0")
-        print("Standby Mode: {}".format(standby_mode));
-        print("Frequency GPU: {}".format(frequency_gpu));
-        print("Frequency GPU Min: {}".format(frequency_min_gpu));
-        print("Frequency GPU Max: {}".format(frequency_max_gpu));
 
+        sys.stdout.write("Frequency:\n");
+        sys.stdout.write("\tStandby Mode: {}\n".format(standby_mode));
+        sys.stdout.write("\tFrequency GPU: {}\n".format(frequency_gpu));
+        sys.stdout.write("\tFrequency GPU Min: {}\n".format(frequency_min_gpu));
+        sys.stdout.write("\tFrequency GPU Max: {}\n".format(frequency_max_gpu));
+
+        #Checks
         if(standby_mode == 0): #We may enter idle and see 0 Hz
             self.assertGreaterEqual(frequency_gpu, 0)
         else:
