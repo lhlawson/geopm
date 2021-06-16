@@ -58,8 +58,6 @@ class MockLevelZeroDevicePool : public geopm::LevelZeroDevicePool
                            double(unsigned int));
         MOCK_CONST_METHOD1(frequency_range_max_gpu,
                            double(unsigned int));
-        MOCK_CONST_METHOD1(utilization,
-                           double(unsigned int));
         MOCK_CONST_METHOD1(active_time,
                            uint64_t(unsigned int));
         MOCK_CONST_METHOD1(active_time_timestamp,

@@ -237,39 +237,91 @@ TEST_F(LevelZeroIOGroupTest, read_signal)
     //EXPECT_CALL(*m_platform_topo, num_domain(GEOPM_DOMAIN_BOARD_ACCELERATOR)).WillRepeatedly(Return(4));
     const int num_accelerator = m_platform_topo->num_domain(GEOPM_DOMAIN_BOARD_ACCELERATOR);
 
+    //Frequency
     std::vector<double> mock_freq_gpu = {1530, 1320, 420, 135};
+    std::vector<double> mock_freq_mem = {130, 1020, 200, 150};
+    std::vector<double> mock_freq_min_gpu = {200, 320, 400, 350};
+    std::vector<double> mock_freq_max_gpu = {2000, 3200, 4200, 1350};
+    std::vector<double> mock_freq_min_mem = {100, 220, 300, 450};
+    std::vector<double> mock_freq_max_mem = {1000, 2200, 3200, 1450};
+    std::vector<double> mock_freq_range_min_gpu = {1200, 620, 500, 530};
+    std::vector<double> mock_freq_range_max_gpu = {3120, 900, 5200, 3500};
+    //Active time
+    std::vector<uint64_t> mock_active_time = {123, 970, 550, 20};
+    std::vector<uint64_t> mock_active_time_timestamp = {182, 970, 650, 33};
     std::vector<uint64_t> mock_active_time_compute = {1, 90, 50, 0};
     std::vector<uint64_t> mock_active_time_timestamp_compute = {12, 90, 150, 3};
+    std::vector<uint64_t> mock_active_time_copy = {12, 20, 30, 40};
+    std::vector<uint64_t> mock_active_time_timestamp_copy = {50, 60, 53, 55};
+    std::vector<uint64_t> mock_active_time_media_decode = {21, 24, 35, 46};
+    std::vector<uint64_t> mock_active_time_timestamp_media_decode = {51, 62, 55, 53};
+    //Temperature
+    std::vector<double> mock_temperature = {45, 60, 68, 92};
+    std::vector<double> mock_temperature_gpu = {50, 65, 78, 99};
+    std::vector<double> mock_temperature_mem = {4, 63, 60, 90};
+    //Power & energy
+    std::vector<int32_t> mock_power_limit_min = {30000, 80000, 20000, 70000};
+    std::vector<int32_t> mock_power_limit_max = {310000, 280000, 320000, 270000};
+    std::vector<int32_t> mock_power_limit_tdp = {320000, 290000, 330000, 280000};
+    std::vector<int32_t> mock_power_limit_interval_sustained = {30000, 26000, 34000, 70000};
+    std::vector<int32_t> mock_power_limit_sustained = {310000, 280000, 320000, 270000};
+    std::vector<bool> mock_power_limit_enabled_sustained = {0, 1, 1, 1};
+    std::vector<int32_t> mock_power_limit_burst = {300000, 270000, 300000, 250000};
+    std::vector<bool> mock_power_limit_enabled_burst = {1, 1, 0, 1};
+    std::vector<int32_t> mock_power_limit_peak_ac = {100000, 730000, 600000, 450000};
     std::vector<uint64_t> mock_energy = {630000000, 280000000, 470000000, 950000000};
     std::vector<uint64_t> mock_energy_timestamp = {153, 70, 300, 50};
 
-    //std::vector<double> mock_freq_mem = {877, 877, 877, 877};
-    //std::vector<double> mock_core_clock_rate = {800, 900, 1000, 2000};
-    //std::vector<double> mock_freq_gpu_min = {100, 120, 55, 75};
-    //std::vector<double> mock_freq_gpu_max = {1530, 1320, 420, 135};
-    //std::vector<double> mock_freq_mem_min = {530, 120, 40, 35};
-    //std::vector<double> mock_freq_mem_max = {1530, 1320, 420, 135};
-    //std::vector<double> mock_freq_gpu_range_min = {980, 190, 35, 25};
-    //std::vector<double> mock_freq_gpu_range_max = {1300, 1200, 40, 735};
-    //std::vector<double> mock_utilization = {10, 9, 5, 0};
-    //std::vector<double> mock_utilization_mem = {25, 50, 100, 75};
-    //std::vector<double> mock_power_limit_sustained = {300000, 270000, 300000, 250000};
-    //std::vector<double> mock_power_limit_enabled = {0, 1, 0, 1};
-    //std::vector<double> mock_throttle_reasons = {0, 1, 3, 128};
-    //std::vector<double> mock_temperature = {45, 60, 68, 92};
+    std::vector<double> mock_performance_factor = {0, 100, 50, 72};
+    std::vector<double> mock_standby_mode = {0, 1, 0, 1};
+    std::vector<double> mock_memory_allocated = {0, 1, 0.5, 0.21};
     //std::vector<int> active_process_list = {40961, 40962, 40963};
 
-
-
     for (int accel_idx = 0; accel_idx < num_accelerator; ++accel_idx) {
+
+        //Frequency
         EXPECT_CALL(*m_device_pool, frequency_status_gpu(accel_idx)).WillRepeatedly(Return(mock_freq_gpu.at(accel_idx)));
-        //EXPECT_CALL(*m_device_pool, power(accel_idx)).WillRepeatedly(Return(mock_power.at(accel_idx)));;
-        EXPECT_CALL(*m_device_pool, energy(accel_idx)).WillRepeatedly(Return(mock_energy.at(accel_idx)));
-        EXPECT_CALL(*m_device_pool, energy_timestamp(accel_idx)).WillRepeatedly(Return(mock_energy_timestamp.at(accel_idx)));
-        //EXPECT_CALL(*m_device_pool, utilization_compute(accel_idx)).WillRepeatedly(Return(mock_utilization_compute.at(accel_idx)));
+        EXPECT_CALL(*m_device_pool, frequency_status_mem(accel_idx)).WillRepeatedly(Return(mock_freq_mem.at(accel_idx)));
+        EXPECT_CALL(*m_device_pool, frequency_min_gpu(accel_idx)).WillRepeatedly(Return(mock_freq_min_gpu.at(accel_idx)));
+        EXPECT_CALL(*m_device_pool, frequency_max_gpu(accel_idx)).WillRepeatedly(Return(mock_freq_max_gpu.at(accel_idx)));
+        EXPECT_CALL(*m_device_pool, frequency_min_mem(accel_idx)).WillRepeatedly(Return(mock_freq_min_mem.at(accel_idx)));
+        EXPECT_CALL(*m_device_pool, frequency_max_mem(accel_idx)).WillRepeatedly(Return(mock_freq_max_mem.at(accel_idx)));
+        EXPECT_CALL(*m_device_pool, frequency_range_min_gpu(accel_idx)).WillRepeatedly(Return(mock_freq_range_min_gpu.at(accel_idx)));
+        EXPECT_CALL(*m_device_pool, frequency_range_max_gpu(accel_idx)).WillRepeatedly(Return(mock_freq_range_max_gpu.at(accel_idx)));
+
+        //Active time
+        EXPECT_CALL(*m_device_pool, active_time(accel_idx)).WillRepeatedly(Return(mock_active_time.at(accel_idx)));
+        EXPECT_CALL(*m_device_pool, active_time_timestamp(accel_idx)).WillRepeatedly(Return(mock_active_time_timestamp.at(accel_idx)));
         EXPECT_CALL(*m_device_pool, active_time_compute(accel_idx)).WillRepeatedly(Return(mock_active_time_compute.at(accel_idx)));
         EXPECT_CALL(*m_device_pool, active_time_timestamp_compute(accel_idx)).WillRepeatedly(Return(mock_active_time_timestamp_compute.at(accel_idx)));
-        //TODO: Test ALL Signals
+        EXPECT_CALL(*m_device_pool, active_time_copy(accel_idx)).WillRepeatedly(Return(mock_active_time_copy.at(accel_idx)));
+        EXPECT_CALL(*m_device_pool, active_time_timestamp_copy(accel_idx)).WillRepeatedly(Return(mock_active_time_timestamp_copy.at(accel_idx)));
+        EXPECT_CALL(*m_device_pool, active_time_media_decode(accel_idx)).WillRepeatedly(Return(mock_active_time_media_decode.at(accel_idx)));
+        EXPECT_CALL(*m_device_pool, active_time_timestamp_media_decode(accel_idx)).WillRepeatedly(Return(mock_active_time_timestamp_media_decode.at(accel_idx)));
+
+        //Temperature
+        EXPECT_CALL(*m_device_pool, temperature(accel_idx)).WillRepeatedly(Return(mock_temperature.at(accel_idx)));
+        EXPECT_CALL(*m_device_pool, temperature_gpu(accel_idx)).WillRepeatedly(Return(mock_temperature_gpu.at(accel_idx)));
+        EXPECT_CALL(*m_device_pool, temperature_memory(accel_idx)).WillRepeatedly(Return(mock_temperature_mem.at(accel_idx)));
+
+        //Power & energy
+        EXPECT_CALL(*m_device_pool, power_limit_min(accel_idx)).WillRepeatedly(Return(mock_power_limit_min.at(accel_idx)));
+        EXPECT_CALL(*m_device_pool, power_limit_max(accel_idx)).WillRepeatedly(Return(mock_power_limit_max.at(accel_idx)));
+        EXPECT_CALL(*m_device_pool, power_limit_tdp(accel_idx)).WillRepeatedly(Return(mock_power_limit_tdp.at(accel_idx)));
+        EXPECT_CALL(*m_device_pool, power_limit_enabled_sustained(accel_idx)).WillRepeatedly(Return(mock_power_limit_enabled_sustained.at(accel_idx)));
+        EXPECT_CALL(*m_device_pool, power_limit_sustained(accel_idx)).WillRepeatedly(Return(mock_power_limit_sustained.at(accel_idx)));
+        EXPECT_CALL(*m_device_pool, power_limit_interval_sustained(accel_idx)).WillRepeatedly(Return(mock_power_limit_interval_sustained.at(accel_idx)));
+        EXPECT_CALL(*m_device_pool, power_limit_enabled_burst(accel_idx)).WillRepeatedly(Return(mock_power_limit_enabled_burst.at(accel_idx)));
+        EXPECT_CALL(*m_device_pool, power_limit_burst(accel_idx)).WillRepeatedly(Return(mock_power_limit_burst.at(accel_idx)));
+        EXPECT_CALL(*m_device_pool, power_limit_peak_ac(accel_idx)).WillRepeatedly(Return(mock_power_limit_peak_ac.at(accel_idx)));
+        EXPECT_CALL(*m_device_pool, energy(accel_idx)).WillRepeatedly(Return(mock_energy.at(accel_idx)));
+        EXPECT_CALL(*m_device_pool, energy_timestamp(accel_idx)).WillRepeatedly(Return(mock_energy_timestamp.at(accel_idx)));
+
+        //Misc
+        EXPECT_CALL(*m_device_pool, performance_factor(accel_idx)).WillRepeatedly(Return(mock_performance_factor.at(accel_idx)));
+        EXPECT_CALL(*m_device_pool, standby_mode(accel_idx)).WillRepeatedly(Return(mock_standby_mode.at(accel_idx)));
+        EXPECT_CALL(*m_device_pool, memory_allocated(accel_idx)).WillRepeatedly(Return(mock_memory_allocated.at(accel_idx)));
+        //EXPECT_CALL(*m_device_pool, active_process_list(accel_idx)).WillRepeatedly(Return(.at(accel_idx)));
     }
 
     //const int num_cpu = m_platform_topo->num_domain(GEOPM_DOMAIN_CPU);
@@ -280,24 +332,93 @@ TEST_F(LevelZeroIOGroupTest, read_signal)
     LevelZeroIOGroup levelzero_io(*m_platform_topo, *m_device_pool);
 
     for (int accel_idx = 0; accel_idx < num_accelerator; ++accel_idx) {
+        //Frequency
         double frequency = levelzero_io.read_signal("LEVELZERO::FREQUENCY_GPU", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
         double frequency_alias = levelzero_io.read_signal("FREQUENCY_ACCELERATOR", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
         EXPECT_DOUBLE_EQ(frequency, frequency_alias);
         EXPECT_DOUBLE_EQ(frequency, mock_freq_gpu.at(accel_idx)*1e6);
+        frequency = levelzero_io.read_signal("LEVELZERO::FREQUENCY_MEMORY", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
+        EXPECT_DOUBLE_EQ(frequency, mock_freq_mem.at(accel_idx)*1e6);
+        frequency = levelzero_io.read_signal("LEVELZERO::FREQUENCY_MIN_GPU", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
+        EXPECT_DOUBLE_EQ(frequency, mock_freq_min_gpu.at(accel_idx)*1e6);
+        frequency = levelzero_io.read_signal("LEVELZERO::FREQUENCY_MAX_GPU", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
+        EXPECT_DOUBLE_EQ(frequency, mock_freq_max_gpu.at(accel_idx)*1e6);
+        frequency = levelzero_io.read_signal("LEVELZERO::FREQUENCY_MIN_MEMORY", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
+        EXPECT_DOUBLE_EQ(frequency, mock_freq_min_mem.at(accel_idx)*1e6);
+        frequency = levelzero_io.read_signal("LEVELZERO::FREQUENCY_MAX_MEMORY", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
+        EXPECT_DOUBLE_EQ(frequency, mock_freq_max_mem.at(accel_idx)*1e6);
+        frequency = levelzero_io.read_signal("LEVELZERO::FREQUENCY_RANGE_MIN_GPU_CONTROL", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
+        EXPECT_DOUBLE_EQ(frequency, mock_freq_range_min_gpu.at(accel_idx)*1e6);
+        frequency = levelzero_io.read_signal("LEVELZERO::FREQUENCY_RANGE_MAX_GPU_CONTROL", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
+        EXPECT_DOUBLE_EQ(frequency, mock_freq_range_max_gpu.at(accel_idx)*1e6);
 
+        //Active time
+        double active_time = levelzero_io.read_signal("LEVELZERO::ACTIVE_TIME", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
+        EXPECT_DOUBLE_EQ(active_time, mock_active_time.at(accel_idx));
+        double active_time_timestamp = levelzero_io.read_signal("LEVELZERO::ACTIVE_TIME_TIMESTAMP", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
+        EXPECT_DOUBLE_EQ(active_time_timestamp, mock_active_time_timestamp.at(accel_idx)/1e6);
         double active_time_compute = levelzero_io.read_signal("LEVELZERO::ACTIVE_TIME_COMPUTE", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
         EXPECT_DOUBLE_EQ(active_time_compute, mock_active_time_compute.at(accel_idx));
         double active_time_timestamp_compute = levelzero_io.read_signal("LEVELZERO::ACTIVE_TIME_TIMESTAMP_COMPUTE", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
-        EXPECT_DOUBLE_EQ(active_time_timestamp_compute, mock_active_time_timestamp_compute.at(accel_idx));
+        EXPECT_DOUBLE_EQ(active_time_timestamp_compute, mock_active_time_timestamp_compute.at(accel_idx)/1e6);
+        double active_time_copy = levelzero_io.read_signal("LEVELZERO::ACTIVE_TIME_COPY", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
+        EXPECT_DOUBLE_EQ(active_time_copy, mock_active_time_copy.at(accel_idx));
+        double active_time_timestamp_copy = levelzero_io.read_signal("LEVELZERO::ACTIVE_TIME_TIMESTAMP_COPY", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
+        EXPECT_DOUBLE_EQ(active_time_timestamp_copy, mock_active_time_timestamp_copy.at(accel_idx)/1e6);
+        double active_time_media_decode = levelzero_io.read_signal("LEVELZERO::ACTIVE_TIME_MEDIA_DECODE", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
+        EXPECT_DOUBLE_EQ(active_time_media_decode, mock_active_time_media_decode.at(accel_idx));
+        double active_time_timestamp_media_decode = levelzero_io.read_signal("LEVELZERO::ACTIVE_TIME_TIMESTAMP_MEDIA_DECODE", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
+        EXPECT_DOUBLE_EQ(active_time_timestamp_media_decode, mock_active_time_timestamp_media_decode.at(accel_idx)/1e6);
+
+        //Temperature
+        double temperature = levelzero_io.read_signal("LEVELZERO::TEMPERATURE", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
+        EXPECT_DOUBLE_EQ(temperature, mock_temperature.at(accel_idx));
+        temperature = levelzero_io.read_signal("LEVELZERO::TEMPERATURE_GPU", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
+        EXPECT_DOUBLE_EQ(temperature, mock_temperature_gpu.at(accel_idx));
+        temperature = levelzero_io.read_signal("LEVELZERO::TEMPERATURE_MEMORY", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
+        EXPECT_DOUBLE_EQ(temperature, mock_temperature_mem.at(accel_idx));
+
+        //Power & energy
+        double power_lim = levelzero_io.read_signal("LEVELZERO::POWER_LIMIT_MIN", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
+        EXPECT_DOUBLE_EQ(power_lim, mock_power_limit_min.at(accel_idx)/1e3);
+        power_lim = levelzero_io.read_signal("LEVELZERO::POWER_LIMIT_MAX", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
+        EXPECT_DOUBLE_EQ(power_lim, mock_power_limit_max.at(accel_idx)/1e3);
+        power_lim = levelzero_io.read_signal("LEVELZERO::POWER_LIMIT_DEFAULT", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
+        EXPECT_DOUBLE_EQ(power_lim, mock_power_limit_tdp.at(accel_idx)/1e3);
+        power_lim = levelzero_io.read_signal("LEVELZERO::POWER_LIMIT_ENABLED_BURST", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
+        EXPECT_DOUBLE_EQ(power_lim, mock_power_limit_enabled_burst.at(accel_idx));
+        power_lim = levelzero_io.read_signal("LEVELZERO::POWER_LIMIT_ENABLED_SUSTAINED", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
+        EXPECT_DOUBLE_EQ(power_lim, mock_power_limit_enabled_sustained.at(accel_idx));
+        power_lim = levelzero_io.read_signal("LEVELZERO::POWER_LIMIT_INTERVAL_SUSTAINED", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
+        EXPECT_DOUBLE_EQ(power_lim, mock_power_limit_interval_sustained.at(accel_idx)/1e3);
+        power_lim = levelzero_io.read_signal("LEVELZERO::POWER_LIMIT_BURST", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
+        EXPECT_DOUBLE_EQ(power_lim, mock_power_limit_burst.at(accel_idx)/1e3);
+        power_lim = levelzero_io.read_signal("LEVELZERO::POWER_LIMIT_SUSTAINED", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
+        EXPECT_DOUBLE_EQ(power_lim, mock_power_limit_sustained.at(accel_idx)/1e3);
+        power_lim = levelzero_io.read_signal("LEVELZERO::POWER_LIMIT_PEAK_AC", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
+        EXPECT_DOUBLE_EQ(power_lim, mock_power_limit_peak_ac.at(accel_idx)/1e3);
 
         double energy = levelzero_io.read_signal("LEVELZERO::ENERGY", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
         EXPECT_DOUBLE_EQ(energy, mock_energy.at(accel_idx)/1e6);
-
         double energy_timestamp = levelzero_io.read_signal("LEVELZERO::ENERGY_TIMESTAMP", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
         EXPECT_DOUBLE_EQ(energy_timestamp, mock_energy_timestamp.at(accel_idx));
 
-
+        //Misc
+        double misc = levelzero_io.read_signal("LEVELZERO::PERFORMANCE_FACTOR", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
+        EXPECT_DOUBLE_EQ(misc, mock_performance_factor.at(accel_idx));
+        misc = levelzero_io.read_signal("LEVELZERO::STANDBY_MODE", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
+        EXPECT_DOUBLE_EQ(misc, mock_standby_mode.at(accel_idx));
+        misc = levelzero_io.read_signal("LEVELZERO::MEMORY_ALLOCATED", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
+        EXPECT_DOUBLE_EQ(misc, mock_memory_allocated.at(accel_idx));
     }
+
+    // Assume DerivativeSignals class functions as expected
+    // Just check validity of derived signals
+    ASSERT_TRUE(levelzero_io.is_valid_signal("LEVELZERO::POWER"));
+    ASSERT_TRUE(levelzero_io.is_valid_signal("LEVELZERO::UTILIZATION"));
+    ASSERT_TRUE(levelzero_io.is_valid_signal("LEVELZERO::UTILIZATION_COMPUTE"));
+    ASSERT_TRUE(levelzero_io.is_valid_signal("LEVELZERO::UTILIZATION_COPY"));
+    ASSERT_TRUE(levelzero_io.is_valid_signal("LEVELZERO::UTILIZATION_MEDIA_DECODE"));
 
 }
 

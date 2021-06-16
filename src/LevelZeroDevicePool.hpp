@@ -87,9 +87,9 @@ namespace geopm
             virtual int32_t power_limit_tdp(unsigned int accel_idx) const = 0;
             virtual int32_t power_limit_min(unsigned int accel_idx) const = 0;
             virtual int32_t power_limit_max(unsigned int accel_idx) const = 0;
-            virtual bool  power_limit_enabled_sustained(unsigned int accel_idx) const = 0;
             virtual int32_t power_limit_sustained(unsigned int accel_idx) const = 0;
             virtual int32_t power_limit_interval_sustained(unsigned int accel_idx) const = 0;
+            virtual bool  power_limit_enabled_sustained(unsigned int accel_idx) const = 0;
             virtual bool  power_limit_enabled_burst(unsigned int accel_idx) const = 0;
             virtual int32_t power_limit_burst(unsigned int accel_idx) const = 0;
             virtual int32_t power_limit_peak_ac(unsigned int accel_idx) const = 0;
