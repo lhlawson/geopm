@@ -128,7 +128,7 @@ namespace geopm
                                   {
                                       return this->m_levelzero_device_pool.energy_timestamp(domain_idx);
                                   },
-                                  1/1e6
+                                  1
                                   }},
                               {"LEVELZERO::POWER_RAW", {
                                   "Accelerator power usage in watts, calculated as specified by oneAPI",
