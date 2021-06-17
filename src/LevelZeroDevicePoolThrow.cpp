@@ -51,8 +51,8 @@ namespace geopm
 
     const LevelZeroDevicePool &levelzero_device_pool(const int num_cpu)
     {
-        throw Exception("NVMLDevicePoolThrow::" + std::string(__func__) +
-                        ": GEOPM configured without nvml library support.  Please configure with --enable-nvml",
+        throw Exception("LevelZeroDevicePoolThrow::" + std::string(__func__) +
+                        ": GEOPM configured without Level Zero library support.  Please configure with --enable-levelzero",
                         GEOPM_ERROR_INVALID, __FILE__, __LINE__);
     }
 
