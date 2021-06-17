@@ -566,7 +566,7 @@ namespace geopm
                                    " does not match number of signals available.");
 
                 auto time_sig = time_it->second.m_signals;
-                GEOPM_DEBUG_ASSERT(time_it->second.domain == domain,
+                GEOPM_DEBUG_ASSERT(time_it->second.domain_type == domain,
                                    "domain for " + ds.time_name +
                                    " does not match " + ds.base_name);
 
@@ -581,7 +581,7 @@ namespace geopm
                 }
                 m_signal_available[ds.name] = {ds.description + "\n    alias_for: " + ds.base_name + " rate of change",
                                                    domain,
-                                                   agg_function(ds.base_name), //TODO: specificy in derivative_signals?
+                                                   agg_function(ds.base_name),
                                                    format_function(ds.base_name),
                                                    result,
                                                    nullptr,
@@ -848,7 +848,7 @@ namespace geopm
     // to adjust them
     void LevelZeroIOGroup::save_control(void)
     {
-        // Read LEVELZERO Power Limit
+        // TODO: Read LEVELZERO Power Limit, frequency settings, etc
         for (int domain_idx = 0; domain_idx < m_platform_topo.num_domain(GEOPM_DOMAIN_BOARD_ACCELERATOR); ++domain_idx) {
         }
     }
@@ -917,7 +917,6 @@ namespace geopm
 
     int LevelZeroIOGroup::signal_behavior(const std::string &signal_name) const
     {
-        // TODO: fix me
         return IOGroup::M_SIGNAL_BEHAVIOR_VARIABLE;
     }
 

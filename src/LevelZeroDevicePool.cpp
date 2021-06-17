@@ -98,21 +98,17 @@ namespace geopm
             check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                             ": LevelZero Device acquisition failed.", __LINE__);
 
-            //TODO: wrap in a property.type = ZE_DEVICE_TYPE_GPU
             for(unsigned int dev_idx = 0; dev_idx < num_device; ++dev_idx) {
                 ze_device_properties_t property;
                 ze_result = zeDeviceGetProperties(device_handle.at(dev_idx), &property);
 
 #ifdef GEOPM_DEBUG
-            uint32_t num_sub_device = 0;
+                uint32_t num_sub_device = 0;
 
-            ze_result = zeDeviceGetSubDevices(device_handle.at(dev_idx), &num_sub_device, nullptr);
-            check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
-                                                            ": LevelZero Sub-Device enumeration failed.", __LINE__);
-            //std::vector<zes_device_handle_t> device_handle(num_device);
-            //ze_result = zeDeviceGet(m_levelzero_driver.at(driver), &num_device, device_handle.data());
-            //check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
-            std::cout << "Debug: levelZero sub-devices: " << std::to_string(num_sub_device) << std::endl;
+                ze_result = zeDeviceGetSubDevices(device_handle.at(dev_idx), &num_sub_device, nullptr);
+                check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
+                                                                ": LevelZero Sub-Device enumeration failed.", __LINE__);
+                std::cout << "Debug: levelZero sub-devices: " << std::to_string(num_sub_device) << std::endl;
 #endif
 
 
@@ -353,13 +349,10 @@ namespace geopm
 #endif
         }
 
-        //TODO: Consider caching all accelerator properties
     }
 
     LevelZeroDevicePoolImp::~LevelZeroDevicePoolImp()
     {
-        //Shutdown
-        //TODO: Actually shutdown anything needed.
     }
 
     int LevelZeroDevicePoolImp::num_accelerator() const
@@ -407,8 +400,9 @@ namespace geopm
         return frequency_status(accel_idx, ZES_FREQ_DOMAIN_MEMORY);
     }
 
-    //TODO: provide frequency: efficient (analogous to sticker?), tdp, and requested.
+    //TODO: provide frequency: efficient (analogous to sticker?), tdp, and t hrottle
     //      see: https://spec.oneapi.com/level-zero/latest/sysman/api.html#_CPPv416zes_freq_state_t
+    //TODO: add zesFrequencyGetAvailableClocks for getting all available frequencies?
     double LevelZeroDevicePoolImp::frequency_status(int accel_idx, zes_freq_domain_t type) const
     {
         check_accel_range(accel_idx);
@@ -467,18 +461,16 @@ namespace geopm
 
         for (auto handle : m_freq_domain.at(accel_idx)) {
             zes_freq_properties_t property;
-            //TODO: it may be necessary to switch this to zesFrequencyGetRange instead of using properties min and max
             ze_result = zesFrequencyGetProperties(handle, &property);
             check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                             ": Sysman failed to get domain properties.", __LINE__);
-            if (type == property.type) { //For initial GEOPM support we're not handling sub-devices
+            if (type == property.type) {
                 result_min += property.min;
                 result_max += property.max;
                 ++result_cnt; //TODO: change for official multi-tile support
             }
         }
 
-        //TODO: this will probably cause problems, uint/double casted to uint
         return {result_min/result_cnt, result_max/result_cnt};
     }
 
@@ -504,11 +496,10 @@ namespace geopm
 
         for (auto handle : m_freq_domain.at(accel_idx)) {
             zes_freq_properties_t property;
-            //TODO: it may be necessary to switch this to zesFrequencyGetRange instead of using properties min and max
             ze_result = zesFrequencyGetProperties(handle, &property);
             check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                             ": Sysman failed to get domain properties.", __LINE__);
-            if (type == property.type) { //For initial GEOPM support we're not handling sub-devices
+            if (type == property.type) {
                 ze_result = zesFrequencyGetRange(handle, &range);
                 check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                                 ": Sysman failed to set frequency.", __LINE__);
@@ -518,11 +509,8 @@ namespace geopm
             }
         }
 
-        //TODO: this will probably cause problems, uint/double casted to uint
         return {result_min/result_cnt, result_max/result_cnt};
     }
-
-    //TODO: add zesFrequencyGetAvailableClocks for getting all available frequencies?
 
     double LevelZeroDevicePoolImp::temperature(unsigned int accel_idx) const
     {
@@ -759,20 +747,6 @@ namespace geopm
             }
         }
 
-//#ifdef GEOPM_DEBUG
-        std::cout << "Debug: levelZero sustained_limit_t.sustained: \n" <<
-                     "\t enabled: " << std::to_string(sustained.enabled) << "\n"
-                     "\t power: " << std::to_string(sustained.power) << " mW\n"
-                     "\t interval: " << std::to_string(sustained.interval) << " mS\n" << std::endl;
-
-        std::cout << "Debug: levelZero burst_limit_t.burst: \n" <<
-                     "\t enable: " << std::to_string(burst.enabled) << "\n"
-                     "\t power: " << std::to_string(burst.power) << " mW\n" << std::endl;
-
-        std::cout << "Debug: levelZero peak_limit_t.peak: \n" <<
-                     "\t powerAC: " << std::to_string(peak.powerAC) << " mW\n" << std::endl;
-//#endif
-
         return std::make_tuple(sustained, burst, peak);
     }
 
@@ -903,7 +877,6 @@ namespace geopm
                                                           ": Sysman failed to get standby mode", __LINE__);
             ++result_cnt; //TODO: change for official multi-tile support
         }
-        //TODO: this will probably cause problems, uint/double casted to uint
         return result/result_cnt;
     }
 
@@ -983,15 +956,9 @@ namespace geopm
                                     "for non controllable domain",
                                     GEOPM_ERROR_INVALID, __FILE__, __LINE__);
                 }
-#ifdef GEOPM_DEBUG
-                std::cout << "Writing freq range.min: "  << std::to_string(min_freq) << ", range.max; " << std::to_string(max_freq) << std::endl;
-#endif
                 ze_result = zesFrequencySetRange(handle, &range);
                 check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                                 ": Sysman failed to set frequency.", __LINE__);
-#ifdef GEOPM_DEBUG
-                std::cout << "\tWrite complete" << std::endl;
-#endif
             }
         }
     }

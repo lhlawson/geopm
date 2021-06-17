@@ -149,7 +149,6 @@ TEST_F(LevelZeroIOGroupTest, push_control_adjust_write_batch)
     }
 
     for (auto& sv: batch_value) {
-
         // Given that we are mocking LEVELZERODevicePool the actual setting here doesn't matter
         EXPECT_NO_THROW(levelzero_io.adjust(sv.first, sv.second));
     }
