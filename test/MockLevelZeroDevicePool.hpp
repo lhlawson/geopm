@@ -112,8 +112,8 @@ class MockLevelZeroDevicePool : public geopm::LevelZeroDevicePool
                            double(unsigned int));
         MOCK_CONST_METHOD2(energy_threshold_control,
                            void(unsigned int, double));
-        MOCK_CONST_METHOD3(frequency_control_gpu,
-                           void(unsigned int, double, double));
+        MOCK_CONST_METHOD2(frequency_control_gpu,
+                           void(unsigned int, double));
         MOCK_CONST_METHOD2(standby_mode_control,
                            void(unsigned int, double));
 };

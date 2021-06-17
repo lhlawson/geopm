@@ -463,21 +463,6 @@ namespace geopm
                                   },
                                   1
                                   }},
-                              //{"LEVELZERO::CPU_ACCELERATOR_ACTIVE_AFFINITIZATION", {
-                              //    "Returns the associated accelerator for a given CPU as determined by running processes."
-                              //    "\n  If no accelerators map to the CPU then -1 is returned"
-                              //    "\n  If multiple accelerators map to the CPU NAN is returned",
-                              //    {},
-                              //    GEOPM_DOMAIN_BOARD_ACCELERATOR,
-                              //    Agg::average,
-                              //    string_format_double,
-                              //    {},
-                              ////    [this](unsigned int domain_idx) -> double
-                              ////    {
-                              ////        return this->m_levelzero_device_pool.
-                              ////    },
-                              //    1
-                              //    }},
                              })
         , m_control_available({{"LEVELZERO::FREQUENCY_GPU_CONTROL", {
                                     "Sets accelerator frequency (in hertz)",
@@ -512,6 +497,7 @@ namespace geopm
 
         register_signal_alias("FREQUENCY_ACCELERATOR", "LEVELZERO::FREQUENCY_GPU");
         register_signal_alias("POWER_ACCELERATOR", "LEVELZERO::POWER");
+        register_control_alias("FREQUENCY_ACCELERATOR_CONTROL", "LEVELZERO::FREQUENCY_GPU_CONTROL");
 
         // populate controls for each domain
         for (auto &sv : m_control_available) {
@@ -573,7 +559,7 @@ namespace geopm
             auto time_it = m_signal_available.find(ds.time_name);
             if (read_it != m_signal_available.end() && time_it != m_signal_available.end()) {
                 auto readings = read_it->second.m_signals;
-                int domain = read_it->second.domain;
+                int domain = read_it->second.domain_type;
                 int num_domain = m_platform_topo.num_domain(domain);
                 GEOPM_DEBUG_ASSERT(num_domain == (int)readings.size(),
                                    "size of domain for " + ds.base_name +
@@ -644,7 +630,7 @@ namespace geopm
         int result = GEOPM_DOMAIN_INVALID;
         auto it = m_signal_available.find(signal_name);
         if (it != m_signal_available.end()) {
-            result = it->second.domain;
+            result = it->second.domain_type;
         }
         return result;
     }
@@ -655,7 +641,7 @@ namespace geopm
         int result = GEOPM_DOMAIN_INVALID;
         auto it = m_control_available.find(control_name);
         if (it != m_control_available.end()) {
-            result = it->second.domain;
+            result = it->second.domain_type;
         }
         return result;
     }
@@ -742,63 +728,10 @@ namespace geopm
         return result;
     }
 
-    // Cache the processes in a PID <-> Accelerator map before using them elsewhere
-    std::map<pid_t, double> LevelZeroIOGroup::accelerator_process_map(void) const
-    {
-        std::map<pid_t,double> accelerator_pid_map;
-
-        for (int accel_idx = 0; accel_idx < m_platform_topo.num_domain(GEOPM_DOMAIN_BOARD_ACCELERATOR); ++accel_idx) {
-            std::cout << "Processes associated with GPU " << std::to_string(accel_idx) << ":" << std::endl;
-
-            std::vector<uint32_t> active_process_list = m_levelzero_device_pool.active_process_list(accel_idx);
-            for (auto proc_itr : active_process_list) {
-                std::cout << std::to_string(proc_itr) << ", ";
-                // If a process is associated with multiple accelerators we have no good means of
-                // signaling the user beyond providing an error value (NAN).
-                if (!accelerator_pid_map.count((pid_t)proc_itr)) {
-                    accelerator_pid_map[(pid_t)proc_itr] = accel_idx;
-                }
-                else {
-                    accelerator_pid_map[(pid_t)proc_itr] = NAN;
-                }
-            }
-            std::cout << std::endl;
-        }
-        return accelerator_pid_map;
-    }
-
-    // Parse PID to CPU affinitzation and use process list --> accelerator map to get CPU --> accelerator
-    double LevelZeroIOGroup::cpu_accelerator_affinity(int cpu_idx, std::map<pid_t, double> process_map) const
-    {
-        double result = -1;
-        size_t num_cpu = m_platform_topo.num_domain(GEOPM_DOMAIN_CPU);
-        size_t alloc_size = CPU_ALLOC_SIZE(num_cpu);
-        cpu_set_t *proc_cpuset = CPU_ALLOC(num_cpu);
-        if (proc_cpuset == NULL) {
-            throw Exception("LevelZeroIOGroup::" + std::string(__func__) +
-                            ": failed to allocate process CPU mask",
-                            ENOMEM, __FILE__, __LINE__);
-        }
-        for (auto &proc : process_map) {
-            int err = sched_getaffinity(proc.first, alloc_size, proc_cpuset);
-            if (err == EINVAL || err == EFAULT) {
-                throw Exception("LevelIOGroup::" + std::string(__func__) +
-                                ": failed to get affinity mask for process: " +
-                                std::to_string(proc.first), err, __FILE__, __LINE__);
-            }
-            if (!err && CPU_ISSET(cpu_idx, proc_cpuset)) {
-                result = proc.second;
-                // Return first match, w/o break will return last match
-                break;
-            }
-        }
-        return result;
-    }
-
     // Parse and update saved values for signals
     void LevelZeroIOGroup::read_batch(void)
     {
-        m_is_batch_read = true; //TODO: may remove?
+        m_is_batch_read = true;
     }
 
     // Write all controls that have been pushed and adjusted
@@ -813,7 +746,7 @@ namespace geopm
                     //
                     //  The majority of these require more in-depth level zero data types being understood by the
                     //  IOGroup, OR new data structures
-                    write_control(sv.first, sv.second.domain, domain_idx, sv.second.controls.at(domain_idx)->m_setting);
+                    write_control(sv.first, sv.second.domain_type, domain_idx, sv.second.controls.at(domain_idx)->m_setting);
                 }
             }
         }
@@ -869,10 +802,6 @@ namespace geopm
         if (it != m_signal_available.end()) {
             result = (it->second.m_signals.at(domain_idx))->read();
         }
-        else if (signal_name == "LEVELZERO::CPU_ACCELERATOR_ACTIVE_AFFINITIZATION") {
-            std::map<pid_t, double> process_map = accelerator_process_map();
-            result = cpu_accelerator_affinity(domain_idx, process_map);
-        }
         else {
     #ifdef GEOPM_DEBUG
             throw Exception("LevelZeroIOGroup::" + std::string(__func__) + ": Handling not defined for " +
@@ -901,8 +830,8 @@ namespace geopm
                             GEOPM_ERROR_INVALID, __FILE__, __LINE__);
         }
 
-        if (control_name == "LEVELZERO::FREQUENCY_GPU_CONTROL") {
-            m_levelzero_device_pool.frequency_control_gpu(domain_idx, setting/1e6, setting/1e6);
+        if (control_name == "LEVELZERO::FREQUENCY_GPU_CONTROL" || control_name == "FREQUENCY_ACCELERATOR_CONTROL") {
+            m_levelzero_device_pool.frequency_control_gpu(domain_idx, setting/1e6);
         }
         else if (control_name == "LEVELZERO::STANDBY_MODE_CONTROL") {
             m_levelzero_device_pool.standby_mode_control(domain_idx, setting);

@@ -84,9 +84,6 @@ namespace geopm
             void register_signal_alias(const std::string &alias_name, const std::string &signal_name);
             void register_control_alias(const std::string &alias_name, const std::string &control_name);
 
-            std::map<pid_t, double> accelerator_process_map(void) const;
-            double cpu_accelerator_affinity(int cpu_idx, std::map<pid_t, double> process_map) const;
-
             const PlatformTopo &m_platform_topo;
             const LevelZeroDevicePool &m_levelzero_device_pool;
             bool m_is_batch_read;
@@ -100,7 +97,7 @@ namespace geopm
 
             struct signal_info {
                 std::string m_description;
-                int domain; //TODO: rename domain_type
+                int domain_type;
                 std::function<double(const std::vector<double> &)> m_agg_function;
                 std::function<std::string(double)> m_format_function;
                 std::vector<std::shared_ptr<Signal> > m_signals;
@@ -111,7 +108,7 @@ namespace geopm
             struct control_info {
                 std::string m_description;
                 std::vector<std::shared_ptr<control_s> > controls;
-                int domain;
+                int domain_type;
                 std::function<double(const std::vector<double> &)> m_agg_function;
                 std::function<std::string(double)> m_format_function;
             };

@@ -127,70 +127,62 @@ TEST_F(LevelZeroIOGroupTest, valid_signals)
 
 TEST_F(LevelZeroIOGroupTest, push_control_adjust_write_batch)
 {
-//    const int num_accelerator = m_platform_topo->num_domain(GEOPM_DOMAIN_BOARD_ACCELERATOR);
-//    std::map<int, double> batch_value;
-//    LevelZeroIOGroup levelzero_io(*m_platform_topo, *m_device_pool);
-//
-//    std::vector<double> mock_freq = {1530, 1320, 420, 135};
-//    std::vector<double> mock_power = {153600, 70000, 300000, 50000};
-//    for (int accel_idx = 0; accel_idx < num_accelerator; ++accel_idx) {
-//        batch_value[(levelzero_io.push_control("LEVELZERO::FREQUENCY_CONTROL",
-//                                        GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx))] = mock_freq.at(accel_idx)*1e6;
-//        batch_value[(levelzero_io.push_control("FREQUENCY_ACCELERATOR_CONTROL",
-//                                        GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx))] = mock_freq.at(accel_idx)*1e6;
-//        EXPECT_CALL(*m_device_pool,
-//                    frequency_control_sm(accel_idx, mock_freq.at(accel_idx),
-//                                         mock_freq.at(accel_idx))).Times(2);
-//
-//        batch_value[(levelzero_io.push_control("LEVELZERO::FREQUENCY_RESET_CONTROL",
-//                                        GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx))] = mock_freq.at(accel_idx);
-//        EXPECT_CALL(*m_device_pool, frequency_reset_control(accel_idx)).Times(1);
-//
-//        batch_value[(levelzero_io.push_control("LEVELZERO::POWER_LIMIT_CONTROL",
-//                                        GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx))] = mock_power.at(accel_idx)/1e3;
-//        batch_value[(levelzero_io.push_control("POWER_ACCELERATOR_LIMIT_CONTROL",
-//                                        GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx))] = mock_power.at(accel_idx)/1e3;
-//        EXPECT_CALL(*m_device_pool, power_control(accel_idx, mock_power.at(accel_idx))).Times(2);
-//    }
-//
-//    for (auto& sv: batch_value) {
-//
-//        // Given that we are mocking LEVELZERODevicePool the actual setting here doesn't matter
-//        EXPECT_NO_THROW(levelzero_io.adjust(sv.first, sv.second));
-//    }
-//    EXPECT_NO_THROW(levelzero_io.write_batch());
+    const int num_accelerator = m_platform_topo->num_domain(GEOPM_DOMAIN_BOARD_ACCELERATOR);
+    std::map<int, double> batch_value;
+    LevelZeroIOGroup levelzero_io(*m_platform_topo, *m_device_pool);
+
+    std::vector<double> mock_freq = {1530, 1320, 420, 135};
+    std::vector<double> mock_standby_control = {1, 0, 1, 0};
+
+    for (int accel_idx = 0; accel_idx < num_accelerator; ++accel_idx) {
+        batch_value[(levelzero_io.push_control("LEVELZERO::FREQUENCY_GPU_CONTROL",
+                                        GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx))] = mock_freq.at(accel_idx)*1e6;
+        batch_value[(levelzero_io.push_control("FREQUENCY_ACCELERATOR_CONTROL",
+                                        GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx))] = mock_freq.at(accel_idx)*1e6;
+        EXPECT_CALL(*m_device_pool,
+                    frequency_control_gpu(accel_idx, mock_freq.at(accel_idx))).Times(2);
+
+        batch_value[(levelzero_io.push_control("LEVELZERO::STANDBY_MODE_CONTROL",
+                                        GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx))] = mock_standby_control.at(accel_idx);
+        EXPECT_CALL(*m_device_pool, standby_mode_control(accel_idx,
+                                                         mock_standby_control.at(accel_idx))).Times(1);
+    }
+
+    for (auto& sv: batch_value) {
+
+        // Given that we are mocking LEVELZERODevicePool the actual setting here doesn't matter
+        EXPECT_NO_THROW(levelzero_io.adjust(sv.first, sv.second));
+    }
+    EXPECT_NO_THROW(levelzero_io.write_batch());
 }
 
 TEST_F(LevelZeroIOGroupTest, write_control)
 {
-//    const int num_accelerator = m_platform_topo->num_domain(GEOPM_DOMAIN_BOARD_ACCELERATOR);
-//    LevelZeroIOGroup levelzero_io(*m_platform_topo, *m_device_pool);
-//
-//    std::vector<double> mock_freq = {1530, 1320, 420, 135};
-//    std::vector<double> mock_power = {153600, 70000, 300000, 50000};
-//    for (int accel_idx = 0; accel_idx < num_accelerator; ++accel_idx) {
-//        EXPECT_CALL(*m_device_pool,
-//                    frequency_control_sm(accel_idx, mock_freq.at(accel_idx),
-//                                         mock_freq.at(accel_idx))).Times(2);
-//        EXPECT_NO_THROW(levelzero_io.write_control("LEVELZERO::FREQUENCY_CONTROL",
-//                                              GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx,
-//                                              mock_freq.at(accel_idx)*1e6));
-//        EXPECT_NO_THROW(levelzero_io.write_control("FREQUENCY_ACCELERATOR_CONTROL",
-//                                              GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx,
-//                                              mock_freq.at(accel_idx)*1e6));
-//
-//        EXPECT_CALL(*m_device_pool, frequency_reset_control(accel_idx)).Times(1);
-//        EXPECT_NO_THROW(levelzero_io.write_control("LEVELZERO::FREQUENCY_RESET_CONTROL",
-//                                              GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx, 12345));
-//
-//        EXPECT_CALL(*m_device_pool, power_control(accel_idx, mock_power.at(accel_idx))).Times(2);
-//        EXPECT_NO_THROW(levelzero_io.write_control("LEVELZERO::POWER_LIMIT_CONTROL",
-//                                              GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx,
-//                                              mock_power.at(accel_idx)/1e3));
-//        EXPECT_NO_THROW(levelzero_io.write_control("POWER_ACCELERATOR_LIMIT_CONTROL",
-//                                              GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx,
-//                                              mock_power.at(accel_idx)/1e3));
-//    }
+    const int num_accelerator = m_platform_topo->num_domain(GEOPM_DOMAIN_BOARD_ACCELERATOR);
+    LevelZeroIOGroup levelzero_io(*m_platform_topo, *m_device_pool);
+
+    std::vector<double> mock_freq = {1530, 1320, 420, 135};
+    std::vector<double> mock_standby_control = {1, 0, 1, 0};
+
+    for (int accel_idx = 0; accel_idx < num_accelerator; ++accel_idx) {
+        EXPECT_CALL(*m_device_pool,
+                    frequency_control_gpu(accel_idx, mock_freq.at(accel_idx))).Times(2);
+
+        EXPECT_NO_THROW(levelzero_io.write_control("LEVELZERO::FREQUENCY_GPU_CONTROL",
+                                              GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx,
+                                              mock_freq.at(accel_idx)*1e6));
+
+        EXPECT_NO_THROW(levelzero_io.write_control("FREQUENCY_ACCELERATOR_CONTROL",
+                                              GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx,
+                                              mock_freq.at(accel_idx)*1e6));
+
+        EXPECT_CALL(*m_device_pool, standby_mode_control(accel_idx,
+                                                         mock_standby_control.at(accel_idx))).Times(1);
+
+        EXPECT_NO_THROW(levelzero_io.write_control("LEVELZERO::STANDBY_MODE_CONTROL",
+                                              GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx,
+                                              mock_standby_control.at(accel_idx)));
+    }
 }
 
 TEST_F(LevelZeroIOGroupTest, read_signal_and_batch)
@@ -234,7 +226,6 @@ TEST_F(LevelZeroIOGroupTest, read_signal_and_batch)
 
 TEST_F(LevelZeroIOGroupTest, read_signal)
 {
-    //EXPECT_CALL(*m_platform_topo, num_domain(GEOPM_DOMAIN_BOARD_ACCELERATOR)).WillRepeatedly(Return(4));
     const int num_accelerator = m_platform_topo->num_domain(GEOPM_DOMAIN_BOARD_ACCELERATOR);
 
     //Frequency
@@ -275,7 +266,6 @@ TEST_F(LevelZeroIOGroupTest, read_signal)
     std::vector<double> mock_performance_factor = {0, 100, 50, 72};
     std::vector<double> mock_standby_mode = {0, 1, 0, 1};
     std::vector<double> mock_memory_allocated = {0, 1, 0.5, 0.21};
-    //std::vector<int> active_process_list = {40961, 40962, 40963};
 
     for (int accel_idx = 0; accel_idx < num_accelerator; ++accel_idx) {
 
@@ -321,13 +311,7 @@ TEST_F(LevelZeroIOGroupTest, read_signal)
         EXPECT_CALL(*m_device_pool, performance_factor(accel_idx)).WillRepeatedly(Return(mock_performance_factor.at(accel_idx)));
         EXPECT_CALL(*m_device_pool, standby_mode(accel_idx)).WillRepeatedly(Return(mock_standby_mode.at(accel_idx)));
         EXPECT_CALL(*m_device_pool, memory_allocated(accel_idx)).WillRepeatedly(Return(mock_memory_allocated.at(accel_idx)));
-        //EXPECT_CALL(*m_device_pool, active_process_list(accel_idx)).WillRepeatedly(Return(.at(accel_idx)));
     }
-
-    //const int num_cpu = m_platform_topo->num_domain(GEOPM_DOMAIN_CPU);
-    //for (int cpu_idx = 0; cpu_idx < num_cpu; ++cpu_idx) {
-    //    EXPECT_CALL(*m_device_pool, active_process_list(cpu_idx)).WillRepeatedly(Return(active_process_list));;
-    //}
 
     LevelZeroIOGroup levelzero_io(*m_platform_topo, *m_device_pool);
 

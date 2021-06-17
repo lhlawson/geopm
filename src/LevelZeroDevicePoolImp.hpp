@@ -88,7 +88,7 @@ namespace geopm
             virtual double standby_mode(unsigned int accel_idx) const override;
             virtual double memory_allocated(unsigned int accel_idx) const override;
             virtual void energy_threshold_control(unsigned int accel_idx, double setting) const override;
-            virtual void frequency_control_gpu(unsigned int accel_idx, double min_freq, double max_freq) const override;
+            virtual void frequency_control_gpu(unsigned int accel_idx,  double setting) const override;
             virtual void standby_mode_control(unsigned int accel_idx, double setting) const override;
 
         private:

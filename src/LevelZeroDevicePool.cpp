@@ -954,9 +954,9 @@ namespace geopm
     }
 
 
-    void LevelZeroDevicePoolImp::frequency_control_gpu(unsigned int accel_idx, double min_freq, double max_freq) const
+    void LevelZeroDevicePoolImp::frequency_control_gpu(unsigned int accel_idx, double setting) const
     {
-        frequency_control(accel_idx, min_freq, max_freq, ZES_FREQ_DOMAIN_GPU);
+        frequency_control(accel_idx, setting, setting, ZES_FREQ_DOMAIN_GPU);
     }
 
     void LevelZeroDevicePoolImp::frequency_control(unsigned int accel_idx, double min_freq, double max_freq, zes_freq_domain_t type) const
