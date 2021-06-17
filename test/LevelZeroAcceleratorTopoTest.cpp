@@ -102,9 +102,8 @@ TEST_F(LevelZeroAcceleratorTopoTest, four_forty_config)
     }
 }
 
-//Test case: Different GPU/CPU count, namely an approximation of the HPE Apollo 6500
-//           system with 8 GPUs and 28 cores per socket.
-TEST_F(LevelZeroAcceleratorTopoTest, hpe_6500_affinitization_config)
+//Test case: Different GPU/CPU count, with 8 GPUs and 28 cores per socket.
+TEST_F(LevelZeroAcceleratorTopoTest, eight_fiftysix_affinitization_config)
 {
     const int num_accelerator = 8;
     const int num_cpu = 56;

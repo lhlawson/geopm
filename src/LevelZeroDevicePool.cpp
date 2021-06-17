@@ -53,9 +53,6 @@
 namespace geopm
 {
 
-    //////////////////////
-    // Timing Functions //
-    //////////////////////
     const LevelZeroDevicePool &levelzero_device_pool(const int num_cpu)
     {
         static LevelZeroDevicePoolImp instance(num_cpu);

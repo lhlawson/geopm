@@ -281,7 +281,7 @@ GTEST_TESTS = test/gtest_links/AcceleratorTopoNullTest.default_config \
               test/gtest_links/IOGroupTest.string_to_behavior \
               test/gtest_links/LevelZeroAcceleratorTopoTest.no_gpu_config \
               test/gtest_links/LevelZeroAcceleratorTopoTest.four_forty_config \
-              test/gtest_links/LevelZeroAcceleratorTopoTest.hpe_6500_affinitization_config \
+              test/gtest_links/LevelZeroAcceleratorTopoTest.eight_fiftysix_affinitization_config \
               test/gtest_links/LevelZeroAcceleratorTopoTest.uneven_affinitization_config \
               test/gtest_links/LevelZeroAcceleratorTopoTest.high_cpu_count_config \
               test/gtest_links/LevelZeroIOGroupTest.read_signal_and_batch \

@@ -652,23 +652,29 @@ libgeopmpolicy_la_SOURCES = contrib/json11/json11.cpp \
                             src/NVMLDevicePool.hpp \
                             src/NVMLIOGroup.cpp \
                             src/NVMLIOGroup.hpp \
+                            src/LevelZeroAcceleratorTopo.cpp \
+                            src/LevelZeroAcceleratorTopo.hpp \
+                            src/LevelZeroDevicePool.hpp \
+                            src/LevelZeroIOGroup.cpp \
+                            src/LevelZeroIoGroup.hpp \
+                            src/LevelZeroSignal.cpp \
+                            src/LevelZeroSignal.hpp \
                             # end
 
 nvml_source_files = src/NVMLDevicePool.cpp \
                     src/NVMLDevicePoolImp.hpp \
                     #end
 
+levelzero_source_files = src/LevelZeroDevicePool.cpp \
+                         src/LevelZeroDevicePoolImp.hpp \
+                         #end
+
 if ENABLE_LEVELZERO
-    libgeopmpolicy_la_SOURCES += src/LevelZeroAcceleratorTopo.cpp \
-                                 src/LevelZeroAcceleratorTopo.hpp \
-                                 src/LevelZeroDevicePool.cpp \
-                                 src/LevelZeroDevicePool.hpp \
-                                 src/LevelZeroDevicePoolImp.hpp \
-                                 src/LevelZeroIOGroup.cpp \
-                                 src/LevelZeroIoGroup.hpp \
-                                 src/LevelZeroSignal.cpp \
-                                 src/LevelZeroSignal.hpp \
-                                 #end
+    libgeopmpolicy_la_SOURCES += $(levelzero_source_files)
+else
+    libgeopmpolicy_la_SOURCES += src/LevelZeroDevicePoolThrow.cpp
+    EXTRA_DIST += $(levelzero_source_files) \
+                  #end
 endif
 
 if ENABLE_NVML
