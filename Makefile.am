@@ -656,7 +656,7 @@ libgeopmpolicy_la_SOURCES = contrib/json11/json11.cpp \
                             src/LevelZeroAcceleratorTopo.hpp \
                             src/LevelZeroDevicePool.hpp \
                             src/LevelZeroIOGroup.cpp \
-                            src/LevelZeroIoGroup.hpp \
+                            src/LevelZeroIOGroup.hpp \
                             src/LevelZeroSignal.cpp \
                             src/LevelZeroSignal.hpp \
                             # end
