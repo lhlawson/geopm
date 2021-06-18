@@ -337,19 +337,19 @@ TEST_F(LevelZeroIOGroupTest, read_signal)
 
         //Active time
         double active_time = levelzero_io.read_signal("LEVELZERO::ACTIVE_TIME", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
-        EXPECT_DOUBLE_EQ(active_time, mock_active_time.at(accel_idx));
+        EXPECT_DOUBLE_EQ(active_time, mock_active_time.at(accel_idx)/1e6);
         double active_time_timestamp = levelzero_io.read_signal("LEVELZERO::ACTIVE_TIME_TIMESTAMP", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
         EXPECT_DOUBLE_EQ(active_time_timestamp, mock_active_time_timestamp.at(accel_idx)/1e6);
         double active_time_compute = levelzero_io.read_signal("LEVELZERO::ACTIVE_TIME_COMPUTE", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
-        EXPECT_DOUBLE_EQ(active_time_compute, mock_active_time_compute.at(accel_idx));
+        EXPECT_DOUBLE_EQ(active_time_compute, mock_active_time_compute.at(accel_idx)/1e6);
         double active_time_timestamp_compute = levelzero_io.read_signal("LEVELZERO::ACTIVE_TIME_TIMESTAMP_COMPUTE", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
         EXPECT_DOUBLE_EQ(active_time_timestamp_compute, mock_active_time_timestamp_compute.at(accel_idx)/1e6);
         double active_time_copy = levelzero_io.read_signal("LEVELZERO::ACTIVE_TIME_COPY", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
-        EXPECT_DOUBLE_EQ(active_time_copy, mock_active_time_copy.at(accel_idx));
+        EXPECT_DOUBLE_EQ(active_time_copy, mock_active_time_copy.at(accel_idx)/1e6);
         double active_time_timestamp_copy = levelzero_io.read_signal("LEVELZERO::ACTIVE_TIME_TIMESTAMP_COPY", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
         EXPECT_DOUBLE_EQ(active_time_timestamp_copy, mock_active_time_timestamp_copy.at(accel_idx)/1e6);
         double active_time_media_decode = levelzero_io.read_signal("LEVELZERO::ACTIVE_TIME_MEDIA_DECODE", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
-        EXPECT_DOUBLE_EQ(active_time_media_decode, mock_active_time_media_decode.at(accel_idx));
+        EXPECT_DOUBLE_EQ(active_time_media_decode, mock_active_time_media_decode.at(accel_idx)/1e6);
         double active_time_timestamp_media_decode = levelzero_io.read_signal("LEVELZERO::ACTIVE_TIME_TIMESTAMP_MEDIA_DECODE", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
         EXPECT_DOUBLE_EQ(active_time_timestamp_media_decode, mock_active_time_timestamp_media_decode.at(accel_idx)/1e6);
 

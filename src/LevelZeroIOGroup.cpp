@@ -365,7 +365,7 @@ namespace geopm
                                   {
                                       return this->m_levelzero_device_pool.active_time(domain_idx);
                                   },
-                                  1
+                                  1/1e6
                                   }},
                               {"LEVELZERO::ACTIVE_TIME_TIMESTAMP", {
                                   "GPU active time reading timestamp",
@@ -389,7 +389,7 @@ namespace geopm
                                   {
                                       return this->m_levelzero_device_pool.active_time_compute(domain_idx);
                                   },
-                                  1
+                                  1/1e6
                                   }},
                               {"LEVELZERO::ACTIVE_TIME_TIMESTAMP_COMPUTE", {
                                   "GPU Compute engine active time reading timestamp",
@@ -413,7 +413,7 @@ namespace geopm
                                   {
                                       return this->m_levelzero_device_pool.active_time_copy(domain_idx);
                                   },
-                                  1
+                                  1/1e6
                                   }},
                               {"LEVELZERO::ACTIVE_TIME_TIMESTAMP_COPY", {
                                   "GPU Copy engine active time timestamp",
@@ -437,7 +437,7 @@ namespace geopm
                                   {
                                       return this->m_levelzero_device_pool.active_time_media_decode(domain_idx);
                                   },
-                                  1
+                                  1/1e6
                                   }},
                               {"LEVELZERO::ACTIVE_TIME_TIMESTAMP_MEDIA_DECODE", {
                                   "GPU Media Decode engine active time",
