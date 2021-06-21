@@ -80,7 +80,7 @@ namespace geopm
             virtual uint64_t active_time_timestamp_compute(unsigned int accel_idx) const = 0;
             virtual uint64_t active_time_timestamp_copy(unsigned int accel_idx) const = 0;
             virtual uint64_t active_time_timestamp_media_decode(unsigned int accel_idx) const = 0;
-            /// @brief Get the LevelZero device power in ???.
+            /// @brief Get the LevelZero device power in Watts.
             /// @param [in] accel_idx The index indicating a particular
             ///        accelerator.
             /// @return Accelerator power consumption in milliwatts.
@@ -94,7 +94,7 @@ namespace geopm
             virtual int32_t power_limit_burst(unsigned int accel_idx) const = 0;
             virtual int32_t power_limit_peak_ac(unsigned int accel_idx) const = 0;
 
-            /// @brief Get the LevelZero device energy in ???.
+            /// @brief Get the LevelZero device energy in microjoules.
             /// @param [in] accel_idx The index indicating a particular
             ///        accelerator.
             /// @return Accelerator power consumption in milliwatts.

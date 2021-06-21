@@ -70,7 +70,6 @@ namespace geopm
             virtual uint64_t active_time_timestamp_compute(unsigned int accel_idx) const override;
             virtual uint64_t active_time_timestamp_copy(unsigned int accel_idx) const override;
             virtual uint64_t active_time_timestamp_media_decode(unsigned int accel_idx) const override;
-            /// @brief Get the LevelZero device power in ???.
 
             virtual int32_t power_limit_tdp(unsigned int accel_idx) const override;
             virtual int32_t power_limit_min(unsigned int accel_idx) const override;
