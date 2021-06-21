@@ -848,8 +848,17 @@ namespace geopm
     // to adjust them
     void LevelZeroIOGroup::save_control(void)
     {
-        // TODO: Read LEVELZERO Power Limit, frequency settings, etc
+        // TODO: Read ALL LEVELZERO Power Limits, frequency settings, etc
         for (int domain_idx = 0; domain_idx < m_platform_topo.num_domain(GEOPM_DOMAIN_BOARD_ACCELERATOR); ++domain_idx) {
+            //Frequency Control Settings
+            m_initial_freq_range_min_gpu_limit.push_back(read_signal("LEVELZERO::FREQUENCY_RANGE_MIN_GPU_CONTROL", GEOPM_DOMAIN_BOARD_ACCELERATOR, domain_idx));
+            m_initial_freq_range_max_gpu_limit.push_back(read_signal("LEVELZERO::FREQUENCY_RANGE_MAX_GPU_CONTROL", GEOPM_DOMAIN_BOARD_ACCELERATOR, domain_idx));
+            //Power Control Settings
+            m_initial_power_limit_sustained.push_back(read_signal("LEVELZERO::POWER_LIMIT_SUSTAINED", GEOPM_DOMAIN_BOARD_ACCELERATOR, domain_idx));
+            m_initial_power_limit_enabled_sustained.push_back(read_signal("LEVELZERO::POWER_LIMIT_ENABLED_SUSTAINED", GEOPM_DOMAIN_BOARD_ACCELERATOR, domain_idx));
+            m_initial_power_limit_interval_sustained.push_back(read_signal("LEVELZERO::POWER_LIMIT_INTERVAL_SUSTAINED", GEOPM_DOMAIN_BOARD_ACCELERATOR, domain_idx));
+            m_initial_power_limit_burst.push_back(read_signal("LEVELZERO::POWER_LIMIT_BURST", GEOPM_DOMAIN_BOARD_ACCELERATOR, domain_idx));
+            m_initial_power_limit_enabled_burst.push_back(read_signal("LEVELZERO::POWER_LIMIT_ENABLED_BURST", GEOPM_DOMAIN_BOARD_ACCELERATOR, domain_idx));
         }
     }
 

@@ -87,7 +87,13 @@ namespace geopm
             const PlatformTopo &m_platform_topo;
             const LevelZeroDevicePool &m_levelzero_device_pool;
             bool m_is_batch_read;
-            std::vector<uint64_t> m_initial_power_limit;
+            std::vector<uint64_t> m_initial_freq_range_max_gpu_limit;
+            std::vector<uint64_t> m_initial_freq_range_min_gpu_limit;
+            std::vector<uint64_t> m_initial_power_limit_sustained;
+            std::vector<uint64_t> m_initial_power_limit_enabled_sustained;
+            std::vector<uint64_t> m_initial_power_limit_interval_sustained;
+            std::vector<uint64_t> m_initial_power_limit_burst;
+            std::vector<uint64_t> m_initial_power_limit_enabled_burst;
 
             struct control_s
             {
