@@ -63,6 +63,9 @@ namespace geopm
             virtual double frequency_max_mem(unsigned int accel_idx) const = 0;
             virtual double frequency_range_min_gpu(unsigned int accel_idx) const = 0;
             virtual double frequency_range_max_gpu(unsigned int accel_idx) const = 0;
+            virtual uint64_t frequency_status_throttle_reason_gpu(unsigned int accel_idx) const = 0;
+            virtual uint64_t frequency_throttle_time_gpu(unsigned int accel_idx) const = 0;
+            virtual uint64_t frequency_throttle_time_timestamp_gpu(unsigned int accel_idx) const = 0;
 
             /// @brief Get the LevelZero device temperature.
             /// @param [in] accel_idx The index indicating a particular

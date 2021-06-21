@@ -389,23 +389,33 @@ namespace geopm
 
     double LevelZeroDevicePoolImp::frequency_status_gpu(unsigned int accel_idx) const
     {
-        return frequency_status(accel_idx, ZES_FREQ_DOMAIN_GPU);
+        return std::get<4>(frequency_status(accel_idx, ZES_FREQ_DOMAIN_GPU));
+    }
+
+    uint64_t LevelZeroDevicePoolImp::frequency_status_throttle_reason_gpu(unsigned int accel_idx) const
+    {
+        return std::get<5>(frequency_status(accel_idx, ZES_FREQ_DOMAIN_GPU));
     }
 
     double LevelZeroDevicePoolImp::frequency_status_mem(unsigned int accel_idx) const
     {
-        return frequency_status(accel_idx, ZES_FREQ_DOMAIN_MEMORY);
+        return std::get<4>(frequency_status(accel_idx, ZES_FREQ_DOMAIN_MEMORY));
     }
 
     //TODO: provide frequency: efficient (analogous to sticker?), tdp, and t hrottle
     //      see: https://spec.oneapi.com/level-zero/latest/sysman/api.html#_CPPv416zes_freq_state_t
     //TODO: add zesFrequencyGetAvailableClocks for getting all available frequencies?
-    double LevelZeroDevicePoolImp::frequency_status(int accel_idx, zes_freq_domain_t type) const
+    std::tuple<double, double, double, double, double, uint64_t> LevelZeroDevicePoolImp::frequency_status(unsigned int accel_idx, zes_freq_domain_t type) const
     {
         check_accel_range(accel_idx);
         check_domain_range(m_freq_domain.at(accel_idx).size(), __func__, __LINE__);
         ze_result_t ze_result;
-        double result = 0;
+        double voltage = 0;
+        double request  = 0;
+        double tdp = 0;
+        double efficient = 0;
+        double actual = 0;
+        uint64_t throttle_reasons = 0;
         double result_cnt = 0;
 
         for (auto handle : m_freq_domain.at(accel_idx)) {
@@ -419,13 +429,19 @@ namespace geopm
                 ze_result = zesFrequencyGetState(handle, &state);
                 check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                                 ": Sysman failed to get frequency state", __LINE__);
-                result += state.actual;
+                voltage += state.currentVoltage;
+                request += state.request;
+                tdp += state.tdp;
+                efficient += state.efficient;
+                actual += state.actual;
+                throttle_reasons |= state.throttleReasons;
                 ++result_cnt; //TODO: change for official multi-tile support
             }
         }
 
-        return result/result_cnt;
+        return std::make_tuple(voltage/result_cnt, request/result_cnt, tdp/result_cnt, efficient/result_cnt, actual/result_cnt, throttle_reasons);
     }
+
 
     double LevelZeroDevicePoolImp::frequency_min_gpu(unsigned int accel_idx) const
     {
@@ -447,7 +463,7 @@ namespace geopm
         return frequency_min_max(accel_idx, ZES_FREQ_DOMAIN_MEMORY).second;
     }
 
-    std::pair<double, double> LevelZeroDevicePoolImp::frequency_min_max(int accel_idx, zes_freq_domain_t type) const
+    std::pair<double, double> LevelZeroDevicePoolImp::frequency_min_max(unsigned int accel_idx, zes_freq_domain_t type) const
     {
         check_accel_range(accel_idx);
         check_domain_range(m_freq_domain.at(accel_idx).size(), __func__, __LINE__);
@@ -481,7 +497,7 @@ namespace geopm
         return frequency_min_max(accel_idx, ZES_FREQ_DOMAIN_GPU).second;
     }
 
-    std::pair<double, double> LevelZeroDevicePoolImp::frequency_range(int accel_idx, zes_freq_domain_t type) const
+    std::pair<double, double> LevelZeroDevicePoolImp::frequency_range(unsigned int accel_idx, zes_freq_domain_t type) const
     {
         check_accel_range(accel_idx);
         check_domain_range(m_freq_domain.at(accel_idx).size(), __func__, __LINE__);
@@ -507,6 +523,42 @@ namespace geopm
         }
 
         return {result_min/result_cnt, result_max/result_cnt};
+    }
+
+    uint64_t LevelZeroDevicePoolImp::frequency_throttle_time_gpu(unsigned int accel_idx) const
+    {
+        return frequency_throttle_time(accel_idx, ZES_FREQ_DOMAIN_GPU).first;
+    }
+
+    uint64_t LevelZeroDevicePoolImp::frequency_throttle_time_timestamp_gpu(unsigned int accel_idx) const
+    {
+        return frequency_throttle_time(accel_idx, ZES_FREQ_DOMAIN_GPU).second;
+    }
+
+    std::pair<uint64_t, uint64_t> LevelZeroDevicePoolImp::frequency_throttle_time(unsigned int accel_idx, zes_freq_domain_t type) const
+    {
+        check_accel_range(accel_idx);
+        check_domain_range(m_power_domain.at(accel_idx).size(), __func__, __LINE__);
+        ze_result_t ze_result;
+        uint64_t result_time = 0;
+        uint64_t result_timestamp = 0;
+
+        for (auto handle : m_freq_domain.at(accel_idx)) {
+            zes_freq_properties_t property;
+            ze_result = zesFrequencyGetProperties(handle, &property);
+            check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
+                                                            ": Sysman failed to get domain properties.", __LINE__);
+            if (type == property.type) {
+                zes_freq_throttle_time_t throttle_counter;
+                ze_result = zesFrequencyGetThrottleTime(handle,  &throttle_counter);
+                check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
+                                                                ": Sysman failed to get throttle reasons.", __LINE__);
+
+                result_time += throttle_counter.throttleTime;
+                result_timestamp += throttle_counter.timestamp;
+            }
+        }
+        return {result_time, result_timestamp};
     }
 
     double LevelZeroDevicePoolImp::temperature(unsigned int accel_idx) const

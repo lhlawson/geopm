@@ -59,6 +59,9 @@ namespace geopm
             virtual double frequency_max_mem(unsigned int accel_idx) const override;
             virtual double frequency_range_min_gpu(unsigned int accel_idx) const override;
             virtual double frequency_range_max_gpu(unsigned int accel_idx) const override;
+            virtual uint64_t frequency_status_throttle_reason_gpu(unsigned int accel_idx) const override;
+            virtual uint64_t frequency_throttle_time_gpu(unsigned int accel_idx) const override;
+            virtual uint64_t frequency_throttle_time_timestamp_gpu(unsigned int accel_idx) const override;
             virtual double temperature(unsigned int accel_idx) const override;
             virtual double temperature_gpu(unsigned int accel_idx) const override;
             virtual double temperature_memory(unsigned int accel_idx) const override;
@@ -103,9 +106,10 @@ namespace geopm
                                zes_power_peak_limit_t> power_limit(unsigned int accel_idx) const;
 
             virtual std::tuple<int32_t, int32_t, int32_t> power_limit_default(unsigned int accel_idx) const;
-            virtual double frequency_status(int accel_idx, zes_freq_domain_t) const;
-            virtual std::pair<double, double> frequency_min_max(int accel_idx, zes_freq_domain_t type) const;
-            virtual std::pair<double, double> frequency_range(int accel_idx, zes_freq_domain_t type) const;
+            virtual std::tuple<double, double, double, double, double, uint64_t> frequency_status(unsigned int accel_idx, zes_freq_domain_t) const;
+            virtual std::pair<double, double> frequency_min_max(unsigned int accel_idx, zes_freq_domain_t type) const;
+            virtual std::pair<double, double> frequency_range(unsigned int accel_idx, zes_freq_domain_t type) const;
+            virtual std::pair<uint64_t, uint64_t> frequency_throttle_time(unsigned int accel_idx, zes_freq_domain_t type) const;
             virtual std::pair<uint64_t, uint64_t> energy_pair(unsigned int accel_idx) const;
             virtual std::pair<uint64_t, uint64_t> active_time(unsigned int accel_idx, zes_engine_group_t engine_type) const;
             virtual double temperature(int accel_idx, zes_temp_sensors_t sensor_type) const;

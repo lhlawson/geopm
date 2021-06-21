@@ -355,6 +355,42 @@ namespace geopm
                                   },
                                   1/1e3
                                   }},
+                              {"LEVELZERO::THROTTLE_REASONS_GPU", {
+                                  "GPU throttle reasons",
+                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                  Agg::average,
+                                  string_format_double,
+                                  {},
+                                  [this](unsigned int domain_idx) -> double
+                                  {
+                                      return this->m_levelzero_device_pool.frequency_status_throttle_reason_gpu(domain_idx);
+                                  },
+                                  1
+                                  }},
+                              {"LEVELZERO::THROTTLE_TIME_GPU", {
+                                  "GPU throttle time",
+                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                  Agg::average,
+                                  string_format_double,
+                                  {},
+                                  [this](unsigned int domain_idx) -> double
+                                  {
+                                      return this->m_levelzero_device_pool.frequency_throttle_time_gpu(domain_idx);
+                                  },
+                                  1/1e6
+                                  }},
+                              {"LEVELZERO::THROTTLE_TIME_TIMESTAMP_GPU", {
+                                  "GPU throttle time reading timestamp",
+                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                  Agg::average,
+                                  string_format_double,
+                                  {},
+                                  [this](unsigned int domain_idx) -> double
+                                  {
+                                      return this->m_levelzero_device_pool.frequency_throttle_time_timestamp_gpu(domain_idx);
+                                  },
+                                  1/1e6
+                                  }},
                               {"LEVELZERO::ACTIVE_TIME", {
                                   "GPU active time",
                                   GEOPM_DOMAIN_BOARD_ACCELERATOR,
@@ -533,6 +569,10 @@ namespace geopm
                         "\n  resulting in a reduced signal range (i.e. not 0 to 1)",
                     "LEVELZERO::ACTIVE_TIME",
                     "LEVELZERO::ACTIVE_TIME_TIMESTAMP"},
+            {"LEVELZERO::THROTTLE_RATIO_GPU",
+                    "Ratio of time the GPU domains were throttled",
+                    "LEVELZERO::THROTTLE_TIME_GPU",
+                    "LEVELZERO::THROTTLE_TIME_TIMESTAMP_GPU"},
             {"LEVELZERO::UTILIZATION_COMPUTE",
                     "Compute engine utilization"
                         "n  Level Zero logical engines may may to the same hardware"

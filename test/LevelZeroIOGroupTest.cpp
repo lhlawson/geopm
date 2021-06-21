@@ -236,6 +236,9 @@ TEST_F(LevelZeroIOGroupTest, read_signal)
     std::vector<double> mock_freq_max_mem = {1000, 2200, 3200, 1450};
     std::vector<double> mock_freq_range_min_gpu = {1200, 620, 500, 530};
     std::vector<double> mock_freq_range_max_gpu = {3120, 900, 5200, 3500};
+    std::vector<double> mock_freq_throttle_time = {200000, 600020, 100500, 101530};
+    std::vector<double> mock_freq_throttle_time_timestamp = {314520, 901000, 58200, 303500};
+    std::vector<double> mock_freq_throttle_reason = {3, 0, 0xFF, 0xA};
     //Active time
     std::vector<uint64_t> mock_active_time = {123, 970, 550, 20};
     std::vector<uint64_t> mock_active_time_timestamp = {182, 970, 650, 33};
@@ -277,6 +280,10 @@ TEST_F(LevelZeroIOGroupTest, read_signal)
         EXPECT_CALL(*m_device_pool, frequency_max_mem(accel_idx)).WillRepeatedly(Return(mock_freq_max_mem.at(accel_idx)));
         EXPECT_CALL(*m_device_pool, frequency_range_min_gpu(accel_idx)).WillRepeatedly(Return(mock_freq_range_min_gpu.at(accel_idx)));
         EXPECT_CALL(*m_device_pool, frequency_range_max_gpu(accel_idx)).WillRepeatedly(Return(mock_freq_range_max_gpu.at(accel_idx)));
+
+        EXPECT_CALL(*m_device_pool, frequency_throttle_time_gpu(accel_idx)).WillRepeatedly(Return(mock_freq_throttle_time.at(accel_idx)));
+        EXPECT_CALL(*m_device_pool, frequency_throttle_time_timestamp_gpu(accel_idx)).WillRepeatedly(Return(mock_freq_throttle_time_timestamp.at(accel_idx)));
+        EXPECT_CALL(*m_device_pool, frequency_status_throttle_reason_gpu(accel_idx)).WillRepeatedly(Return(mock_freq_throttle_reason.at(accel_idx)));
 
         //Active time
         EXPECT_CALL(*m_device_pool, active_time(accel_idx)).WillRepeatedly(Return(mock_active_time.at(accel_idx)));
@@ -334,6 +341,14 @@ TEST_F(LevelZeroIOGroupTest, read_signal)
         EXPECT_DOUBLE_EQ(frequency, mock_freq_range_min_gpu.at(accel_idx)*1e6);
         frequency = levelzero_io.read_signal("LEVELZERO::FREQUENCY_RANGE_MAX_GPU_CONTROL", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
         EXPECT_DOUBLE_EQ(frequency, mock_freq_range_max_gpu.at(accel_idx)*1e6);
+
+        frequency = levelzero_io.read_signal("LEVELZERO::THROTTLE_TIME_GPU", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
+        EXPECT_DOUBLE_EQ(frequency, mock_freq_throttle_time.at(accel_idx)/1e6);
+        frequency = levelzero_io.read_signal("LEVELZERO::THROTTLE_TIME_TIMESTAMP_GPU", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
+        EXPECT_DOUBLE_EQ(frequency, mock_freq_throttle_time_timestamp.at(accel_idx)/1e6);
+        frequency = levelzero_io.read_signal("LEVELZERO::THROTTLE_REASONS_GPU", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
+        EXPECT_DOUBLE_EQ(frequency, mock_freq_throttle_reason.at(accel_idx));
+
 
         //Active time
         double active_time = levelzero_io.read_signal("LEVELZERO::ACTIVE_TIME", GEOPM_DOMAIN_BOARD_ACCELERATOR, accel_idx);
@@ -402,6 +417,7 @@ TEST_F(LevelZeroIOGroupTest, read_signal)
     ASSERT_TRUE(levelzero_io.is_valid_signal("LEVELZERO::UTILIZATION_COMPUTE"));
     ASSERT_TRUE(levelzero_io.is_valid_signal("LEVELZERO::UTILIZATION_COPY"));
     ASSERT_TRUE(levelzero_io.is_valid_signal("LEVELZERO::UTILIZATION_MEDIA_DECODE"));
+    ASSERT_TRUE(levelzero_io.is_valid_signal("LEVELZERO::THROTTLE_RATIO_GPU"));
 
 }
 
