@@ -137,10 +137,56 @@ namespace geopm
             std::vector<std::vector<zes_perf_handle_t> > m_perf_domain;
             std::vector<std::vector<zes_standby_handle_t> > m_standby_domain;
             std::vector<std::vector<zes_mem_handle_t> > m_mem_domain;
-            std::vector<std::vector<zes_fabric_port_handle_t> > m_fabric_domain;
             std::vector<std::vector<zes_temp_handle_t> > m_temperature_domain;
-            std::vector<std::vector<zes_fan_handle_t> > m_fan_domain;
 
+            enum geopm_levelzero_type_e {
+                GEOPM_LEVLEZERO_TYPE_INVALID = -1,
+                //Not defined in level zero spec https://spec.oneapi.com/level-zero/latest/core/api.html#_CPPv416ze_device_type_t
+                GEOPM_LEVLEZERO_TYPE_INTEGRATED_GPU = 0,
+                GEOPM_LEVLEZERO_TYPE_BOARD_GPU = 1,
+                GEOPM_LEVLEZERO_TYPE_CPU = 2,
+                GEOPM_LEVLEZERO_TYPE_FPGA = 3,
+                GEOPM_LEVLEZERO_TYPE_MCA = 4,
+            };
+            enum geopm_levelzero_domain_e {
+                GEOPM_LEVLEZERO_DOMAIN_ALL = 0,
+                GEOPM_LEVLEZERO_DOMAIN_COMPUTE = 1,
+                GEOPM_LEVLEZERO_DOMAIN_MEMORY = 2,
+                GEOPM_LEVLEZERO_DOMAIN_ENUM = -1,
+            };
+
+            struct domains_s {
+                std::vector<zes_freq_handle_t> m_freq_domain;
+                std::vector<zes_engine_handle_t> m_engine_domain;
+                std::vector<zes_perf_handle_t> m_perf_domain;
+                std::vector<zes_temp_handle_t> m_temperature_domain;
+            };
+
+            struct subdevice_s {
+                std::vector<zes_pwr_handle_t> m_subdevice_power_domain;
+                std::vector<zes_standby_handle_t> m_standby_domain;
+                std::vector<zes_mem_handle_t> m_mem_domain;
+
+                domains_s compute_domains;
+                domains_s memory_domains;
+            };
+
+            struct device_info_s {
+                zes_device_handle_t device_handle; // likely not needed
+                ze_device_properties_t property;
+                ze_device_type_t device_type; // already a part of property above
+                uint32_t m_num_subdevice;
+                // device type doesn't tell us board vs integrated GPU.  So we have our own
+                //geopm_levelzero_type_e geopm_device_type;
+                std::vector<zes_device_handle_t> sub_device_handle;
+                //// Sub-Device
+                std::vector<subdevice_s> subdevice;
+
+                //// Device/Package domain
+                std::vector<zes_pwr_handle_t> m_device_power_domain;
+                std::vector<zes_temp_handle_t> m_device_temperature_domain;
+            };
+            std::vector<device_info_s> m_devices;
     };
 }
 #endif

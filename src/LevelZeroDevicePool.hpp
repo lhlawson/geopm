@@ -121,5 +121,12 @@ namespace geopm
     };
 
     const LevelZeroDevicePool &levelzero_device_pool(int num_cpu);
+
+    enum geopm_levelzero_domain_e {
+        GEOPM_LEVLEZERO_DOMAIN_INVALID = -1,
+        GEOPM_LEVLEZERO_DOMAIN_ALL = 0,
+        GEOPM_LEVLEZERO_DOMAIN_COMPUTE = 1,
+        GEOPM_LEVLEZERO_DOMAIN_MEMORY = 2,
+    };
 }
 #endif

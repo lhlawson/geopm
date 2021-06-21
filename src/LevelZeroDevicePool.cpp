@@ -95,19 +95,35 @@ namespace geopm
             check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                             ": LevelZero Device acquisition failed.", __LINE__);
 
+
             for(unsigned int dev_idx = 0; dev_idx < num_device; ++dev_idx) {
                 ze_device_properties_t property;
                 ze_result = zeDeviceGetProperties(device_handle.at(dev_idx), &property);
 
-#ifdef GEOPM_DEBUG
                 uint32_t num_sub_device = 0;
 
                 ze_result = zeDeviceGetSubDevices(device_handle.at(dev_idx), &num_sub_device, nullptr);
                 check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                                 ": LevelZero Sub-Device enumeration failed.", __LINE__);
+                std::vector<zes_device_handle_t> sub_device_handle(num_sub_device);
+                ze_result = zeDeviceGetSubDevices(device_handle.at(dev_idx), &num_sub_device, sub_device_handle.data());
+                check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
+                                                                ": LevelZero Sub-Device acquisition failed.", __LINE__);
+
+#ifdef GEOPM_DEBUG
                 std::cout << "Debug: levelZero sub-devices: " << std::to_string(num_sub_device) << std::endl;
 #endif
 
+                m_devices.push_back({
+                    device_handle.at(dev_idx),
+                    property,
+                    property.type,
+                    num_sub_device,
+                    sub_device_handle,
+                    {}, //sub device
+                    {}, //power domain
+                    {}  //temp domaon
+                });
 
 
                 if (property.type == ZE_DEVICE_TYPE_GPU) {
@@ -151,7 +167,6 @@ namespace geopm
             //m_num_device = m_num_device + num_device;
         }
 
-        m_fan_domain.resize(m_num_device);
         m_temperature_domain.resize(m_num_device);
         m_fabric_domain.resize(m_num_device);
         m_mem_domain.resize(m_num_device);
@@ -191,6 +206,20 @@ namespace geopm
             ze_result = zesDeviceEnumFrequencyDomains(m_sysman_device.at(accel_idx), &num_domain, m_freq_domain.at(accel_idx).data());
             check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                         ": Sysman failed to get domain handles.", __LINE__);
+
+            for (auto handle : m_freq_domain.at(accel_idx)) {
+                zes_freq_properties_t property;
+                ze_result = zesFrequencyGetProperties(handle, &property);
+                check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
+                                                                ": Sysman failed to get domain properties.", __LINE__);
+
+                if (property.type == ZES_FREQ_DOMAIN_GPU) {
+
+                }
+                else if (property.type == ZES_FREQ_DOMAIN_GPU) {
+
+                }
+            }
 #ifdef GEOPM_DEBUG
             std::cout << "Debug: levelZero frequency domains: " << std::to_string(num_domain) << std::endl;
 #endif
@@ -210,6 +239,22 @@ namespace geopm
             ze_result = zesDeviceEnumPowerDomains(m_sysman_device.at(accel_idx), &num_domain, m_power_domain.at(accel_idx).data());
             check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                             ": Sysman failed to get domain handle(s).", __LINE__);
+
+            for (auto handle : m_power_domain.at(accel_idx)) {
+                zes_power_properties_t property;
+                ze_result = zesPowerGetProperties(handle, &property);
+                check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
+                                                                ": Sysman failed to get domain power properties", __LINE__);
+
+                //For initial GEOPM support we're only providing device level power
+                //finding non-subdevice domain.
+                if (property.onSubdevice == 0) {
+
+                }
+                else {
+
+                }
+            }
 #ifdef GEOPM_DEBUG
             std::cout << "Debug: levelZero power domains: " << std::to_string(num_domain) << std::endl;
 #endif
@@ -327,25 +372,6 @@ namespace geopm
             std::cout << "Debug: levelZero temperature domains: " << std::to_string(num_domain) << std::endl;
 #endif
         }
-
-        //Fan domain signals
-        num_domain = 0;
-        ze_result = zesDeviceEnumFans(m_sysman_device.at(accel_idx), &num_domain, nullptr);
-        if (ze_result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-            std::cerr << "Warning: <geopm> LevelZeroDevicePool: Fan detection is not supported.\n";
-        }
-        else {
-            check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
-                                                            ": Sysman failed to get number of domains", __LINE__);
-            m_fan_domain.at(accel_idx).resize(num_domain);
-            ze_result = zesDeviceEnumFans(m_sysman_device.at(accel_idx), &num_domain, m_fan_domain.at(accel_idx).data());
-            check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
-                                                            ": Sysman failed to get number of domains", __LINE__);
-#ifdef GEOPM_DEBUG
-            std::cout << "Debug: levelZero fan domains: " << std::to_string(num_domain) << std::endl;
-#endif
-        }
-
     }
 
     LevelZeroDevicePoolImp::~LevelZeroDevicePoolImp()
@@ -668,7 +694,6 @@ namespace geopm
         zes_engine_properties_t property;
         zes_engine_stats_t stats;
 
-        //for each engine group
         for (auto handle : m_engine_domain.at(accel_idx)) {
             ze_result = zesEngineGetProperties(handle, &property);
             check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
@@ -815,7 +840,6 @@ namespace geopm
                                                             ": Sysman failed to get domain power properties", __LINE__);
 
             //For initial GEOPM support we're only providing device level power
-            //finding non-subdevice domain.
             if (property.onSubdevice == 0) {
                 ze_result = zesPowerGetEnergyCounter(handle, &energy_counter);
                 check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
@@ -991,10 +1015,8 @@ namespace geopm
         zes_freq_range_t range;
         range.min = min_freq;
         range.max = max_freq;
-        //zes_freq_range_t range_check;
 
         for (auto handle : m_freq_domain.at(accel_idx)) {
-            //zes_freq_properties_t properts = {ZES_STRUCTURE_TYPE_FREQ_PROPERTIES,
             ze_result = zesFrequencyGetProperties(handle, &property);
             check_ze_result(ze_result, GEOPM_ERROR_RUNTIME, "LevelZeroDevicePool::" + std::string(__func__) +
                                                             ": Sysman failed to get domain properties.", __LINE__);
