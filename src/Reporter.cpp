@@ -326,35 +326,35 @@ namespace geopm
             GEOPM_DEBUG_ASSERT(sig.size() == 1, "Wrong number of signals for sample_only()");
             return m_sample_agg->sample_region(m_sync_signal_idx[sig[0]], hash);
         };
-        auto divide = [this](uint64_t hash, const std::vector<std::string> &sig) -> double
-        {
-            GEOPM_DEBUG_ASSERT(sig.size() == 2, "Wrong number of signals for divide()");
-            double numer = m_sample_agg->sample_region(m_sync_signal_idx[sig[0]], hash);
-            double denom = m_sample_agg->sample_region(m_sync_signal_idx[sig[1]], hash);
-            return denom == 0 ? 0.0 : numer / denom;
-        };
-        auto divide_pct = [this](uint64_t hash, const std::vector<std::string> &sig) -> double
-        {
-            GEOPM_DEBUG_ASSERT(sig.size() == 2, "Wrong number of signals for divide_pct()");
-            double numer = m_sample_agg->sample_region(m_sync_signal_idx[sig[0]], hash);
-            double denom = m_sample_agg->sample_region(m_sync_signal_idx[sig[1]], hash);
-            return denom == 0 ? 0.0 : 100.0 * numer / denom;
-        };
-        auto divide_sticker_scale = [this](uint64_t hash, const std::vector<std::string> &sig) -> double
-        {
-            GEOPM_DEBUG_ASSERT(sig.size() == 2, "Wrong number of signals for divide_sticker_scale()");
-            double numer = m_sample_agg->sample_region(m_sync_signal_idx[sig[0]], hash);
-            double denom = m_sample_agg->sample_region(m_sync_signal_idx[sig[1]], hash);
-            return denom == 0 ? 0.0 : m_sticker_freq * numer / denom;
-        };
+        //auto divide = [this](uint64_t hash, const std::vector<std::string> &sig) -> double
+        //{
+        //    GEOPM_DEBUG_ASSERT(sig.size() == 2, "Wrong number of signals for divide()");
+        //    double numer = m_sample_agg->sample_region(m_sync_signal_idx[sig[0]], hash);
+        //    double denom = m_sample_agg->sample_region(m_sync_signal_idx[sig[1]], hash);
+        //    return denom == 0 ? 0.0 : numer / denom;
+        //};
+        //auto divide_pct = [this](uint64_t hash, const std::vector<std::string> &sig) -> double
+        //{
+        //    GEOPM_DEBUG_ASSERT(sig.size() == 2, "Wrong number of signals for divide_pct()");
+        //    double numer = m_sample_agg->sample_region(m_sync_signal_idx[sig[0]], hash);
+        //    double denom = m_sample_agg->sample_region(m_sync_signal_idx[sig[1]], hash);
+        //    return denom == 0 ? 0.0 : 100.0 * numer / denom;
+        //};
+        //auto divide_sticker_scale = [this](uint64_t hash, const std::vector<std::string> &sig) -> double
+        //{
+        //    GEOPM_DEBUG_ASSERT(sig.size() == 2, "Wrong number of signals for divide_sticker_scale()");
+        //    double numer = m_sample_agg->sample_region(m_sync_signal_idx[sig[0]], hash);
+        //    double denom = m_sample_agg->sample_region(m_sync_signal_idx[sig[1]], hash);
+        //    return denom == 0 ? 0.0 : m_sticker_freq * numer / denom;
+        //};
 
         m_sync_fields = {
             {"sync-runtime (s)", {"TIME"}, sample_only},
-            {"package-energy (J)", {"ENERGY_PACKAGE"}, sample_only},
-            {"dram-energy (J)", {"ENERGY_DRAM"}, sample_only},
-            {"power (W)", {"ENERGY_PACKAGE", "TIME"}, divide},
-            {"frequency (%)", {"CYCLES_THREAD", "CYCLES_REFERENCE"}, divide_pct},
-            {"frequency (Hz)", {"CYCLES_THREAD", "CYCLES_REFERENCE"}, divide_sticker_scale},
+            //{"package-energy (J)", {"ENERGY_PACKAGE"}, sample_only},
+            //{"dram-energy (J)", {"ENERGY_DRAM"}, sample_only},
+            //{"power (W)", {"ENERGY_PACKAGE", "TIME"}, divide},
+            //{"frequency (%)", {"CYCLES_THREAD", "CYCLES_REFERENCE"}, divide_pct},
+            //{"frequency (Hz)", {"CYCLES_THREAD", "CYCLES_REFERENCE"}, divide_sticker_scale},
             {"time-hint-network (s)", {"TIME_HINT_NETWORK"}, sample_only},
             {"time-hint-ignore (s)", {"TIME_HINT_IGNORE"}, sample_only},
             {"time-hint-compute (s)", {"TIME_HINT_COMPUTE"}, sample_only},
