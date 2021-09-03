@@ -48,6 +48,7 @@
 #include "PowerGovernorAgent.hpp"
 #include "EnergyEfficientAgent.hpp"
 #include "FrequencyMapAgent.hpp"
+#include "BottleneckTrackerAgent.hpp"
 #include "Environment.hpp"
 #include "Helper.hpp"
 
@@ -77,6 +78,10 @@ namespace geopm
                         FrequencyMapAgent::make_plugin,
                         Agent::make_dictionary(FrequencyMapAgent::policy_names(),
                                                FrequencyMapAgent::sample_names()));
+        register_plugin(BottleneckTrackerAgent::plugin_name(),
+                        BottleneckTrackerAgent::make_plugin,
+                        Agent::make_dictionary(BottleneckTrackerAgent::policy_names(),
+                                               BottleneckTrackerAgent::sample_names()));
     }
 
 
