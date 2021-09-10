@@ -473,6 +473,8 @@ libgeopmpolicy_la_SOURCES = contrib/json11/json11.cpp \
                             src/ApplicationStatus.hpp \
                             src/BottleneckTrackerAgent.cpp \
                             src/BottleneckTrackerAgent.hpp \
+                            src/NVMLBoardUtilizationAgent.cpp \
+                            src/NVMLBoardUtilizationAgent.hpp \
                             src/CircularBuffer.hpp \
                             src/CNLIOGroup.cpp \
                             src/CNLIOGroup.hpp \

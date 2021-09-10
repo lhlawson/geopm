@@ -450,14 +450,12 @@ namespace geopm
                         //Minimal time in AVX2 or AVX512
                         //std::cout << "SSE" << std::endl;
                         ++m_license_0_samples;
-                        //cpu_freq_request.push_back(m_freq_p0x.at(0).at(active_cores));
                         avx_core.push_back(0);
                    }
                     else if (pmc1_diff >= pmc0_diff && pmc1_diff >= pmc2_diff) {
                         //more time in AVX2 than AVX512
                         //std::cout << "AVX2" << std::endl;
                         ++m_license_1_samples;
-                        //cpu_freq_request.push_back(m_freq_p0x.at(1).at(active_cores));
                         avx_core.push_back(1);
                         if(max_avx_seen < 1) {
                             max_avx_seen = 1;
@@ -466,7 +464,6 @@ namespace geopm
                         //more time in AVX512 than AVX2
                         //std::cout << "AVX512" << std::endl;
                         ++m_license_2_samples;
-                        //cpu_freq_request.push_back(m_freq_p0x.at(2).at(active_cores));
                         avx_core.push_back(2);
                         if(max_avx_seen < 2) {
                             max_avx_seen = 2;
@@ -518,6 +515,8 @@ namespace geopm
             double cycle_thread = cycle_thread_itr->second.signals.at(domain_idx).m_last_sample;
             double ipc = inst_retired/cycle_thread;
 
+            //Start from our last requested frequency
+            double request = freq_ctl_itr->second.controls.at(domain_idx).m_last_setting;
             //double cycle_ref = cycle_ref_itr->second.signals.at(domain_idx).m_last_sample;
 
             // TODO: check that the GPU associated with this CPU is active (GPU_Util != 0).
@@ -536,25 +535,30 @@ namespace geopm
                 if(associated_gpu != -1                         // -1 means associated to no GPUs
                    && !std::isnan(associated_gpu)               // NAN means associated to multiple GPUs
                    && gpu_util.at((int)associated_gpu) >= 0.95
-                   && ipc_std_perc < 0.05
-                   && ipc_avg < 3) {                            // TODO: And IPC < CUTOFF?  IPC of 3?
-                    double last_request = freq_ctl_itr->second.controls.at(domain_idx).m_last_setting;
-                    double request = last_request - 1e8; //step down 100MHz
-                    //if(request >= m_freq_sticker.at(avx_level)) { //TODO: consider re-enabling
-                    if(request >= m_freq_sticker.at(0)) { //Using SSE limits to be more perf conscious
-                        cpu_freq_request.push_back(request);
-                        //TODO: dump history?
-                    } else {
-                        cpu_freq_request.push_back(last_request);
+                   && ipc_std_perc < 0.05) {
+
+                    // TODO: And IPC < CUTOFF?  IPC of 3?
+                    //       Ultimately IPC level might determine what we do.
+                    //       Consider a stable IPC of 5 vs IPC of 0.  One likely
+                    //       means we're corebound, the other does not
+
+                    if (ipc_avg < 3) {
+                        //if(request > m_freq_sticker.at(avx_level)) { //TODO: consider re-enabling
+                        if(request > m_freq_sticker.at(0)) { //Using SSE limits to limit perf impact
+                            request = request - 1e8; //step down 100MHz
+                            //TODO: dump history of circular buffer?
+                        }
                     }
                 } else {
-                    cpu_freq_request.push_back(package_P0a);
+                    request = package_P0a;
                 }
             }
             else {
                 //cpu_freq_request.push_back(3.7*1e9);
-                cpu_freq_request.push_back(package_P0a);
+                //cpu_freq_request.push_back(package_P0a);
+                request = package_P0a;
             }
+            cpu_freq_request.push_back(request);
         }
 
         if (m_do_per_core) {
