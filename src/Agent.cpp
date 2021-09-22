@@ -49,6 +49,7 @@
 #include "EnergyEfficientAgent.hpp"
 #include "FrequencyMapAgent.hpp"
 #include "BottleneckTrackerAgent.hpp"
+#include "NVMLBoardUtilizationAgent.hpp"
 #include "Environment.hpp"
 #include "Helper.hpp"
 
@@ -82,6 +83,10 @@ namespace geopm
                         BottleneckTrackerAgent::make_plugin,
                         Agent::make_dictionary(BottleneckTrackerAgent::policy_names(),
                                                BottleneckTrackerAgent::sample_names()));
+        register_plugin(NVMLBoardUtilizationAgent::plugin_name(),
+                        NVMLBoardUtilizationAgent::make_plugin,
+                        Agent::make_dictionary(NVMLBoardUtilizationAgent::policy_names(),
+                                               NVMLBoardUtilizationAgent::sample_names()));
     }
 
 

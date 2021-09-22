@@ -49,6 +49,7 @@
 #define SAMPLE_PERIOD_SECONDS 0.025 // 25mS wait
 #define DECISION_WINDOW_SECONDS 0.100
 #define DECISION_WINDOW_SAMPLES (DECISION_WINDOW_SECONDS / SAMPLE_PERIOD_SECONDS)
+#define M_POLICY_PERF_MARGIN_DEFAULT 0.10  // max 10% performance degradation
 
 namespace geopm
 {
@@ -57,6 +58,7 @@ namespace geopm
         , m_platform_topo(platform_topo())
         , m_last_wait{{0, 0}}
         , M_WAIT_SEC(SAMPLE_PERIOD_SECONDS)
+        , m_perf_margin(M_POLICY_PERF_MARGIN_DEFAULT)
         , m_do_write_batch(false)
         // This agent approach is meant to allow for quick prototyping through simplifying
         // signal & control addition and usage.  Most changes to signals and controls
@@ -187,6 +189,8 @@ namespace geopm
         m_accelerator_low_util_samples = 0;
         m_accelerator_high_util_samples = 0;
 
+        sort(m_gpu_supported_freqs.begin(), m_gpu_supported_freqs.end());
+
         if (level == 0) {
             init_platform_io();
         }
@@ -217,6 +221,7 @@ namespace geopm
         for (size_t gpu_idx = 0;
                 gpu_idx < static_cast<size_t>(m_platform_topo.num_domain(GEOPM_DOMAIN_BOARD_ACCELERATOR)); ++gpu_idx) {
             m_gpu_utilization.push_back(geopm::make_unique<CircularBuffer<double> >(DECISION_WINDOW_SAMPLES));
+            m_gpu_mem_utilization.push_back(geopm::make_unique<CircularBuffer<double> >(DECISION_WINDOW_SAMPLES));
         }
         for (size_t cpu_idx = 0;
                 cpu_idx < static_cast<size_t>(m_platform_topo.num_domain(GEOPM_DOMAIN_CORE)); ++cpu_idx) {
@@ -256,6 +261,10 @@ namespace geopm
         m_platform_io.write_control("MSR::PQR_ASSOC:RMID", GEOPM_DOMAIN_BOARD, 0 ,0);
         m_platform_io.write_control("MSR::QM_EVTSEL:RMID", GEOPM_DOMAIN_BOARD, 0, 0);
         m_platform_io.write_control("MSR::QM_EVTSEL:EVENT_ID", GEOPM_DOMAIN_BOARD, 0, 2);
+
+        dcgmHandle_t dcgmHandle;
+        dcgmConfig_t *perDeviceConfigList = NULL;
+        dcgmGroupInfo_t myGroupInfo;
     }
 
     // Validate incoming policy and configure default policy requests.
@@ -374,8 +383,10 @@ namespace geopm
         // GPU
         for (int domain_idx = 0; domain_idx < util_itr->second.signals.size(); ++domain_idx) {
             double utilization_accelerator = util_itr->second.signals.at(domain_idx).m_last_signal;
-            double utilization_accelerator_mem = util_itr->second.signals.at(domain_idx).m_last_signal;
+            double utilization_accelerator_mem = util_mem_itr->second.signals.at(domain_idx).m_last_signal;
 
+            //safe bet is max freq.
+            double request = m_gpu_P0_freq;
             if (!std::isnan(utilization_accelerator)) {
                 //std::cout << "utilization_accel is: " << std::to_string(utilization_accelerator) << std::endl;
                 //m_scalable_freq[domain_idx]->insert(scalability);
@@ -383,16 +394,63 @@ namespace geopm
                 auto gpu_samples = m_gpu_utilization[domain_idx]->make_vector();
                 //auto qtile = quantile(core_samples, QUANTILE);
                 auto m = Agg::max(gpu_samples);
+
+                m_gpu_mem_utilization[domain_idx]->insert(utilization_accelerator_mem);
+                auto gpu_mem_samples = m_gpu_mem_utilization[domain_idx]->make_vector();
+                auto m_u = Agg::min(gpu_mem_samples);
                 if (m > 0.0) {
-                    board_gpu_freq_request.push_back(m_gpu_P0_freq);
+                    //A basic bang bang controller
+                    //request = m_gpu_P0_freq;
+
+                    request = (m_gpu_freq_deg_map.lower_bound(m_perf_margin)->second)*1e6;
+
+                    //scaled freq with util
+                    //auto itr = std::upper_bound(m_gpu_supported_freqs.begin(),
+                    //                            m_gpu_supported_freqs.end(),
+                    //                            m*m_gpu_P0_freq);
+
+                    //scaled freq with in a range, assuming supported_freq is cut to some range.  1312-1530 was used.
+                    //auto itr = std::upper_bound(m_gpu_supported_freqs.begin(),
+                    //                            m_gpu_supported_freqs.end(),
+                    //                            m_gpu_supported_freqs.front() + m*2.1e8);
+
+                    //Directly related to gpu_mem_freq
+                    //auto itr = std::upper_bound(m_gpu_supported_freqs.begin(),
+                    //                            m_gpu_supported_freqs.end(),
+                    //                            m_gpu_P0_freq - utilization_accelerator_mem*m_gpu_mem_freq);
+
+                    //based on the idea that at max mem util we should MATCH GPU and Mem freq
+                    //auto itr = std::upper_bound(m_gpu_supported_freqs.begin(),
+                    //                            m_gpu_supported_freqs.end(),
+                    //                            m_gpu_P0_freq - m_u*(m_gpu_P0_freq - m_gpu_mem_freq));
+                                                //m_gpu_P0_freq - utilization_accelerator_mem*(m_gpu_P0_freq - m_gpu_mem_freq));
+
+                    //std::cout << "m is: " << std::to_string(m) << std::endl;
+                    //std::cout << "m scaled is: " << std::to_string(m*m_gpu_P0_freq) << std::endl;
+                    //std::cout << "m scaled is: " << std::to_string(m_gpu_supported_freqs.front() + m*2.1e8) << std::endl;
+                    //std::cout << "mem_util is: " << std::to_string(utilization_accelerator_mem) << std::endl;
+                    //std::cout << "target is: " << std::to_string(m_gpu_P0_freq - utilization_accelerator_mem*(m_gpu_P0_freq - m_gpu_mem_freq)) << std::endl;
+                    //std::cout << "itr is: " << std::to_string(*itr) << std::endl;
+                    //std::cout << "result is: " << std::to_string(request) << std::endl;
+                    //If found, use the value
+                    //if (itr != m_gpu_supported_freqs.end()) {
+                    //    request = *itr;
+                    //}
+                    //std::cout << "utilization_accel agg::max is: " << std::to_string(m) << std::endl;
                 }
                 else {
-                    board_gpu_freq_request.push_back(m_gpu_PN_freq);
+                    request = m_gpu_PN_freq;
                 }
-                gpu_util.push_back(utilization_accelerator);
             } else {
-                gpu_util.push_back(0);
+                utilization_accelerator = 0;
             }
+            //std::cout << "request is: " << std::to_string(request) << std::endl;
+            board_gpu_freq_request.push_back(request);
+
+            // needed later for CPU work freq selection
+            // We're saving the last sample here, not the
+            // Agg:*(gpu_samples).  Consider using the Agg instead
+            gpu_util.push_back(utilization_accelerator);
         }
 
         // XEON

@@ -143,6 +143,19 @@ fi
 AC_SUBST([enable_nvml])
 AM_CONDITIONAL([ENABLE_NVML], [test "x$enable_nvml" = "x1"])
 
+AC_ARG_ENABLE([dcgm],
+  [AS_HELP_STRING([--enable-dcgm], [Enables use of the DCGM library to support NVIDIA board accelerators])],
+[if test "x$enable_dcgm" = "xno" ; then
+  enable_dcgm="0"
+else
+  enable_dcgm="1"
+fi
+],
+[enable_dcgm="0"]
+)
+AC_SUBST([enable_dcgm])
+AM_CONDITIONAL([ENABLE_DCGM], [test "x$enable_dcgm" = "x1"])
+
 AC_ARG_ENABLE([cnl-iogroup],
   [AS_HELP_STRING([--enable-cnl-iogroup], [Enable the CNL IOGroup])],
 [if test "x$enable_cnl_iogroup" = "xno" ; then
@@ -180,11 +193,17 @@ if test "x$enable_msrsafe_ioctl_write" = "x1" ; then
 fi
 AC_SUBST([enable_msrsafe_ioctl_write])
 
+if test "x$enable_dcgm" = "x1" ; then
+  ENABLE_DCGM=True
+  AC_DEFINE([GEOPM_ENABLE_DCGM], [ ], [Enables use of the DCGM library to support NVIDA board accelerators])
+fi
+
 if test "x$enable_nvml" = "x1" ; then
   ENABLE_NVML=True
   AC_DEFINE([GEOPM_ENABLE_NVML], [ ], [Enables use of the NVML library to support NVML board accelerators])
 else
     ENABLE_NVML=False
+    ENABLE_DCGM=False
     if test "x$enable_levelzero" = "x1" ; then
         ENABLE_LEVELZERO=True
         AC_DEFINE([GEOPM_ENABLE_LEVELZERO], [ ], [Enables use of the levelzero library to support levelzero board accelerators])
@@ -288,6 +307,14 @@ fi
 )
 AC_SUBST([enable_fortran])
 AM_CONDITIONAL([ENABLE_FORTRAN], [test "x$enable_fortran" = "x1"])
+
+AC_ARG_WITH([libdcgm], [AS_HELP_STRING([--with-libdcgm=PATH],
+            [specify directory for installed libdcgm package.])])
+if test "x$with_libdcgm" != x; then
+  EXTRA_CPPFLAGS="$EXTRA_CPPFLAGS -I$with_libdcgm/include"
+  LD_LIBRARY_PATH="$with_libdcgm/lib64:$LD_LIBRARY_PATH"
+  EXTRA_LDFLAGS="$EXTRA_LDFLAGS -L$with_libdcgm/lib64"
+fi
 
 AC_ARG_WITH([libnvml], [AS_HELP_STRING([--with-libnvml=PATH],
             [specify directory for installed libnvml package.])])
@@ -497,6 +524,16 @@ AC_CHECK_HEADER([libelf.h], [], [
 AC_CHECK_HEADER([gelf.h], [], [
     echo "missing gelf.h: ELF library is required, use --with-libelf or --with-libelf-include to specify location"
     exit -1])
+
+if test "x$enable_dcgm" = "x1" ; then
+    AC_SEARCH_LIBS([dcgmInit], [dcgm])
+    AC_CHECK_LIB([dcgm], [dcgmInit], [], [
+        echo "missing libdcgm: DCGM library is required, use --with-libdcgm to specify location"
+        exit -1])
+    AC_CHECK_HEADER([dcgm_structs.h], [], [
+        echo "missing dcgm_structs.h: DCGM headers are required, use --with-libdcgm to specify location"
+        exit -1])
+fi
 
 if test "x$enable_nvml" = "x1" ; then
     AC_SEARCH_LIBS([nvmlSystemGetCudaDriverVersion], [nvidia-ml])
