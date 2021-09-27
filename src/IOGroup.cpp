@@ -53,6 +53,9 @@
 #ifdef GEOPM_ENABLE_LEVELZERO
 #include "LevelZeroIOGroup.hpp"
 #endif
+#ifdef GEOPM_ENABLE_DCGM
+#include "DCGMIOGroup.hpp"
+#endif
 #ifdef GEOPM_DEBUG
 #include <iostream>
 #endif
@@ -120,6 +123,10 @@ namespace geopm
 #ifdef GEOPM_ENABLE_LEVELZERO
         register_plugin(LevelZeroIOGroup::plugin_name(),
                         LevelZeroIOGroup::make_plugin);
+#endif
+#ifdef GEOPM_ENABLE_NVML
+        register_plugin(DCGMIOGroup::plugin_name(),
+                        DCGMIOGroup::make_plugin);
 #endif
     }
 

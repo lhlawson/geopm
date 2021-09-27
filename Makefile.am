@@ -679,6 +679,9 @@ levelzero_source_files = src/LevelZero.cpp \
                          src/LevelZero.hpp \
                          #end
 
+dcgm_source_files = src/DCGMIOGroup.cpp \
+                    #end
+
 if ENABLE_LEVELZERO
     libgeopmpolicy_la_SOURCES += $(levelzero_source_files)
 else
@@ -693,6 +696,10 @@ else
     libgeopmpolicy_la_SOURCES += src/NVMLDevicePoolThrow.cpp
     EXTRA_DIST += $(nvml_source_files) \
                   #end
+endif
+
+if ENABLE_DCGM
+    libgeopmpolicy_la_SOURCES += $(dcgm_source_files)
 endif
 
 beta_source_files = src/Daemon.cpp \
