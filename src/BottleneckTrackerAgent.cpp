@@ -150,6 +150,14 @@ namespace geopm
                                   true,
                                   {}
                                   }},
+                              {"DCGM::SM_ACTIVE", {
+                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                  true,
+                                  {}
+                                  }},
+                              //{"CYCLES_REFERENCE", {
+                              //    GEOPM_DOMAIN_CORE,
+                              //    true,
                               //{"CYCLES_REFERENCE", {
                               //    GEOPM_DOMAIN_CORE,
                               //    true,
@@ -222,6 +230,7 @@ namespace geopm
                 gpu_idx < static_cast<size_t>(m_platform_topo.num_domain(GEOPM_DOMAIN_BOARD_ACCELERATOR)); ++gpu_idx) {
             m_gpu_utilization.push_back(geopm::make_unique<CircularBuffer<double> >(DECISION_WINDOW_SAMPLES));
             m_gpu_mem_utilization.push_back(geopm::make_unique<CircularBuffer<double> >(DECISION_WINDOW_SAMPLES));
+            m_gpu_sm_active.push_back(geopm::make_unique<CircularBuffer<double> >(DECISION_WINDOW_SAMPLES));
         }
         for (size_t cpu_idx = 0;
                 cpu_idx < static_cast<size_t>(m_platform_topo.num_domain(GEOPM_DOMAIN_CORE)); ++cpu_idx) {
@@ -262,9 +271,6 @@ namespace geopm
         m_platform_io.write_control("MSR::QM_EVTSEL:RMID", GEOPM_DOMAIN_BOARD, 0, 0);
         m_platform_io.write_control("MSR::QM_EVTSEL:EVENT_ID", GEOPM_DOMAIN_BOARD, 0, 2);
 
-        dcgmHandle_t dcgmHandle;
-        dcgmConfig_t *perDeviceConfigList = NULL;
-        dcgmGroupInfo_t myGroupInfo;
     }
 
     // Validate incoming policy and configure default policy requests.
@@ -340,9 +346,6 @@ namespace geopm
         m_do_write_batch = false;
 
         // Build frequency recommendation based on accelerator utilization
-        //auto pcnt_itr = m_signal_available.find("MSR::PPERF:PCNT");
-        //auto acnt_itr = m_signal_available.find("MSR::APERF:ACNT");
-        //auto freq_itr = m_signal_available.find("FREQUENCY");
         auto pmc0_itr = m_signal_available.find("MSR::IA32_PMC0:PERFCTR");
         auto pmc1_itr = m_signal_available.find("MSR::IA32_PMC1:PERFCTR");
         auto pmc2_itr = m_signal_available.find("MSR::IA32_PMC2:PERFCTR");
@@ -350,10 +353,11 @@ namespace geopm
         auto inst_retired_itr = m_signal_available.find("INSTRUCTIONS_RETIRED");
         auto cycle_thread_itr = m_signal_available.find("CYCLES_THREAD");
         auto qm_itr = m_signal_available.find("QM_CTR_SCALED_RATE");
-        //auto cycle_ref_itr = m_signal_available.find("CYCLES_REFERENCE");
 
         auto util_itr = m_signal_available.find("NVML::UTILIZATION_ACCELERATOR");
         auto util_mem_itr = m_signal_available.find("NVML::UTILIZATION_MEMORY");
+
+        auto sm_active_itr = m_signal_available.find("DCGM::SM_ACTIVE");
 
         auto freq_ctl_itr = m_control_available.find("FREQUENCY");
 
@@ -384,6 +388,7 @@ namespace geopm
         for (int domain_idx = 0; domain_idx < util_itr->second.signals.size(); ++domain_idx) {
             double utilization_accelerator = util_itr->second.signals.at(domain_idx).m_last_signal;
             double utilization_accelerator_mem = util_mem_itr->second.signals.at(domain_idx).m_last_signal;
+            double sm_active_accelerator = sm_active_itr->second.signals.at(domain_idx).m_last_signal;
 
             //safe bet is max freq.
             double request = m_gpu_P0_freq;
@@ -398,11 +403,39 @@ namespace geopm
                 m_gpu_mem_utilization[domain_idx]->insert(utilization_accelerator_mem);
                 auto gpu_mem_samples = m_gpu_mem_utilization[domain_idx]->make_vector();
                 auto m_u = Agg::min(gpu_mem_samples);
+
                 if (m > 0.0) {
                     //A basic bang bang controller
                     //request = m_gpu_P0_freq;
 
-                    request = (m_gpu_freq_deg_map.lower_bound(m_perf_margin)->second)*1e6;
+                    //User specified degradation Value
+                    //request = (m_gpu_freq_deg_map.lower_bound(m_perf_margin)->second)*1e6;
+
+                    //Scaled freq with SM Active
+                    if (!std::isnan(sm_active_accelerator)) {
+                        //last sample only
+                        if(utilization_accelerator != 0) {
+                            request = (990 + (1530-990)*(sm_active_accelerator/utilization_accelerator))*1e6;
+                        }
+                        else {
+                            request = (990 + (1530-990)*(sm_active_accelerator))*1e6;
+                        }
+
+                        //max sample approach
+                        //m_gpu_sm_active[domain_idx]->insert(sm_active_accelerator);
+                        //auto gpu_sm_active_samples = m_gpu_sm_active[domain_idx]->make_vector();
+                        //auto m_sm = Agg::max(gpu_sm_active_samples);
+                        //m is guaranteed to be non-zero (if above)
+                        //if(utilization_accelerator != 0) {
+                        //    request = (990 + (1530-990)*(m_sm/utilization_accelerator))*1e6;
+                        //} else {
+                        //    request = (990 + (1530-990)*(m_sm))*1e6;
+                        //}
+                    }
+
+                    auto itr = std::upper_bound(m_gpu_supported_freqs.begin(),
+                                                m_gpu_supported_freqs.end(),
+                                                request);
 
                     //scaled freq with util
                     //auto itr = std::upper_bound(m_gpu_supported_freqs.begin(),
@@ -433,9 +466,9 @@ namespace geopm
                     //std::cout << "itr is: " << std::to_string(*itr) << std::endl;
                     //std::cout << "result is: " << std::to_string(request) << std::endl;
                     //If found, use the value
-                    //if (itr != m_gpu_supported_freqs.end()) {
-                    //    request = *itr;
-                    //}
+                    if (itr != m_gpu_supported_freqs.end()) {
+                        request = *itr;
+                    }
                     //std::cout << "utilization_accel agg::max is: " << std::to_string(m) << std::endl;
                 }
                 else {
