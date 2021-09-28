@@ -61,65 +61,46 @@ namespace geopm
     DCGMIOGroup::DCGMIOGroup(const PlatformTopo &platform_topo)
         : m_platform_topo(platform_topo)
         , m_is_batch_read(false)
-        , m_update_freq(100) //TODO: Review
-        , m_max_keep_age(3600.0) //TODO: Review
-        , m_max_keep_sample(3600) //TODO: Review
-        //, m_dcgm_handle()
-        //, m_dcgm_group_id()
-        //, m_field_group_id()
+        , m_update_freq(1000)    // 1 millisecond
+        , m_max_keep_age(1.0)    // 1 second
+        , m_max_keep_sample(100) // 100 samples
         , m_signal_available({{"DCGM::SM_ACTIVE", {
                                   "SM activity expressed as a ratio of cycles",
                                   {},
-                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                  DCGM_FI_PROF_SM_ACTIVE,
+                                  -1,
                                   Agg::average,
                                   string_format_double
                                   }},
                               {"DCGM::SM_OCCUPANCY", {
                                   "Warp residency expressed as a ratio of maximum warps per cycles",
                                   {},
-                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                  DCGM_FI_PROF_SM_OCCUPANCY,
+                                  -1,
                                   Agg::average,
-                                  string_format_double
-                                  }},
-                              {"DCGM::FP64_ACTIVE", {
-                                  "Floating point activity expressed as a ratio of cycles",
-                                  {},
-                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
-                                  Agg::sum,
-                                  string_format_double
-                                  }},
-                              {"DCGM::FP32_ACTIVE", {
-                                  "Floating point activity expressed as a ratio of cycles",
-                                  {},
-                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
-                                  Agg::sum,
-                                  string_format_double
-                                  }},
-                              {"DCGM::FP16_ACTIVE", {
-                                  "Floating point activity expressed as a ratio of cycles",
-                                  {},
-                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
-                                  Agg::sum,
                                   string_format_double
                                   }},
                               {"DCGM::DRAM_ACTIVE", {
                                   "DRAM Send & Receive expresed as a ratio of cycles",
                                   {},
-                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
-                                  Agg::sum,
+                                  DCGM_FI_PROF_DRAM_ACTIVE,
+                                  -1,
+                                  Agg::average,
                                   string_format_double
                                   }},
                               {"DCGM::PCIE_RX_BYTES", {
-                                  "Bytes read via PCIE",
+                                  "Bytes received via PCIE",
                                   {},
-                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                  DCGM_FI_PROF_PCIE_RX_BYTES,
+                                  -1,
                                   Agg::sum,
                                   string_format_double
                                   }},
                               {"DCGM::PCIE_TX_BYTES", {
                                   "Bytes sent via PCIE",
                                   {},
-                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                  DCGM_FI_PROF_PCIE_TX_BYTES,
+                                  -1,
                                   Agg::sum,
                                   string_format_double
                                   }},
@@ -127,27 +108,25 @@ namespace geopm
         , m_control_available({{"DCGM::FIELD_UPDATE_RATE", {
                                     "Rate at which field data is polled in Seconds",
                                     {},
-                                    GEOPM_DOMAIN_BOARD,
                                     Agg::expect_same,
                                     string_format_double
                                     }},
                                {"DCGM::MAX_STORAGE_TIME", {
                                     "Maximum time field data is stored in seconds",
                                     {},
-                                    GEOPM_DOMAIN_BOARD,
                                     Agg::expect_same,
                                     string_format_double
                                     }},
                                {"DCGM::MAX_SAMPLES", {
                                     "Maximum number of samples.  0=no limit",
                                     {},
-                                    GEOPM_DOMAIN_BOARD,
                                     Agg::expect_same,
                                     string_format_integer
                                     }}
                               })
     {
         // populate signals for each domain
+        int idx=0;
         for (auto &sv : m_signal_available) {
             std::vector<std::shared_ptr<signal_s> > result;
             for (int domain_idx = 0; domain_idx < m_platform_topo.num_domain(signal_domain_type(sv.first)); ++domain_idx) {
@@ -155,6 +134,11 @@ namespace geopm
                 result.push_back(sgnl);
             }
             sv.second.signals = result;
+
+            // initialize dcgm_field_ids
+            dcgm_field_ids.push_back(sv.second.m_field_id);
+            sv.second.m_field_index=idx;
+            ++idx;
         }
 
         // populate controls for each domain
@@ -171,7 +155,6 @@ namespace geopm
         //Initialize DCGM
         result = dcgmInit();
         dcgm_error_check(result, "Error Initializing DCGM.");
-        //std::cout << "DELETE ME - DCGM initialized" << std::endl;
 
         //Launch DCGM
         //result = dcgmStartEmbedded(DCGM_OPERATION_MODE_AUTO, &m_dcgm_handle);
@@ -180,14 +163,12 @@ namespace geopm
         char host_ip_address[16] = {0};
         strncpy(host_ip_address, "127.0.0.1", 15);
         result = dcgmConnect(host_ip_address, &m_dcgm_handle);
-        //std::cout << "DELETE ME - DCGM embedded started" << std::endl;
 
         //Check all devices are DCGM enabled
         unsigned int dcgm_dev_id_list[DCGM_MAX_NUM_DEVICES];
         int dcgm_dev_count;
         result = dcgmGetAllSupportedDevices(m_dcgm_handle, dcgm_dev_id_list, &dcgm_dev_count);
         dcgm_error_check(result, "Error fetching devices.");
-        //std::cout << "DELETE ME - DCGM device fetch complete.  Device count: " << std::to_string(dcgm_dev_count) << std::endl;
 
         if (dcgm_dev_count != m_platform_topo.num_domain(GEOPM_DOMAIN_BOARD_ACCELERATOR)) {
             throw Exception("DCGMIOGroup::" + std::string(__func__) + ": "
@@ -196,42 +177,22 @@ namespace geopm
         }
 
         //Setup DCGM Group
-        result = dcgmGroupCreate(m_dcgm_handle, DCGM_GROUP_DEFAULT, (char *)"GEOPM", &m_dcgm_group_id);
-        dcgm_error_check(result, "Error creating GEOPM DCGM group.");
-        //std::cout << "DELETE ME - Created DCGM Group ID: " << std::to_string((unsigned long)m_dcgm_group_id) << std::endl;
 
         //Setup Field Group
-        //result = dcgmFieldGroupCreate(m_dcgm_handle, std::end(dcgm_field_ids) - std::begin(dcgm_field_ids), &dcgm_field_ids[0],
-        //                              (char *)"geopm_fields", &m_field_group_id);
-        result = dcgmFieldGroupCreate(m_dcgm_handle, sizeof(dcgm_field_ids)/sizeof(dcgm_field_ids[0]), &dcgm_field_ids[0],
+        result = dcgmFieldGroupCreate(m_dcgm_handle, dcgm_field_ids.size(), &dcgm_field_ids[0],
                                       (char *)"geopm_fields", &m_field_group_id);
         dcgm_error_check(result, "Error creating field group.");
-        //std::cout << "DELETE ME - Field Group Created" << std::endl;
 
         //Start DCGM
-        //std::cout << "DELETE ME - pre DCGM watch" << std::endl;
-        result = dcgmWatchFields(m_dcgm_handle, m_dcgm_group_id, m_field_group_id, m_update_freq,
+        result = dcgmWatchFields(m_dcgm_handle, DCGM_GROUP_ALL_GPUS, m_field_group_id, m_update_freq,
                                  m_max_keep_age, m_max_keep_sample);
-        //std::cout << "DELETE ME - post DCGM watch" << std::endl;
         dcgm_error_check(result, "Error setting default watch field configuration.");
-
-
-        //TODO: is this needed?
-        //dcgmUpdateAllFields(m_dcgm_handle, 1);
-
-        //If you want to get names
-        //for(const int &field_id : dcgm_field_ids){
-        //    DcgmFieldGetById(fieldId)->tag
-
-        //dcgmFieldValue_v1 values[sizeof(dcgm_field_ids)];?
     }
 
     DCGMIOGroup::~DCGMIOGroup(void)
     {
         dcgmStatusDestroy(NULL);
-        dcgmGroupDestroy(m_dcgm_handle, m_dcgm_group_id);
-        dcgmStopEmbedded(m_dcgm_handle);
-        dcgmStopEmbedded(m_dcgm_handle);
+        dcgmGroupDestroy(m_dcgm_handle, DCGM_GROUP_ALL_GPUS);
     }
 
     void DCGMIOGroup::dcgm_error_check(const dcgmReturn_t result, const std::string error)
@@ -278,23 +239,25 @@ namespace geopm
     // Return domain for all valid signals
     int DCGMIOGroup::signal_domain_type(const std::string &signal_name) const
     {
-        int result = GEOPM_DOMAIN_INVALID;
-        auto it = m_signal_available.find(signal_name);
-        if (it != m_signal_available.end()) {
-            result = it->second.domain;
-        }
-        return result;
+        //int result = GEOPM_DOMAIN_INVALID;
+        //auto it = m_signal_available.find(signal_name);
+        //if (it != m_signal_available.end()) {
+        //    result = it->second.domain;
+        //}
+        //return result;
+        return is_valid_signal(signal_name) ? GEOPM_DOMAIN_BOARD_ACCELERATOR : GEOPM_DOMAIN_INVALID;
     }
 
     // Return domain for all valid controls
     int DCGMIOGroup::control_domain_type(const std::string &control_name) const
     {
-        int result = GEOPM_DOMAIN_INVALID;
-        auto it = m_control_available.find(control_name);
-        if (it != m_control_available.end()) {
-            result = it->second.domain;
-        }
-        return result;
+        //int result = GEOPM_DOMAIN_INVALID;
+        //auto it = m_control_available.find(control_name);
+        //if (it != m_control_available.end()) {
+        //    result = it->second.domain;
+        //}
+        //return result;
+        return is_valid_control(control_name) ? GEOPM_DOMAIN_BOARD : GEOPM_DOMAIN_INVALID;
     }
 
     // Mark the given signal to be read by read_batch()
@@ -384,16 +347,26 @@ namespace geopm
     void DCGMIOGroup::read_batch(void)
     {
         m_is_batch_read = true;
-        for (auto &sv : m_signal_available) {
-        //    if (sv.first == "") {
-        //    }
-        //    else {
-                for (unsigned int domain_idx = 0; domain_idx < sv.second.signals.size(); ++domain_idx) {
-                    if (sv.second.signals.at(domain_idx)->m_do_read) {
-                        sv.second.signals.at(domain_idx)->m_value = read_signal(sv.first, sv.second.domain, domain_idx);
-                    }
+        dcgmReturn_t dcgm_result;
+
+        //NOTE: This requires all signals to operate at the GEOPM_BOARD_ACCELERATOR domain
+        for (int domain_idx = 0; domain_idx < m_platform_topo.num_domain(
+             GEOPM_DOMAIN_BOARD_ACCELERATOR); ++domain_idx) {
+
+            dcgmFieldValue_v1 dcgm_field_values[dcgm_field_ids.size()];
+
+            dcgm_result = dcgmGetLatestValuesForFields(m_dcgm_handle, domain_idx,
+                            &dcgm_field_ids[0], dcgm_field_ids.size(),
+                            dcgm_field_values);
+            dcgm_error_check(dcgm_result, "Error getting latest values for fields in read_batch");
+
+            for (auto &sv : m_signal_available) {
+                if (sv.second.signals.at(domain_idx)->m_do_read) {
+                    //TODO: assuming we can use the .dbl value for ALL signals
+                    sv.second.signals.at(domain_idx)->m_value =
+                        dcgm_field_values[sv.second.m_field_index].value.dbl;
                 }
-        //    }
+            }
         }
     }
 
@@ -403,7 +376,8 @@ namespace geopm
         for (auto &sv : m_control_available) {
             for (unsigned int domain_idx = 0; domain_idx < sv.second.controls.size(); ++domain_idx) {
                 if (sv.second.controls.at(domain_idx)->m_is_adjusted) {
-                    write_control(sv.first, sv.second.domain, domain_idx, sv.second.controls.at(domain_idx)->m_setting);
+                    write_control(sv.first, control_domain_type(sv.first), domain_idx,
+                                  sv.second.controls.at(domain_idx)->m_setting);
                 }
             }
         }
@@ -458,53 +432,20 @@ namespace geopm
         dcgmReturn_t dcgm_result;
         double result = NAN;
 
-        dcgmFieldValue_v1 dcgm_field_values[sizeof(dcgm_field_ids)];
-        dcgm_result = dcgmGetLatestValuesForFields(m_dcgm_handle, domain_idx, dcgm_field_ids, sizeof(dcgm_field_ids)/sizeof(dcgm_field_ids[0]), dcgm_field_values);
-        dcgm_error_check(dcgm_result, "Error getting latest values for fields");
+        dcgmFieldValue_v1 dcgm_field_values[dcgm_field_ids.size()];
+            dcgm_result = dcgmGetLatestValuesForFields(m_dcgm_handle, domain_idx,
+                            &dcgm_field_ids[0], dcgm_field_ids.size(),
+                            dcgm_field_values);
 
-        for (int i = 0; i < sizeof(dcgm_field_ids)/sizeof(dcgm_field_ids[0]); i++) {
-            if(i == 0)
-                switch (dcgm_field_values[i].fieldType) {
-                    case DCGM_FT_BINARY:
-                        break;
-                    case DCGM_FT_DOUBLE:
-                        result = dcgm_field_values[i].value.dbl;
-                        break;
-                    case DCGM_FT_INT64:
-                        result = (double) dcgm_field_values[i].value.i64;
-                        break;
-                    case DCGM_FT_STRING:
-                        break;
-                    case DCGM_FT_TIMESTAMP:
-                        break;
-                    default:
-                        //std::cout << "Error in field types. " << gpulist[gpu_id].values[i].fieldType
-                        //          << "\n";
-                        //result = "";
-                        break;
-                }
-        }
-        if (signal_name == "DCGM::SM_ACTIVE") {
-        }
-        else if (signal_name == "DCGM::SM_OCCUPANCY") {
-        }
-        else if (signal_name == "DCGM::FP64_ACTIVE") {
-        }
-        else if (signal_name == "DCGM::FP32_ACTIVE") {
-        }
-        else if (signal_name == "DCGM::FP16_ACTIVE") {
-        }
-        else if (signal_name == "DCGM::DRAM_ACTIVE") {
-        }
-        else if (signal_name == "DCGM::PCIE_RX_BYTES") {
-        }
-        else if (signal_name == "DCGM::PCIE_TX_BYTES") {
-        }
-        else {
+        dcgm_error_check(dcgm_result, "Error getting latest values for fields in read_signal");
+
+        auto it = m_signal_available.find(signal_name);
+        if (it != m_signal_available.end()) {
+            //TODO: assuming we can use the .dbl value for ALL signals
+            result = dcgm_field_values[it->second.m_field_index].value.dbl;
     #ifdef GEOPM_DEBUG
             throw Exception("DCGMIOGroup::" + std::string(__func__) + ": Handling not defined for " +
                             signal_name, GEOPM_ERROR_LOGIC, __FILE__, __LINE__);
-
     #endif
         }
         return result;
@@ -533,17 +474,17 @@ namespace geopm
         dcgmReturn_t result;
         if (control_name == "DCGM::FIELD_UPDATE_RATE") {
             m_update_freq = setting*1e6; //second to usec conversion
-            result = dcgmWatchFields(m_dcgm_handle, m_dcgm_group_id, m_field_group_id, m_update_freq,
+            result = dcgmWatchFields(m_dcgm_handle, DCGM_GROUP_ALL_GPUS, m_field_group_id, m_update_freq,
                                      m_max_keep_age, m_max_keep_sample);
         }
         else if (control_name == "DCGM::MAX_STORAGE_TIME") {
             m_max_keep_age = setting; //second to second conversion
-            result = dcgmWatchFields(m_dcgm_handle, m_dcgm_group_id, m_field_group_id, m_update_freq,
+            result = dcgmWatchFields(m_dcgm_handle, DCGM_GROUP_ALL_GPUS, m_field_group_id, m_update_freq,
                                      m_max_keep_age, m_max_keep_sample);
         }
         else if (control_name == "DCGM::MAX_SAMPLES") {
             m_max_keep_age = setting;
-            result = dcgmWatchFields(m_dcgm_handle, m_dcgm_group_id, m_field_group_id, m_update_freq,
+            result = dcgmWatchFields(m_dcgm_handle, DCGM_GROUP_ALL_GPUS, m_field_group_id, m_update_freq,
                                      m_max_keep_age, m_max_keep_sample);
         }
         else {

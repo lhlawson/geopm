@@ -100,11 +100,11 @@ namespace geopm
                                   true,
                                   {}
                                   }},
-                              {"MSR::C6_RESIDENCY:RESIDENCY", {
-                                  GEOPM_DOMAIN_CORE,
-                                  true,
-                                  {}
-                                  }},
+                              //{"MSR::C6_RESIDENCY:RESIDENCY", {
+                              //    GEOPM_DOMAIN_CORE,
+                              //    true,
+                              //    {}
+                              //    }},
                               {"QM_CTR_SCALED_RATE", {
                                   GEOPM_DOMAIN_PACKAGE,
                                   true,
@@ -189,7 +189,7 @@ namespace geopm
         //m_license_2_cycles = 0;
         m_pmon_avx = false; //Gather and make decisions based upon AVX
         m_do_per_core = true;
-        m_do_c6_res = true;
+        //m_do_c6_res = true;
         m_license_0_samples = 0;
         m_license_1_samples = 0;
         m_license_2_samples = 0;
@@ -349,7 +349,7 @@ namespace geopm
         auto pmc0_itr = m_signal_available.find("MSR::IA32_PMC0:PERFCTR");
         auto pmc1_itr = m_signal_available.find("MSR::IA32_PMC1:PERFCTR");
         auto pmc2_itr = m_signal_available.find("MSR::IA32_PMC2:PERFCTR");
-        auto c6_res_itr =  m_signal_available.find("MSR::C6_RESIDENCY:RESIDENCY");
+        //auto c6_res_itr =  m_signal_available.find("MSR::C6_RESIDENCY:RESIDENCY");
         auto inst_retired_itr = m_signal_available.find("INSTRUCTIONS_RETIRED");
         auto cycle_thread_itr = m_signal_available.find("CYCLES_THREAD");
         auto qm_itr = m_signal_available.find("QM_CTR_SCALED_RATE");
@@ -488,37 +488,37 @@ namespace geopm
 
         // XEON
         max_cores = m_freq_p0x.at(0).size();
-        if(m_do_c6_res) {
-            for (int domain_idx = 0; domain_idx < pmc0_itr->second.signals.size(); ++domain_idx) {
-                package = domain_idx/cores_per_package; //TODO: PlatformTopo-ify this?
+        //if(m_do_c6_res) {
+        //    for (int domain_idx = 0; domain_idx < pmc0_itr->second.signals.size(); ++domain_idx) {
+        //        package = domain_idx/cores_per_package; //TODO: PlatformTopo-ify this?
 
-                double c6_res_diff = c6_res_itr->second.signals.at(domain_idx).m_last_sample;
-                double c6_res_sig = c6_res_itr->second.signals.at(domain_idx).m_last_signal;
+        //        double c6_res_diff = c6_res_itr->second.signals.at(domain_idx).m_last_sample;
+        //        double c6_res_sig = c6_res_itr->second.signals.at(domain_idx).m_last_signal;
 
-                if (std::isnan(c6_res_diff) //TODO: review.  if a core reports NAN for C6 we're assuming it's active.
-                    || c6_res_diff == 0) { //TODO: make <= some number
-                    ++active_cores;
-                }
+        //        if (std::isnan(c6_res_diff) //TODO: review.  if a core reports NAN for C6 we're assuming it's active.
+        //            || c6_res_diff == 0) { //TODO: make <= some number
+        //            ++active_cores;
+        //        }
 
-                if((domain_idx+1) % cores_per_package == 0) {
-                    if (active_cores > 0) {
-                        active_cores_package.push_back(active_cores);
-                    }
-                    else if (active_cores >= max_cores) { //should be max_cores
-                        active_cores_package.push_back(max_cores);
-                    } else {
-                        active_cores_package.push_back(1);
-                        std::cerr << "ERROR: Where'd everyone go?" << std::endl;
-                    }
-                    //std::cout << "Active cores: " << std::to_string(active_cores) << std::endl;
-                    active_cores = 0;
-                }
-            }
-        }
-        else {
+        //        if((domain_idx+1) % cores_per_package == 0) {
+        //            if (active_cores > 0) {
+        //                active_cores_package.push_back(active_cores);
+        //            }
+        //            else if (active_cores >= max_cores) { //should be max_cores
+        //                active_cores_package.push_back(max_cores);
+        //            } else {
+        //                active_cores_package.push_back(1);
+        //                std::cerr << "ERROR: Where'd everyone go?" << std::endl;
+        //            }
+        //            //std::cout << "Active cores: " << std::to_string(active_cores) << std::endl;
+        //            active_cores = 0;
+        //        }
+        //    }
+        //}
+        //else {
             active_cores_package.push_back(max_cores);
             active_cores_package.push_back(max_cores);
-        }
+        //}
 
         if (m_pmon_avx) {
             for (int domain_idx = 0; domain_idx < pmc0_itr->second.signals.size(); ++domain_idx) {
@@ -732,8 +732,8 @@ namespace geopm
                     sv.first == "MSR::IA32_PMC2:PERFCTR" ||
                     sv.first == "MSR::IA32_PMC3:PERFCTR" ||
                     sv.first == "INSTRUCTIONS_RETIRED" ||
-                    sv.first == "CYCLES_THREAD" ||
-                    sv.first == "MSR::C6_RESIDENCY:RESIDENCY") { //||
+                    sv.first == "CYCLES_THREAD") {
+                    //sv.first == "MSR::C6_RESIDENCY:RESIDENCY") { //||
                     sv.second.signals.at(domain_idx).m_last_sample = curr_value - sv.second.signals.at(domain_idx).m_last_signal;
                 }
                 else {

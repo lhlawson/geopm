@@ -124,7 +124,7 @@ namespace geopm
         register_plugin(LevelZeroIOGroup::plugin_name(),
                         LevelZeroIOGroup::make_plugin);
 #endif
-#ifdef GEOPM_ENABLE_NVML
+#ifdef GEOPM_ENABLE_DCGM
         register_plugin(DCGMIOGroup::plugin_name(),
                         DCGMIOGroup::make_plugin);
 #endif

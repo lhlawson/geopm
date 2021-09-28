@@ -93,7 +93,6 @@ namespace geopm
             int m_max_keep_sample;
 
             dcgmHandle_t m_dcgm_handle;
-            dcgmGpuGrp_t m_dcgm_group_id;
             dcgmFieldGrp_t m_field_group_id;
 
             struct signal_s
@@ -111,7 +110,8 @@ namespace geopm
             struct signal_info {
                 std::string m_description;
                 std::vector<std::shared_ptr<signal_s> > signals;
-                int domain;
+                unsigned short m_field_id;
+                int m_field_index;
                 std::function<double(const std::vector<double> &)> m_agg_function;
                 std::function<std::string(double)> m_format_function;
             };
@@ -119,7 +119,6 @@ namespace geopm
             struct control_info {
                 std::string m_description;
                 std::vector<std::shared_ptr<control_s> > controls;
-                int domain;
                 std::function<double(const std::vector<double> &)> m_agg_function;
                 std::function<std::string(double)> m_format_function;
             };
@@ -133,14 +132,15 @@ namespace geopm
             //                                   DCGM_FI_DEV_GPU_TEMP
             //                                  };
 
-            unsigned short dcgm_field_ids[1] = {DCGM_FI_PROF_SM_ACTIVE};
+            //unsigned short dcgm_field_ids[1] = {DCGM_FI_PROF_SM_ACTIVE};
+            std::vector<unsigned short> dcgm_field_ids;
             //unsigned short dcgm_field_ids[9] = {DCGM_FI_PROF_SM_ACTIVE,
             //                                   DCGM_FI_PROF_SM_OCCUPANCY,
-            //                                   DCGM_FI_PROF_PIPE_TENSOR_ACTIVE,
-            //                                   DCGM_FI_PROF_DRAM_ACTIVE,
             //                                   DCGM_FI_PROF_PIPE_FP64_ACTIVE,
             //                                   DCGM_FI_PROF_PIPE_FP32_ACTIVE,
             //                                   DCGM_FI_PROF_PIPE_FP16_ACTIVE,
+            //                                   DCGM_FI_PROF_PIPE_TENSOR_ACTIVE,
+            //                                   DCGM_FI_PROF_DRAM_ACTIVE,
             //                                   DCGM_FI_PROF_PCIE_TX_BYTES,
             //                                   DCGM_FI_PROF_PCIE_RX_BYTES};
 
