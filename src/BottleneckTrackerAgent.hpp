@@ -150,6 +150,8 @@ namespace geopm
             double m_gpu_P0_freq=1.530*1e9;
             double m_gpu_mem_freq=0.877*1e9;
 
+            double m_gpu_Fmin_energy=[967, 982, 945, 990];
+
             double m_gpu_power_fit_a=18455;
             double m_gpu_power_fit_b=-1.001;
 

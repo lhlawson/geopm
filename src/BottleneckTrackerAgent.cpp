@@ -420,56 +420,14 @@ namespace geopm
                         else {
                             request = (990 + (1530-990)*(sm_active_accelerator))*1e6;
                         }
-
-                        //max sample approach
-                        //m_gpu_sm_active[domain_idx]->insert(sm_active_accelerator);
-                        //auto gpu_sm_active_samples = m_gpu_sm_active[domain_idx]->make_vector();
-                        //auto m_sm = Agg::max(gpu_sm_active_samples);
-                        //m is guaranteed to be non-zero (if above)
-                        //if(utilization_accelerator != 0) {
-                        //    request = (990 + (1530-990)*(m_sm/utilization_accelerator))*1e6;
-                        //} else {
-                        //    request = (990 + (1530-990)*(m_sm))*1e6;
-                        //}
                     }
 
                     auto itr = std::upper_bound(m_gpu_supported_freqs.begin(),
                                                 m_gpu_supported_freqs.end(),
                                                 request);
-
-                    //scaled freq with util
-                    //auto itr = std::upper_bound(m_gpu_supported_freqs.begin(),
-                    //                            m_gpu_supported_freqs.end(),
-                    //                            m*m_gpu_P0_freq);
-
-                    //scaled freq with in a range, assuming supported_freq is cut to some range.  1312-1530 was used.
-                    //auto itr = std::upper_bound(m_gpu_supported_freqs.begin(),
-                    //                            m_gpu_supported_freqs.end(),
-                    //                            m_gpu_supported_freqs.front() + m*2.1e8);
-
-                    //Directly related to gpu_mem_freq
-                    //auto itr = std::upper_bound(m_gpu_supported_freqs.begin(),
-                    //                            m_gpu_supported_freqs.end(),
-                    //                            m_gpu_P0_freq - utilization_accelerator_mem*m_gpu_mem_freq);
-
-                    //based on the idea that at max mem util we should MATCH GPU and Mem freq
-                    //auto itr = std::upper_bound(m_gpu_supported_freqs.begin(),
-                    //                            m_gpu_supported_freqs.end(),
-                    //                            m_gpu_P0_freq - m_u*(m_gpu_P0_freq - m_gpu_mem_freq));
-                                                //m_gpu_P0_freq - utilization_accelerator_mem*(m_gpu_P0_freq - m_gpu_mem_freq));
-
-                    //std::cout << "m is: " << std::to_string(m) << std::endl;
-                    //std::cout << "m scaled is: " << std::to_string(m*m_gpu_P0_freq) << std::endl;
-                    //std::cout << "m scaled is: " << std::to_string(m_gpu_supported_freqs.front() + m*2.1e8) << std::endl;
-                    //std::cout << "mem_util is: " << std::to_string(utilization_accelerator_mem) << std::endl;
-                    //std::cout << "target is: " << std::to_string(m_gpu_P0_freq - utilization_accelerator_mem*(m_gpu_P0_freq - m_gpu_mem_freq)) << std::endl;
-                    //std::cout << "itr is: " << std::to_string(*itr) << std::endl;
-                    //std::cout << "result is: " << std::to_string(request) << std::endl;
-                    //If found, use the value
                     if (itr != m_gpu_supported_freqs.end()) {
                         request = *itr;
                     }
-                    //std::cout << "utilization_accel agg::max is: " << std::to_string(m) << std::endl;
                 }
                 else {
                     request = m_gpu_PN_freq;
@@ -477,7 +435,6 @@ namespace geopm
             } else {
                 utilization_accelerator = 0;
             }
-            //std::cout << "request is: " << std::to_string(request) << std::endl;
             board_gpu_freq_request.push_back(request);
 
             // needed later for CPU work freq selection

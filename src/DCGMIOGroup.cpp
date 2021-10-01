@@ -176,8 +176,6 @@ namespace geopm
                             GEOPM_ERROR_INVALID, __FILE__, __LINE__);
         }
 
-        //Setup DCGM Group
-
         //Setup Field Group
         result = dcgmFieldGroupCreate(m_dcgm_handle, dcgm_field_ids.size(), &dcgm_field_ids[0],
                                       (char *)"geopm_fields", &m_field_group_id);
@@ -197,7 +195,7 @@ namespace geopm
 
     void DCGMIOGroup::dcgm_error_check(const dcgmReturn_t result, const std::string error)
     {
-        if (result != DCGM_ST_OK){
+        if (result != DCGM_ST_OK) {
             throw Exception("DCGMIOGroup::" + std::string(__func__) + ": "
                             + error + ": " + errorString(result),
                             GEOPM_ERROR_INVALID, __FILE__, __LINE__);
@@ -239,24 +237,12 @@ namespace geopm
     // Return domain for all valid signals
     int DCGMIOGroup::signal_domain_type(const std::string &signal_name) const
     {
-        //int result = GEOPM_DOMAIN_INVALID;
-        //auto it = m_signal_available.find(signal_name);
-        //if (it != m_signal_available.end()) {
-        //    result = it->second.domain;
-        //}
-        //return result;
         return is_valid_signal(signal_name) ? GEOPM_DOMAIN_BOARD_ACCELERATOR : GEOPM_DOMAIN_INVALID;
     }
 
     // Return domain for all valid controls
     int DCGMIOGroup::control_domain_type(const std::string &control_name) const
     {
-        //int result = GEOPM_DOMAIN_INVALID;
-        //auto it = m_control_available.find(control_name);
-        //if (it != m_control_available.end()) {
-        //    result = it->second.domain;
-        //}
-        //return result;
         return is_valid_control(control_name) ? GEOPM_DOMAIN_BOARD : GEOPM_DOMAIN_INVALID;
     }
 
@@ -349,22 +335,27 @@ namespace geopm
         m_is_batch_read = true;
         dcgmReturn_t dcgm_result;
 
-        //NOTE: This requires all signals to operate at the GEOPM_BOARD_ACCELERATOR domain
-        for (int domain_idx = 0; domain_idx < m_platform_topo.num_domain(
-             GEOPM_DOMAIN_BOARD_ACCELERATOR); ++domain_idx) {
+        if(!m_signal_pushed.empty()) {
+            // NOTE: Doing this requires all signals to operate at the
+            //       GEOPM_BOARD_ACCELERATOR domain, but it means
+            //       dcgmGetLatestValuesForFields only has to be called
+            //       once per GEOPM_BOARD_ACCELERATOR domain.
+            for (int domain_idx = 0; domain_idx < m_platform_topo.num_domain(
+                 GEOPM_DOMAIN_BOARD_ACCELERATOR); ++domain_idx) {
 
-            dcgmFieldValue_v1 dcgm_field_values[dcgm_field_ids.size()];
+                dcgmFieldValue_v1 dcgm_field_values[dcgm_field_ids.size()];
 
-            dcgm_result = dcgmGetLatestValuesForFields(m_dcgm_handle, domain_idx,
-                            &dcgm_field_ids[0], dcgm_field_ids.size(),
-                            dcgm_field_values);
-            dcgm_error_check(dcgm_result, "Error getting latest values for fields in read_batch");
+                dcgm_result = dcgmGetLatestValuesForFields(m_dcgm_handle, domain_idx,
+                                &dcgm_field_ids[0], dcgm_field_ids.size(),
+                                dcgm_field_values);
+                dcgm_error_check(dcgm_result, "Error getting latest values for fields in read_batch");
 
-            for (auto &sv : m_signal_available) {
-                if (sv.second.signals.at(domain_idx)->m_do_read) {
-                    //TODO: assuming we can use the .dbl value for ALL signals
-                    sv.second.signals.at(domain_idx)->m_value =
-                        dcgm_field_values[sv.second.m_field_index].value.dbl;
+                for (auto &sv : m_signal_available) {
+                    if (sv.second.signals.at(domain_idx)->m_do_read) {
+                        //TODO: assuming we can use the .dbl value for ALL signals
+                        sv.second.signals.at(domain_idx)->m_value =
+                            dcgm_field_values[sv.second.m_field_index].value.dbl;
+                    }
                 }
             }
         }
@@ -441,7 +432,7 @@ namespace geopm
 
         auto it = m_signal_available.find(signal_name);
         if (it != m_signal_available.end()) {
-            //TODO: assuming we can use the .dbl value for ALL signals
+            //TODO: This is assuming all metrics collected allow for usage of .dbl value
             result = dcgm_field_values[it->second.m_field_index].value.dbl;
     #ifdef GEOPM_DEBUG
             throw Exception("DCGMIOGroup::" + std::string(__func__) + ": Handling not defined for " +
