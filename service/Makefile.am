@@ -153,6 +153,7 @@ libgeopmd_la_SOURCES = $(include_HEADERS) \
                        src/DerivativeSignal.hpp \
                        src/DifferenceSignal.cpp \
                        src/DifferenceSignal.hpp \
+                       src/DCGMDevicePool.hpp \
                        src/DomainControl.cpp \
                        src/DomainControl.hpp \
                        src/Exception.cpp \
@@ -252,10 +253,13 @@ levelzero_source_files = src/LevelZero.cpp \
                          src/LevelZero.hpp \
                          #end
 
+dcgm_source_files = src/DCGMDevicePool.cpp \
+                    src/DCGMDevicePoolImp.hpp \
+                    #end
+
 if ENABLE_LEVELZERO
     libgeopmd_la_SOURCES += $(levelzero_source_files)
     EXTRA_DIST += src/LevelZeroThrow.cpp
-
 else
     libgeopmd_la_SOURCES += src/LevelZeroThrow.cpp
     EXTRA_DIST += $(levelzero_source_files)
@@ -267,6 +271,14 @@ if ENABLE_NVML
 else
     libgeopmd_la_SOURCES += src/NVMLDevicePoolThrow.cpp
     EXTRA_DIST += $(nvml_source_files)
+endif
+
+if ENABLE_DCGM
+    libgeopmd_la_SOURCES += $(dcgm_source_files)
+    EXTRA_DIST += src/DCGMDevicePoolThrow.cpp
+else
+    libgeopmd_la_SOURCES += src/DCGMDevicePoolThrow.cpp
+    EXTRA_DIST += $(dcgm_source_files)
 endif
 
 io.github.geopm.xml:
