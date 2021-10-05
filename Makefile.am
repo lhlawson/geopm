@@ -490,6 +490,8 @@ libgeopmpolicy_la_SOURCES = src/Accumulator.cpp \
                             src/FrequencyGovernorImp.hpp \
                             src/FrequencyMapAgent.cpp \
                             src/FrequencyMapAgent.hpp \
+                            src/GPUUtilizationActivityAgent.cpp \
+                            src/GPUUtilizationActivityAgent.hpp \
                             src/Imbalancer.cpp \
                             src/ModelParse.cpp \
                             src/ModelParse.hpp \
