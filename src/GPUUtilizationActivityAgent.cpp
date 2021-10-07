@@ -49,7 +49,7 @@
 #define SAMPLE_PERIOD_SECONDS 0.025 // 25mS wait
 #define DECISION_WINDOW_SECONDS 0.100
 #define DECISION_WINDOW_SAMPLES (DECISION_WINDOW_SECONDS / SAMPLE_PERIOD_SECONDS)
-#define M_POLICY_ENERGY_PERF_BIAS_DEFAULT 50
+#define M_POLICY_ENERGY_PERF_BIAS_DEFAULT 50;
 
 namespace geopm
 {
@@ -58,7 +58,6 @@ namespace geopm
         , m_platform_topo(platform_topo())
         , m_last_wait{{0, 0}}
         , M_WAIT_SEC(SAMPLE_PERIOD_SECONDS)
-        , m_energy_perf_bias(M_POLICY_ENERGY_PERF_BIAS_DEFAULT)
         , m_do_write_batch(false)
         // This agent approach is meant to allow for quick prototyping through simplifying
         // signal & control addition and usage.  Most changes to signals and controls
@@ -120,8 +119,6 @@ namespace geopm
         m_accelerator_low_util_samples = 0;
         m_accelerator_high_util_samples = 0;
 
-        sort(m_gpu_supported_freqs.begin(), m_gpu_supported_freqs.end());
-
         if (level == 0) {
             init_platform_io();
         }
@@ -159,27 +156,23 @@ namespace geopm
     void GPUUtilizationActivityAgent::validate_policy(std::vector<double> &in_policy) const
     {
         assert(in_policy.size() == M_NUM_POLICY);
-        //double min_freq = m_platform_io.read_signal("CPU_FREQUENCY_MIN", GEOPM_DOMAIN_BOARD, 0);
-        //double max_freq = m_platform_io.read_signal("CPU_FREQUENCY_MAX", GEOPM_DOMAIN_BOARD, 0);
-        //double sticker_freq = m_platform_io.read_signal("FREQUENCY_STICKER", GEOPM_DOMAIN_BOARD, 0);
+        double accel_min_freq = m_platform_io.read_signal("NVML::FREQUENCY_MIN", GEOPM_DOMAIN_BOARD, 0);
+        double accel_max_freq = m_platform_io.read_signal("NVML::FREQUENCY_MAX", GEOPM_DOMAIN_BOARD, 0);
 
-        ////TODO: taken from example agent, moved to here...can we ever actually hit these beng NAN?
-        //// Check for NAN to set default values for policy
-        //if (std::isnan(in_policy[M_POLICY_THRESH_0])) {
-        //    in_policy[M_POLICY_THRESH_0] = 0.5;
-        //}
-        //if (std::isnan(in_policy[M_POLICY_THRESH_1])) {
-        //    in_policy[M_POLICY_THRESH_1] = 0.7;
-        //}
-        //if (std::isnan(in_policy[M_POLICY_FREQ_SUB_THRESH_0])) {
-        //    in_policy[M_POLICY_FREQ_SUB_THRESH_0] = min_freq;
-        //}
-        //if (std::isnan(in_policy[M_POLICY_FREQ_SUB_THRESH_1])) {
-        //    in_policy[M_POLICY_FREQ_SUB_THRESH_1] = min_freq;
-        //}
-        //if (std::isnan(in_policy[M_POLICY_FREQ_ABOVE_THRESH_1])) {
-        //    in_policy[M_POLICY_FREQ_ABOVE_THRESH_1] = max_freq;
-        //}
+        // Check for NAN to set default values for policy
+        if (std::isnan(in_policy[M_POLICY_ACCELERATOR_FREQ_MAX])) {
+            in_policy[M_POLICY_ACCELERATOR_FREQ_MAX] = accel_max_freq;
+        }
+        if (std::isnan(in_policy[M_POLICY_ACCELERATOR_FREQ_MIN])) {
+            in_policy[M_POLICY_ACCELERATOR_FREQ_MIN] = accel_min_freq;
+        }
+        if (std::isnan(in_policy[M_POLICY_ACCELERATOR_FREQ_EFFICIENT])) {
+            in_policy[M_POLICY_ACCELERATOR_FREQ_EFFICIENT] = (in_policy[M_POLICY_ACCELERATOR_FREQ_MAX]
+                                                             +in_policy[M_POLICY_ACCELERATOR_FREQ_MIN])/2;
+        }
+        if (std::isnan(in_policy[M_POLICY_ACCELERATOR_ENERGY_PERF_BIAS])) {
+            in_policy[M_POLICY_ACCELERATOR_ENERGY_PERF_BIAS] = M_POLICY_ENERGY_PERF_BIAS_DEFAULT;
+        }
     }
 
     // Distribute incoming policy to children
@@ -223,49 +216,72 @@ namespace geopm
         //Per GPU freq
         std::vector<double> board_gpu_freq_request;
 
+        double f_max = in_policy[M_POLICY_ACCELERATOR_FREQ_MAX];
+        double f_efficient = in_policy[M_POLICY_ACCELERATOR_FREQ_EFFICIENT];
+        double f_min = in_policy[M_POLICY_ACCELERATOR_FREQ_MIN];
+
+        double energy_perf_bias = in_policy[M_POLICY_ACCELERATOR_ENERGY_PERF_BIAS];
+        double f_range = f_max - f_efficient;
+        //std::cout << "F_eff: " << std::to_string(f_efficient) << std::endl;
+        //std::cout << "F_max: " << std::to_string(f_max) << std::endl;
+        //std::cout << "F_min: " << std::to_string(in_policy[M_POLICY_ACCELERATOR_FREQ_MIN]) << std::endl;
+        //std::cout << "F_range: " << std::to_string(f_range) << std::endl;
+        if (energy_perf_bias > 50) {
+            //Energy Biased.  Scale F_max down to F_efficient based upon EPB value
+
+            //Inactive region EPB usage
+            //f_min = std::max(f_min, f_efficient-(f_efficient-f_min)*(energy_perf_bias-50)/50);
+
+            //Active region EPB usage
+            f_max = std::max(f_efficient, f_max-f_range*(energy_perf_bias-50)/50);
+        }
+        else if (energy_perf_bias < 50) {
+            //Perf Biased.  Scale F_efficient up to F_max based upon EPB value
+
+            //Inactive region EPB usage
+            //f_min = std::max(f_min, f_min+(f_efficient-f_min)*(50-energy_perf_bias)/50);
+
+            //Active region EPB usage
+            f_efficient = std::min(f_max, f_efficient+f_range*(50-energy_perf_bias)/50);
+        }
+        //std::cout << "F_eff_res: " << std::to_string(f_efficient) << std::endl;
+        //std::cout << "F_max_res: " << std::to_string(f_max) << std::endl;
+
         // GPU
         for (int domain_idx = 0; domain_idx < util_itr->second.signals.size(); ++domain_idx) {
             double utilization_accelerator = util_itr->second.signals.at(domain_idx).m_last_signal;
             double sm_active_accelerator = sm_active_itr->second.signals.at(domain_idx).m_last_signal;
 
-            double request = m_gpu_P0_freq;
+            double request = f_max;
             if (!std::isnan(utilization_accelerator)) {
                 m_gpu_utilization[domain_idx]->insert(utilization_accelerator);
                 auto gpu_samples = m_gpu_utilization[domain_idx]->make_vector();
-                auto m = Agg::max(gpu_samples);
+                auto gpu_sample_max = Agg::max(gpu_samples);
 
-                if (m > 0.0) {
-                    //A basic bang bang controller
-                    //request = m_gpu_P0_freq;
-
-                    //User specified degradation Value
-                    //request = (m_gpu_freq_deg_map.lower_bound(m_perf_margin)->second)*1e6;
-
+                if (gpu_sample_max > 0.0) {
                     //Scaled freq with SM Active
                     if (!std::isnan(sm_active_accelerator)) {
                         //last sample only
                         if(utilization_accelerator != 0) {
-                            request = (990 + (1530-990)*(sm_active_accelerator/utilization_accelerator))*1e6;
+                            request = (f_efficient + (f_range)*(sm_active_accelerator/utilization_accelerator));
                         }
                         else {
-                            request = (990 + (1530-990)*(sm_active_accelerator))*1e6;
+                            request = (f_efficient + (f_range)*(sm_active_accelerator));
                         }
-                    }
-
-                    auto itr = std::upper_bound(m_gpu_supported_freqs.begin(),
-                                                m_gpu_supported_freqs.end(),
-                                                request);
-                    if (itr != m_gpu_supported_freqs.end()) {
-                        request = *itr;
                     }
                 }
                 else {
-                    request = m_gpu_PN_freq;
+                    request = f_min;
                 }
             } else {
                 utilization_accelerator = 0;
             }
+
+            std::min(request, f_max);
+            std::max(request, f_min);
+
             board_gpu_freq_request.push_back(request);
+            //std::cout << "F_request: " << std::to_string(request) << std::endl;
         }
 
         if (!board_gpu_freq_request.empty()) {
@@ -428,8 +444,7 @@ namespace geopm
     // Describes expected policies to be provided by the resource manager or user
     std::vector<std::string> GPUUtilizationActivityAgent::policy_names(void)
     {
-        //return {"THRESH_0", "THRESH_1", "FREQ_SUB_THRESH_0", "FREQ_SUB_THRESH_1", "FREQ_ABOVE_THRESH_1"};
-        return {};
+        return {"ACCELERATOR_FREQ_MAX", "ACCELERATOR_FREQ_EFFICIENT", "ACCELERATOR_FREQ_MIN", "ACCELERATOR_ENERGY_PERF_BIAS"};
     }
 
     // Describes samples to be provided to the resource manager or user
