@@ -126,6 +126,7 @@ namespace geopm
             double m_accelerator_frequency_requests;
             double m_accelerator_low_util_samples;
             double m_accelerator_high_util_samples;
+            double m_accelerator_sm_active_low_util_samples;
 
             std::vector<std::unique_ptr<CircularBuffer<double> > > m_gpu_utilization;
 
@@ -133,5 +134,4 @@ namespace geopm
             void init_platform_io(void);
     };
 }
-
 #endif

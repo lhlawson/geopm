@@ -46,7 +46,10 @@
 
 #include <iostream>
 
-#define SAMPLE_PERIOD_SECONDS 0.025 // 25mS wait
+//#define SAMPLE_PERIOD_SECONDS 0.025 // 25mS wait
+//#define DECISION_WINDOW_SECONDS 0.100
+//#define SAMPLE_PERIOD_SECONDS 0.015 // 15mS wait
+#define SAMPLE_PERIOD_SECONDS 0.020 // 20mS wait
 #define DECISION_WINDOW_SECONDS 0.100
 #define DECISION_WINDOW_SAMPLES (DECISION_WINDOW_SECONDS / SAMPLE_PERIOD_SECONDS)
 #define M_POLICY_ENERGY_PERF_BIAS_DEFAULT 50;
@@ -80,17 +83,12 @@ namespace geopm
                                   true,
                                   {}
                                   }},
-                              {"DCGM::SM_ACTIVE", {
-                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
-                                  true,
-                                  {}
-                                  }},
                               {"NVML::TOTAL_ENERGY_CONSUMPTION", {
                                   GEOPM_DOMAIN_BOARD_ACCELERATOR,
                                   true,
                                   {}
                                   }},
-                              {"NVML::POWER", {
+                              {"DCGM::SM_ACTIVE", {
                                   GEOPM_DOMAIN_BOARD_ACCELERATOR,
                                   true,
                                   {}
@@ -118,6 +116,7 @@ namespace geopm
         m_accelerator_frequency_requests = 0;
         m_accelerator_low_util_samples = 0;
         m_accelerator_high_util_samples = 0;
+        m_accelerator_sm_active_low_util_samples = 0;
 
         if (level == 0) {
             init_platform_io();
@@ -219,8 +218,8 @@ namespace geopm
         double f_max = in_policy[M_POLICY_ACCELERATOR_FREQ_MAX];
         double f_efficient = in_policy[M_POLICY_ACCELERATOR_FREQ_EFFICIENT];
         double f_min = in_policy[M_POLICY_ACCELERATOR_FREQ_MIN];
-
         double energy_perf_bias = in_policy[M_POLICY_ACCELERATOR_ENERGY_PERF_BIAS];
+
         double f_range = f_max - f_efficient;
         //std::cout << "F_eff: " << std::to_string(f_efficient) << std::endl;
         //std::cout << "F_max: " << std::to_string(f_max) << std::endl;
@@ -244,15 +243,17 @@ namespace geopm
             //Active region EPB usage
             f_efficient = std::min(f_max, f_efficient+f_range*(50-energy_perf_bias)/50);
         }
-        //std::cout << "F_eff_res: " << std::to_string(f_efficient) << std::endl;
-        //std::cout << "F_max_res: " << std::to_string(f_max) << std::endl;
+        f_range = f_max - f_efficient;
+
+        //std::cout << "\tF_eff_res: " << std::to_string(f_efficient) << std::endl;
+        //std::cout << "\tF_max_res: " << std::to_string(f_max) << std::endl;
 
         // GPU
         for (int domain_idx = 0; domain_idx < util_itr->second.signals.size(); ++domain_idx) {
             double utilization_accelerator = util_itr->second.signals.at(domain_idx).m_last_signal;
             double sm_active_accelerator = sm_active_itr->second.signals.at(domain_idx).m_last_signal;
 
-            double request = f_max;
+            double f_request = f_max;
             if (!std::isnan(utilization_accelerator)) {
                 m_gpu_utilization[domain_idx]->insert(utilization_accelerator);
                 auto gpu_samples = m_gpu_utilization[domain_idx]->make_vector();
@@ -263,25 +264,35 @@ namespace geopm
                     if (!std::isnan(sm_active_accelerator)) {
                         //last sample only
                         if(utilization_accelerator != 0) {
-                            request = (f_efficient + (f_range)*(sm_active_accelerator/utilization_accelerator));
+                            f_request = (f_efficient + (f_range)*std::min(1.0,(sm_active_accelerator/utilization_accelerator)));
                         }
                         else {
-                            request = (f_efficient + (f_range)*(sm_active_accelerator));
+                            f_request = (f_efficient + (f_range)*(std::min(1.0,sm_active_accelerator)));
                         }
                     }
+                    ++m_accelerator_high_util_samples;
+                }
+                else if(!std::isnan(sm_active_accelerator) && sm_active_accelerator != 0) {
+                    // In some instances NVML::UTILIZATION_ACCELERATOR can be 0 when DCGM::SM_ACTIVE
+                    // is non-zero.
+                    f_request = (f_efficient + (f_range)*(std::min(1.0,sm_active_accelerator)));
+                    ++m_accelerator_sm_active_low_util_samples;
+                    ++m_accelerator_low_util_samples;
                 }
                 else {
-                    request = f_min;
+                    ++m_accelerator_low_util_samples;
+                    f_request = f_min;
                 }
             } else {
                 utilization_accelerator = 0;
             }
 
-            std::min(request, f_max);
-            std::max(request, f_min);
+            //std::cout << "F_request: " << std::to_string(f_request) << std::endl;
+            f_request = std::min(f_request, f_max);
+            f_request = std::max(f_request, f_min);
 
-            board_gpu_freq_request.push_back(request);
-            //std::cout << "F_request: " << std::to_string(request) << std::endl;
+            board_gpu_freq_request.push_back(f_request);
+            //std::cout << "\tF_request_res: " << std::to_string(f_request) << std::endl;
         }
 
         if (!board_gpu_freq_request.empty()) {
@@ -344,6 +355,7 @@ namespace geopm
         result.push_back({"Accelerator Frequency Requests", std::to_string(m_accelerator_frequency_requests)});
         result.push_back({"Accelerator Low Utilization Samples", std::to_string(m_accelerator_low_util_samples)});
         result.push_back({"Accelerator High Utilization Samples", std::to_string(m_accelerator_high_util_samples)});
+        result.push_back({"Accelerator Low Utilization w/SM Active Samples", std::to_string(m_accelerator_sm_active_low_util_samples)});
 
         return result;
     }
