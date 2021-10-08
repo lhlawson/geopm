@@ -348,9 +348,6 @@ namespace geopm
         m_sync_fields = {
             {"sync-runtime (s)", {"TIME"}, sample_only},
             {"package-energy (J)", {"ENERGY_PACKAGE"}, sample_only},
-#if defined(GEOPM_ENABLE_NVML) || defined(GEOPM_ENABLE_LEVELZERO)
-            {"accelerator-energy (J)", {"ENERGY_ACCELERATOR"}, sample_only},
-#endif
             {"dram-energy (J)", {"ENERGY_DRAM"}, sample_only},
             {"power (W)", {"ENERGY_PACKAGE", "TIME"}, divide},
             {"frequency (%)", {"CYCLES_THREAD", "CYCLES_REFERENCE"}, divide_pct},
@@ -365,6 +362,11 @@ namespace geopm
             {"time-hint-unknown (s)", {"TIME_HINT_UNKNOWN"}, sample_only},
             {"time-hint-unset (s)", {"TIME_HINT_UNSET"}, sample_only},
         };
+
+        auto all_names = platform_io().signal_names();
+        if (all_names.find("ENERGY_ACCELERATOR") != all_names.end()) {
+            m_sync_fields.push_back({"accelerator-energy (J)", {"ENERGY_ACCELERATOR"}, sample_only});
+        }
 
         for (const auto &field : m_sync_fields) {
             for (const auto &signal : field.supporting_signals) {
