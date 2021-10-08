@@ -348,6 +348,9 @@ namespace geopm
         m_sync_fields = {
             {"sync-runtime (s)", {"TIME"}, sample_only},
             {"package-energy (J)", {"ENERGY_PACKAGE"}, sample_only},
+#if defined(GEOPM_ENABLE_NVML) || defined(GEOPM_ENABLE_LEVELZERO)
+            {"accelerator-energy (J)", {"ENERGY_ACCELERATOR"}, sample_only},
+#endif
             {"dram-energy (J)", {"ENERGY_DRAM"}, sample_only},
             {"power (W)", {"ENERGY_PACKAGE", "TIME"}, divide},
             {"frequency (%)", {"CYCLES_THREAD", "CYCLES_REFERENCE"}, divide_pct},
