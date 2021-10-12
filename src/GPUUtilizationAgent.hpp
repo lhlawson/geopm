@@ -30,26 +30,26 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GPUUTILIZATIONACTIVITYAGENT_HPP_INCLUDE
-#define GPUUTILIZATIONACTIVITYAGENT_HPP_INCLUDE
+#ifndef GPUUTILIZATIONAGENT_HPP_INCLUDE
+#define GPUUTILIZATIONAGENT_HPP_INCLUDE
 
 #include <vector>
 
 #include "Agent.hpp"
 #include "geopm_time.h"
 
-#include "geopm/CircularBuffer.hpp"
 namespace geopm
 {
     class PlatformTopo;
     class PlatformIO;
 
     /// @brief Agent
-    class GPUUtilizationActivityAgent : public Agent
+    class GPUUtilizationAgent : public Agent
     {
         public:
-            GPUUtilizationActivityAgent();
-            virtual ~GPUUtilizationActivityAgent() = default;
+            GPUUtilizationAgent();
+            GPUUtilizationAgent(PlatformIO &plat_io, const PlatformTopo &topo);
+            virtual ~GPUUtilizationAgent() = default;
             void init(int level, const std::vector<int> &fan_in, bool is_level_root) override;
             void validate_policy(std::vector<double> &in_policy) const override;
             void split_policy(const std::vector<double> &in_policy,
@@ -74,25 +74,15 @@ namespace geopm
             static std::vector<std::string> policy_names(void);
             static std::vector<std::string> sample_names(void);
         private:
-            PlatformIO &m_platform_io;
-            const PlatformTopo &m_platform_topo;
-            geopm_time_s m_last_wait;
-            const double M_WAIT_SEC;
-            bool m_do_write_batch;
+            void init_platform_io(void);
 
             struct signal
             {
                 int m_batch_idx;
                 double m_last_signal;
-                double m_last_sample;
             };
 
-            struct signal_info {
-                int domain;
-                bool trace_signal;
-                std::vector<signal> signals;
-            };
-            std::map<std::string, signal_info> m_signal_available;
+            std::map<std::string, signal> m_signal_available;
 
             struct control
             {
@@ -100,43 +90,41 @@ namespace geopm
                 double m_last_setting;
             };
 
-            struct control_info {
-                int domain;
-                bool trace_control;
-                std::vector<control> controls;
-            };
-            std::map<std::string, control_info> m_control_available;
+            std::map<std::string, control> m_control_available;
 
             // Policy indices; must match policy_names()
             enum m_policy_e {
-                M_POLICY_ACCELERATOR_FREQ_MAX,
-                M_POLICY_ACCELERATOR_FREQ_EFFICIENT,
-                M_POLICY_ACCELERATOR_ENERGY_PERF_BIAS,
+                M_POLICY_ACCELERATOR_UTIL_THRESH_0,
+                M_POLICY_ACCELERATOR_FREQ_SUB_THRESH_0,
+                M_POLICY_XEON_FREQ_SUB_THRESH_0,
+                M_POLICY_ACCELERATOR_UTIL_THRESH_1,
+                M_POLICY_ACCELERATOR_FREQ_SUB_THRESH_1,
+                M_POLICY_XEON_FREQ_SUB_THRESH_1,
+                M_POLICY_ACCELERATOR_FREQ_ABOVE_THRESH_1,
+                M_POLICY_XEON_FREQ_ABOVE_THRESH_1,
+                M_POLICY_USE_MEM_UTIL_THRESH,
+                M_POLICY_ACCELERATOR_MEM_UTIL_THRESH,
+                M_POLICY_ACCELERATOR_FREQ_ABOVE_MEM_UTIL_THRESH,
+                M_POLICY_XEON_FREQ_ABOVE_MEM_UTIL_THRESH,
                 M_NUM_POLICY
             };
-
             // Sample indices; must match sample_names()
             enum m_sample_e {
                 M_NUM_SAMPLE
             };
 
-            std::map<std::string, double> m_policy_available;
+            PlatformIO &m_platform_io;
+            const PlatformTopo &m_platform_topo;
+
+            geopm_time_s m_last_wait;
+            const double M_WAIT_SEC;
+
+            bool m_do_write_batch;
 
             double m_accelerator_frequency_requests;
-            double m_f_max_resolved;
-            double m_f_efficient_resolved;
-            double m_f_range_resolved;
-            double m_accelerator_passive_energy;
-            double m_accelerator_passive_samples;
-            double m_accelerator_passive_freq_agg;
-            double m_accelerator_active_energy;
-            double m_accelerator_active_samples;
-            double m_accelerator_active_freq_agg;
-
-            std::vector<std::unique_ptr<CircularBuffer<double> > > m_gpu_utilization;
-
-            //std::vector<double> m_gpu_F_efficient={967, 982, 945, 990};
-            void init_platform_io(void);
+            std::vector<double> m_accelerator_initial_energy_consumption;
+            double m_accelerator_adjusted_energy_consumption;
     };
 }
+
 #endif
