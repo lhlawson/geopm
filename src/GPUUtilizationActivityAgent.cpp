@@ -78,11 +78,6 @@ namespace geopm
                                   true,
                                   {}
                                   }},
-                              {"UTILIZATION_ACCELERATOR", {
-                                  GEOPM_DOMAIN_BOARD_ACCELERATOR,
-                                  true,
-                                  {}
-                                  }},
                               {"ENERGY_ACCELERATOR", {
                                   GEOPM_DOMAIN_BOARD_ACCELERATOR,
                                   true,
@@ -114,17 +109,15 @@ namespace geopm
     void GPUUtilizationActivityAgent::init(int level, const std::vector<int> &fan_in, bool is_level_root)
     {
         m_accelerator_frequency_requests = 0;
-        m_accelerator_low_util_samples = 0;
-        m_accelerator_high_util_samples = 0;
-        m_accelerator_sm_active_low_util_samples = 0;
         m_f_max_resolved = 0;
         m_f_efficient_resolved = 0;
         m_f_range_resolved = 0;
-        m_accelerator_high_util_freq_agg = 0;
-        m_accelerator_low_util_freq_agg = 0;
-        m_accelerator_sm_active_low_util_freq_agg = 0;
-        m_accelerator_high_util_energy = 0;
-        m_accelerator_low_util_energy = 0;
+        m_accelerator_passive_freq_agg = 0;
+        m_accelerator_passive_samples = 0;
+        m_accelerator_passive_energy = 0;
+        m_accelerator_active_freq_agg = 0;
+        m_accelerator_active_samples = 0;
+        m_accelerator_active_energy = 0;
 
         if (level == 0) {
             init_platform_io();
@@ -170,13 +163,14 @@ namespace geopm
         if (std::isnan(in_policy[M_POLICY_ACCELERATOR_FREQ_MAX])) {
             in_policy[M_POLICY_ACCELERATOR_FREQ_MAX] = accel_max_freq;
         }
-        if (std::isnan(in_policy[M_POLICY_ACCELERATOR_FREQ_MIN])) {
-            in_policy[M_POLICY_ACCELERATOR_FREQ_MIN] = accel_min_freq;
-        }
+        // Not all accelerators provide an 'efficient' frequency signal, and the
+        // value provided by the policy may not be valid.  In this case approximating
+        // f_efficient as midway between F_min and F_max is reasonable.
         if (std::isnan(in_policy[M_POLICY_ACCELERATOR_FREQ_EFFICIENT])) {
             in_policy[M_POLICY_ACCELERATOR_FREQ_EFFICIENT] = (in_policy[M_POLICY_ACCELERATOR_FREQ_MAX]
-                                                             +in_policy[M_POLICY_ACCELERATOR_FREQ_MIN])/2;
+                                                             +accel_min_freq)/2;
         }
+        // If not EPB value is provided assume the default behavior.
         if (std::isnan(in_policy[M_POLICY_ACCELERATOR_ENERGY_PERF_BIAS])) {
             in_policy[M_POLICY_ACCELERATOR_ENERGY_PERF_BIAS] = M_POLICY_ENERGY_PERF_BIAS_DEFAULT;
         }
@@ -216,48 +210,46 @@ namespace geopm
 
         m_do_write_batch = false;
 
-        // Build frequency recommendation based on accelerator utilization
-        auto util_itr = m_signal_available.find("UTILIZATION_ACCELERATOR");
-        auto sm_active_itr = m_signal_available.find("ACCELERATOR_COMPUTE_ACTIVITY");
+        // Primary signal used for frequency recommendation
+        auto gpu_active_itr = m_signal_available.find("ACCELERATOR_COMPUTE_ACTIVITY");
+
+        // Track energy in the active and passive case for reporting
         auto energy_itr = m_signal_available.find("ENERGY_ACCELERATOR");
 
-        //Per GPU freq
+        // Per GPU freq
         std::vector<double> board_gpu_freq_request;
 
+        // Policy provided controls
         double f_max = in_policy[M_POLICY_ACCELERATOR_FREQ_MAX];
         double f_efficient = in_policy[M_POLICY_ACCELERATOR_FREQ_EFFICIENT];
-        double f_min = in_policy[M_POLICY_ACCELERATOR_FREQ_MIN];
         double energy_perf_bias = in_policy[M_POLICY_ACCELERATOR_ENERGY_PERF_BIAS];
 
+        // initial range is needed to apply EPB
         double f_range = f_max - f_efficient;
+
         if (energy_perf_bias > 50) {
             //Energy Biased.  Scale F_max down to F_efficient based upon EPB value
-
-            //Inactive region EPB usage
-            //f_min = std::max(f_min, f_efficient-(f_efficient-f_min)*(energy_perf_bias-50)/50);
-
             //Active region EPB usage
             f_max = std::max(f_efficient, f_max-f_range*(energy_perf_bias-50)/50);
         }
         else if (energy_perf_bias < 50) {
             //Perf Biased.  Scale F_efficient up to F_max based upon EPB value
-
-            //Inactive region EPB usage
-            //f_min = std::max(f_min, f_min+(f_efficient-f_min)*(50-energy_perf_bias)/50);
-
             //Active region EPB usage
             f_efficient = std::min(f_max, f_efficient+f_range*(50-energy_perf_bias)/50);
         }
+
+        // Recalculate range after EPB has been applied
         f_range = f_max - f_efficient;
 
+        // Tracking EPB resolved frequencies for the report
         m_f_max_resolved = f_max;
         m_f_efficient_resolved = f_efficient;
         m_f_range_resolved = f_range;
 
-        // GPU Frequency Selection
-        for (int domain_idx = 0; domain_idx < util_itr->second.signals.size(); ++domain_idx) {
-            double utilization_accelerator = util_itr->second.signals.at(domain_idx).m_last_signal;
-            double sm_active_accelerator = sm_active_itr->second.signals.at(domain_idx).m_last_signal;
+        // Per GPU Frequency Selection
+        for (int domain_idx = 0; domain_idx < gpu_active_itr->second.signals.size(); ++domain_idx) {
+            // Accelerator Comppute Activity
+            double accelerator_compute_activity = gpu_active_itr->second.signals.at(domain_idx).m_last_signal;
 
             // Energy consumed from the last sample to this sample
             double energy_accelerator = energy_itr->second.signals.at(domain_idx).m_last_sample;
@@ -265,62 +257,50 @@ namespace geopm
             // Default to F_max
             double f_request = f_max;
 
-            if (!std::isnan(utilization_accelerator)) {
-                m_gpu_utilization[domain_idx]->insert(utilization_accelerator);
-                auto gpu_samples = m_gpu_utilization[domain_idx]->make_vector();
-                auto gpu_sample_max = Agg::max(gpu_samples);
+            if (!std::isnan(accelerator_compute_activity)) {
+                // Frequency selection is based upon the accelerator compute activity.
+                // For active regions this means that we scale with the amount of work
+                // being done (such as SM_ACTIVE for NVIDIA GPUs).
+                //
+                // For inactive regions the frequency selection is simply the efficient
+                // frequency from system characterization.
+                //
+                // This approach assumes the efficient frequency is suitable as both a
+                // baseline for active regions and and inactive regions. This is generally
+                // true of the efficient frequency is low power enough at idle due to clock
+                // gating or other hardware PM techniques.
+                //
+                // If f_efficient does not meet these criteria this behavior can still be
+                // achieved through tracking the GPU Utilization signal and setting frequency
+                // to a separate idle value (f_idle) during regions where GPU Utilizaiton is
+                // zero (or below some bar).
+                f_request = (f_efficient + (f_range)*(std::min(1.0,accelerator_compute_activity)));
 
-                if (gpu_sample_max > 0.0) {
-                    // Scale frequency from F_efficient to F_max based upon the value of
-                    // sm_active
-                    if (!std::isnan(sm_active_accelerator)) {
-                        //For sm_active scaling we only use the most recent last sample
-                        if (utilization_accelerator != 0) {
-                            f_request = (f_efficient + (f_range)*std::min(1.0,(sm_active_accelerator/utilization_accelerator)));
-                        }
-                        else {
-                            f_request = (f_efficient + (f_range)*(std::min(1.0,sm_active_accelerator)));
-                        }
-                    }
-
-                    //Report Tracking
-                    ++m_accelerator_high_util_samples;
-                    m_accelerator_high_util_freq_agg += f_request;
+                // Tracking logic.  This is not needed for any performance reason,
+                // but does provide useful metrics for tracking agent behavior
+                if (accelerator_compute_activity != 0) {
+                    // Active region tracking
+                    ++m_accelerator_active_samples;
+                    m_accelerator_active_freq_agg += f_request;
                     if (!std::isnan(energy_accelerator)) {
-                        m_accelerator_high_util_energy += energy_accelerator;
-                    }
-                }
-                else if (!std::isnan(sm_active_accelerator) && sm_active_accelerator != 0) {
-                    // In some instances UTILIZATION_ACCELERATOR can be 0 when ACCELERATOR_COMPUTE_ACTIVITY
-                    // is non-zero.  In these cases we still want to scale frequency based upon
-                    // sm_active
-                    f_request = (f_efficient + (f_range)*(std::min(1.0,sm_active_accelerator)));
-
-                    //Report Tracking
-                    ++m_accelerator_sm_active_low_util_samples;
-                    m_accelerator_sm_active_low_util_freq_agg += f_request;
-                    if (!std::isnan(energy_accelerator)) {
-                        m_accelerator_low_util_energy += energy_accelerator;
+                        m_accelerator_active_energy += energy_accelerator;
                     }
                 }
                 else {
-                    // In cases where the GPU is Inactive set a low frequency (F_min)
-                    f_request = f_min;
-
-                    //Report Tracking
-                    ++m_accelerator_low_util_samples;
-                    m_accelerator_low_util_freq_agg += f_request;
+                    // Passive region tracking
+                    ++m_accelerator_passive_samples;
+                    m_accelerator_passive_freq_agg += f_request;
                     if (!std::isnan(energy_accelerator)) {
-                        m_accelerator_low_util_energy += energy_accelerator;
+                        m_accelerator_passive_energy += energy_accelerator;
                     }
                 }
-            } else {
-                utilization_accelerator = 0;
             }
 
+            // Frequency bound checking
             f_request = std::min(f_request, f_max);
-            f_request = std::max(f_request, f_min);
+            f_request = std::max(f_request, f_efficient);
 
+            // Store frequency request
             board_gpu_freq_request.push_back(f_request);
         }
 
@@ -328,9 +308,12 @@ namespace geopm
             // set frequency control per accelerator
             auto freq_ctl_itr = m_control_available.find("FREQUENCY_ACCELERATOR_CONTROL");
             for (int domain_idx = 0; domain_idx < freq_ctl_itr->second.controls.size(); ++domain_idx) {
-                if (board_gpu_freq_request.at(domain_idx) != freq_ctl_itr->second.controls.at(domain_idx).m_last_setting) {
-                    m_platform_io.adjust(freq_ctl_itr->second.controls.at(domain_idx).m_batch_idx, board_gpu_freq_request.at(domain_idx));
-                    freq_ctl_itr->second.controls.at(domain_idx).m_last_setting = board_gpu_freq_request.at(domain_idx);
+                if (board_gpu_freq_request.at(domain_idx) !=
+                    freq_ctl_itr->second.controls.at(domain_idx).m_last_setting) {
+                    m_platform_io.adjust(freq_ctl_itr->second.controls.at(domain_idx).m_batch_idx,
+                                         board_gpu_freq_request.at(domain_idx));
+                    freq_ctl_itr->second.controls.at(domain_idx).m_last_setting =
+                                         board_gpu_freq_request.at(domain_idx);
                     ++m_accelerator_frequency_requests;
                 }
             }
@@ -355,7 +338,8 @@ namespace geopm
                 double curr_value = m_platform_io.sample(sv.second.signals.at(domain_idx).m_batch_idx);
 
                 if (sv.first == "ENERGY_ACCELERATOR") {
-                    sv.second.signals.at(domain_idx).m_last_sample = curr_value - sv.second.signals.at(domain_idx).m_last_signal;
+                    sv.second.signals.at(domain_idx).m_last_sample = curr_value -
+                                                                     sv.second.signals.at(domain_idx).m_last_signal;
                 }
                 else {
                     sv.second.signals.at(domain_idx).m_last_sample = sv.second.signals.at(domain_idx).m_last_signal;
@@ -391,14 +375,12 @@ namespace geopm
         result.push_back({"Resolved Max Frequency", std::to_string(m_f_max_resolved)});
         result.push_back({"Resolved Efficient Frequency", std::to_string(m_f_efficient_resolved)});
         result.push_back({"Resolved Frequency Range", std::to_string(m_f_range_resolved)});
-        result.push_back({"Accelerator Low Utilization Energy", std::to_string(m_accelerator_low_util_energy)});
-        result.push_back({"Accelerator Low Utilization Samples", std::to_string(m_accelerator_low_util_samples)});
-        result.push_back({"Accelerator Low Utilization Freq Request Avg", std::to_string(m_accelerator_low_util_freq_agg/m_accelerator_low_util_samples)});
-        result.push_back({"Accelerator High Utilization Energy", std::to_string(m_accelerator_high_util_energy)});
-        result.push_back({"Accelerator High Utilization Samples", std::to_string(m_accelerator_high_util_samples)});
-        result.push_back({"Accelerator High Utilization Freq Request Avg", std::to_string(m_accelerator_high_util_freq_agg/m_accelerator_high_util_samples)});
-        result.push_back({"Accelerator Low Utilization w/SM Active Samples", std::to_string(m_accelerator_sm_active_low_util_samples)});
-        result.push_back({"Accelerator Low Utilization w/SM Active Freq Request Avg", std::to_string(m_accelerator_sm_active_low_util_freq_agg/m_accelerator_sm_active_low_util_samples)});
+        result.push_back({"Accelerator Passive Energy", std::to_string(m_accelerator_passive_energy)});
+        result.push_back({"Accelerator Passive Samples", std::to_string(m_accelerator_passive_samples)});
+        result.push_back({"Accelerator Passive Freq Request Avg", std::to_string(m_accelerator_passive_freq_agg/m_accelerator_passive_samples)});
+        result.push_back({"Accelerator Active Energy", std::to_string(m_accelerator_active_energy)});
+        result.push_back({"Accelerator Active Samples", std::to_string(m_accelerator_active_samples)});
+        result.push_back({"Accelerator Active Freq Request Avg", std::to_string(m_accelerator_active_freq_agg/m_accelerator_active_samples)});
 
         return result;
     }
@@ -499,7 +481,7 @@ namespace geopm
     // Describes expected policies to be provided by the resource manager or user
     std::vector<std::string> GPUUtilizationActivityAgent::policy_names(void)
     {
-        return {"ACCELERATOR_FREQ_MAX", "ACCELERATOR_FREQ_EFFICIENT", "ACCELERATOR_FREQ_MIN", "ACCELERATOR_ENERGY_PERF_BIAS"};
+        return {"ACCELERATOR_FREQ_MAX", "ACCELERATOR_FREQ_EFFICIENT", "ACCELERATOR_ENERGY_PERF_BIAS"};
     }
 
     // Describes samples to be provided to the resource manager or user

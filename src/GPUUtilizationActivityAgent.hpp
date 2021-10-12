@@ -111,7 +111,6 @@ namespace geopm
             enum m_policy_e {
                 M_POLICY_ACCELERATOR_FREQ_MAX,
                 M_POLICY_ACCELERATOR_FREQ_EFFICIENT,
-                M_POLICY_ACCELERATOR_FREQ_MIN,
                 M_POLICY_ACCELERATOR_ENERGY_PERF_BIAS,
                 M_NUM_POLICY
             };
@@ -124,17 +123,15 @@ namespace geopm
             std::map<std::string, double> m_policy_available;
 
             double m_accelerator_frequency_requests;
-            double m_accelerator_low_util_samples;
-            double m_accelerator_high_util_samples;
-            double m_accelerator_sm_active_low_util_samples;
             double m_f_max_resolved;
             double m_f_efficient_resolved;
             double m_f_range_resolved;
-            double m_accelerator_high_util_freq_agg;
-            double m_accelerator_low_util_freq_agg;
-            double m_accelerator_sm_active_low_util_freq_agg;
-            double m_accelerator_high_util_energy;
-            double m_accelerator_low_util_energy;
+            double m_accelerator_passive_energy;
+            double m_accelerator_passive_samples;
+            double m_accelerator_passive_freq_agg;
+            double m_accelerator_active_energy;
+            double m_accelerator_active_samples;
+            double m_accelerator_active_freq_agg;
 
             std::vector<std::unique_ptr<CircularBuffer<double> > > m_gpu_utilization;
 
