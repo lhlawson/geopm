@@ -145,11 +145,6 @@ namespace geopm
                 sv.second.controls.push_back(ctrl);
             }
         }
-
-        for (size_t gpu_idx = 0;
-                gpu_idx < static_cast<size_t>(m_platform_topo.num_domain(GEOPM_DOMAIN_BOARD_ACCELERATOR)); ++gpu_idx) {
-            m_gpu_utilization.push_back(geopm::make_unique<CircularBuffer<double> >(DECISION_WINDOW_SAMPLES));
-        }
     }
 
     // Validate incoming policy and configure default policy requests.

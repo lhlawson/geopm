@@ -38,7 +38,6 @@
 #include "Agent.hpp"
 #include "geopm_time.h"
 
-#include "geopm/CircularBuffer.hpp"
 namespace geopm
 {
     class PlatformTopo;
@@ -133,9 +132,6 @@ namespace geopm
             double m_accelerator_active_samples;
             double m_accelerator_active_freq_agg;
 
-            std::vector<std::unique_ptr<CircularBuffer<double> > > m_gpu_utilization;
-
-            //std::vector<double> m_gpu_F_efficient={967, 982, 945, 990};
             void init_platform_io(void);
     };
 }
