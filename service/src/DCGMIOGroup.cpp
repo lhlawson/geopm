@@ -154,6 +154,7 @@ namespace geopm
             sv.second.signals = result;
         }
         register_signal_alias("ACCELERATOR_COMPUTE_ACTIVITY", "DCGM::SM_ACTIVE");
+        register_signal_alias("ACCELERATOR_MEMORY_ACTIVITY", "DCGM::DRAM_ACTIVE");
 
         // populate controls for each domain
         for (auto &sv : m_control_available) {
