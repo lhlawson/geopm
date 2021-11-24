@@ -171,6 +171,7 @@ ronn_man_inst = man/GEOPM_CXX_MAN_Agent.3 \
 
 ronn_man_noinst = man/GEOPM_CXX_MAN_Comm.3 \
                   man/GEOPM_CXX_MAN_EnergyEfficientAgent.3 \
+                  man/GEOPM_CXX_MAN_GPUActivityAgent.3 \
                   man/GEOPM_CXX_MAN_MonitorAgent.3 \
                   man/GEOPM_CXX_MAN_MPIComm.3 \
                   man/GEOPM_CXX_MAN_PowerBalancerAgent.3 \
@@ -266,6 +267,7 @@ EXTRA_DIST = $(TUTORIAL_DIST) \
              ronn/GEOPM_CXX_MAN_EnergyEfficientAgent.3.ronn \
              ronn/GEOPM_CXX_MAN_EnergyEfficientRegion.3.ronn \
              ronn/GEOPM_CXX_MAN_Exception.3.ronn \
+             ronn/GEOPM_CXX_MAN_GPUActivityAgent.3.ronn \
              ronn/GEOPM_CXX_MAN_Helper.3.ronn \
              ronn/GEOPM_CXX_MAN_IOGroup.3.ronn \
              ronn/GEOPM_CXX_MAN_MPIComm.3.ronn \
@@ -287,6 +289,7 @@ EXTRA_DIST = $(TUTORIAL_DIST) \
              ronn/geopm_agent_c.3.ronn \
              ronn/geopm_agent_energy_efficient.7.ronn \
              ronn/geopm_agent_frequency_map.7.ronn \
+             ronn/geopm_agent_gpu_activity.7.ronn \
              ronn/geopm_agent_monitor.7.ronn \
              ronn/geopm_agent_power_balancer.7.ronn \
              ronn/geopm_agent_power_governor.7.ronn \
