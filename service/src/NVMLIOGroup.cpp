@@ -182,6 +182,21 @@ namespace geopm
                                     Agg::average,
                                     string_format_double
                                     }},
+                               {M_NAME_PREFIX + "APPLICATION_FREQUENCY_CONTROL", {
+                                    "Sets streaming multiprocessor frequency when an application is resident on the accelerator",
+                                    {},
+                                    GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                    Agg::average,
+                                    string_format_double
+                                    }},
+                               {M_NAME_PREFIX + "APPLICATION_FREQUENCY_RESET_CONTROL", {
+                                    "Resets streaming multiprocessor application frequency min and max limits to default values."
+                                    "\n  Parameter provided is unused.",
+                                    {},
+                                    GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                                    Agg::average,
+                                    string_format_double
+                                    }},
                                {M_NAME_PREFIX + "FREQUENCY_RESET_CONTROL", {
                                     "Resets streaming multiprocessor frequency min and max limits to default values."
                                     "\n  Parameter provided is unused.",
@@ -589,6 +604,12 @@ namespace geopm
 
         if (control_name == M_NAME_PREFIX + "FREQUENCY_CONTROL" || control_name == "FREQUENCY_ACCELERATOR_CONTROL") {
             m_nvml_device_pool.frequency_control_sm(domain_idx, setting / 1e6, setting / 1e6);
+        }
+        else if (control_name == M_NAME_PREFIX + "APPLICATION_FREQUENCY_CONTROL") {
+            m_nvml_device_pool.application_frequency_control_sm(domain_idx, setting/1e6);
+        }
+        else if (control_name == M_NAME_PREFIX + "APPLICATION_FREQUENCY_RESET_CONTROL") {
+            m_nvml_device_pool.application_frequency_reset_control(domain_idx);
         }
         else if (control_name == M_NAME_PREFIX + "FREQUENCY_RESET_CONTROL") {
             m_nvml_device_pool.frequency_reset_control(domain_idx);
