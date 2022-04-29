@@ -1,33 +1,6 @@
 /*
- * Copyright (c) 2015, 2016, 2017, 2018, 2019, Intel Corporation
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- *
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in
- *       the documentation and/or other materials provided with the
- *       distribution.
- *
- *     * Neither the name of Intel Corporation nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY LOG OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Copyright (c) 2015 - 2022, Intel Corporation
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #include "CPUActivityAgent.hpp"
@@ -124,10 +97,13 @@ void CPUActivityAgent::init_platform_io(void)
         m_package_cycles_unhalted.push_back({m_platform_io.push_signal("CYCLES_THREAD",
                                              GEOPM_DOMAIN_PACKAGE,
                                              domain_idx), NAN});
-        m_package_acnt.push_back({m_platform_io.push_signal("MSR::APERF:ACNT",
-                                  GEOPM_DOMAIN_PACKAGE,
-                                  domain_idx), NAN});
-        m_package_pcnt.push_back({m_platform_io.push_signal("MSR::PPERF:PCNT",
+        //m_package_acnt.push_back({m_platform_io.push_signal("MSR::APERF:ACNT",
+        //                          GEOPM_DOMAIN_PACKAGE,
+        //                          domain_idx), NAN});
+        //m_package_pcnt.push_back({m_platform_io.push_signal("MSR::PPERF:PCNT",
+        //                          GEOPM_DOMAIN_PACKAGE,
+        //                          domain_idx), NAN});
+        m_package_scal.push_back({m_platform_io.push_signal("MSR::CPU_SCALABILITY_RATIO",
                                   GEOPM_DOMAIN_PACKAGE,
                                   domain_idx), NAN});
     }
@@ -268,8 +244,12 @@ void CPUActivityAgent::adjust_platform(const std::vector<double>& in_policy)
         double ipc = (double) m_package_inst_retired.at(domain_idx).sample /
                               m_package_cycles_unhalted.at(domain_idx).sample;
 
-        double scalability = (double) m_package_pcnt.at(domain_idx).sample /
-                                      m_package_acnt.at(domain_idx).sample;
+        //double scalability = (double) m_package_pcnt.at(domain_idx).sample /
+        //                              m_package_acnt.at(domain_idx).sample;
+        double scalability = (double) m_package_scal.at(domain_idx).signal;
+        if (std::isnan(scalability)) {
+            scalability = 1.0;
+        }
 
         double core_req = core_fe + core_range * scalability;
         //double core_req = core_fe + core_range * (ipc / 4); //TODO: formalize an approach for ipc normalization
@@ -346,14 +326,16 @@ void CPUActivityAgent::sample_platform(std::vector<double> &out_sample)
         m_package_inst_retired.at(domain_idx).signal = m_platform_io.sample(m_package_inst_retired.at(domain_idx).batch_idx);
 
         //ACNT diff and new value
-        m_package_acnt.at(domain_idx).sample = m_platform_io.sample(m_package_acnt.at(domain_idx).batch_idx) -
-                                               m_package_acnt.at(domain_idx).signal;
-        m_package_acnt.at(domain_idx).signal = m_platform_io.sample(m_package_acnt.at(domain_idx).batch_idx);
+        //m_package_acnt.at(domain_idx).sample = m_platform_io.sample(m_package_acnt.at(domain_idx).batch_idx) -
+        //                                       m_package_acnt.at(domain_idx).signal;
+        //m_package_acnt.at(domain_idx).signal = m_platform_io.sample(m_package_acnt.at(domain_idx).batch_idx);
 
         //PCNT diff and new value
-        m_package_pcnt.at(domain_idx).sample = m_platform_io.sample(m_package_pcnt.at(domain_idx).batch_idx) -
-                                               m_package_pcnt.at(domain_idx).signal;
-        m_package_pcnt.at(domain_idx).signal = m_platform_io.sample(m_package_pcnt.at(domain_idx).batch_idx);
+        //m_package_pcnt.at(domain_idx).sample = m_platform_io.sample(m_package_pcnt.at(domain_idx).batch_idx) -
+        //                                       m_package_pcnt.at(domain_idx).signal;
+        //m_package_pcnt.at(domain_idx).signal = m_platform_io.sample(m_package_pcnt.at(domain_idx).batch_idx);
+
+        m_package_scal.at(domain_idx).sample = m_platform_io.sample(m_package_scal.at(domain_idx).batch_idx);
     }
 }
 
