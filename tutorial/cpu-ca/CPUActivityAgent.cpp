@@ -76,6 +76,8 @@ CPUActivityAgent::CPUActivityAgent(geopm::PlatformIO &plat_io, const geopm::Plat
     , M_POLICY_PHI_DEFAULT(0.5)
     , M_NUM_PACKAGE(m_platform_topo.num_domain(GEOPM_DOMAIN_PACKAGE))
     , m_do_write_batch(false)
+    //TODO: change to a policy as this is not guaranteed across SKUs
+    //      and families
     , m_package_qm_max_rate({
                             {1.2e9, 4.56E+10},
                             {1.3e9, 6.53E+10},
@@ -107,15 +109,9 @@ void CPUActivityAgent::init(int level, const std::vector<int> &fan_in, bool is_l
 void CPUActivityAgent::init_platform_io(void)
 {
     for (int domain_idx = 0; domain_idx < M_NUM_PACKAGE; ++domain_idx) {
-        m_package_power.push_back({m_platform_io.push_signal("POWER_PACKAGE",
-                                   GEOPM_DOMAIN_PACKAGE,
-                                   domain_idx), NAN});
         m_package_freq_status.push_back({m_platform_io.push_signal("CPU_FREQUENCY_STATUS",
                                          GEOPM_DOMAIN_PACKAGE,
                                          domain_idx), NAN});
-        m_package_temperature.push_back({m_platform_io.push_signal("TEMPERATURE_CORE",
-                                          GEOPM_DOMAIN_PACKAGE,
-                                          domain_idx), NAN});
         m_package_uncore_freq_status.push_back({m_platform_io.push_signal("MSR::UNCORE_PERF_STATUS:FREQ",
                                                 GEOPM_DOMAIN_PACKAGE,
                                                 domain_idx), NAN});
@@ -128,13 +124,7 @@ void CPUActivityAgent::init_platform_io(void)
         m_package_cycles_unhalted.push_back({m_platform_io.push_signal("CYCLES_THREAD",
                                              GEOPM_DOMAIN_PACKAGE,
                                              domain_idx), NAN});
-        m_package_energy.push_back({m_platform_io.push_signal("ENERGY_PACKAGE",
-                                    GEOPM_DOMAIN_PACKAGE,
-                                    domain_idx), NAN});
         m_package_acnt.push_back({m_platform_io.push_signal("MSR::APERF:ACNT",
-                                  GEOPM_DOMAIN_PACKAGE,
-                                  domain_idx), NAN});
-        m_package_mcnt.push_back({m_platform_io.push_signal("MSR::MPERF:MCNT",
                                   GEOPM_DOMAIN_PACKAGE,
                                   domain_idx), NAN});
         m_package_pcnt.push_back({m_platform_io.push_signal("MSR::PPERF:PCNT",
@@ -265,8 +255,6 @@ void CPUActivityAgent::adjust_platform(const std::vector<double>& in_policy)
 
     for (int domain_idx = 0; domain_idx < M_NUM_PACKAGE; ++domain_idx) {
         //Create an input tensor
-        //double package_power = (double) m_package_power.at(domain_idx).signal;
-        //double package_freq = (double) m_package_freq_status.at(domain_idx).signal;
         double package_uncore_freq = (double) m_package_uncore_freq_status.at(domain_idx).signal;
 
         //Lower bound is not ideal here.  We want the lower bound - 1
@@ -277,17 +265,16 @@ void CPUActivityAgent::adjust_platform(const std::vector<double>& in_policy)
         double qm_normalized = (double) m_package_qm_rate.at(domain_idx).signal /
                                         qm_max_itr->second;
 
-        //double ipc = (double) m_package_inst_retired.at(domain_idx).sample /
-        //                      m_package_cycles_unhalted.at(domain_idx).sample;
+        double ipc = (double) m_package_inst_retired.at(domain_idx).sample /
+                              m_package_cycles_unhalted.at(domain_idx).sample;
 
         double scalability = (double) m_package_pcnt.at(domain_idx).sample /
                                       m_package_acnt.at(domain_idx).sample;
 
         double core_req = core_fe + core_range * scalability;
+        //double core_req = core_fe + core_range * (ipc / 4); //TODO: formalize an approach for ipc normalization
+                                                              //      if scalability isn't available
         double uncore_req = uncore_fe + uncore_range * qm_normalized;
-
-        //std::cout << "Sclability is " << std::to_string(scalability) << ", core req: " << std::to_string(core_req) << std::endl;
-        //std::cout << "qm norm is " << std::to_string(qm_normalized) << ", uncore req: " << std::to_string(uncore_req) << std::endl;
 
         package_core_freq_request.push_back(core_req);
         package_uncore_freq_request.push_back(uncore_req);
@@ -344,9 +331,7 @@ void CPUActivityAgent::sample_platform(std::vector<double> &out_sample)
 
     // Collect latest signal values
     for (int domain_idx = 0; domain_idx < M_NUM_PACKAGE; ++domain_idx) {
-        m_package_power.at(domain_idx).signal = m_platform_io.sample(m_package_power.at(domain_idx).batch_idx);
         m_package_freq_status.at(domain_idx).signal = m_platform_io.sample(m_package_freq_status.at(domain_idx).batch_idx);
-        m_package_temperature.at(domain_idx).signal = m_platform_io.sample(m_package_temperature.at(domain_idx).batch_idx);
         m_package_uncore_freq_status.at(domain_idx).signal = m_platform_io.sample(m_package_uncore_freq_status.at(domain_idx).batch_idx);
         m_package_qm_rate.at(domain_idx).signal = m_platform_io.sample(m_package_qm_rate.at(domain_idx).batch_idx);
 
@@ -360,20 +345,10 @@ void CPUActivityAgent::sample_platform(std::vector<double> &out_sample)
                                                        m_package_inst_retired.at(domain_idx).signal;
         m_package_inst_retired.at(domain_idx).signal = m_platform_io.sample(m_package_inst_retired.at(domain_idx).batch_idx);
 
-        //Energy diff and new value
-        m_package_energy.at(domain_idx).sample = m_platform_io.sample(m_package_energy.at(domain_idx).batch_idx) -
-                                                 m_package_energy.at(domain_idx).signal;
-        m_package_energy.at(domain_idx).signal = m_platform_io.sample(m_package_energy.at(domain_idx).batch_idx);
-
         //ACNT diff and new value
         m_package_acnt.at(domain_idx).sample = m_platform_io.sample(m_package_acnt.at(domain_idx).batch_idx) -
                                                m_package_acnt.at(domain_idx).signal;
         m_package_acnt.at(domain_idx).signal = m_platform_io.sample(m_package_acnt.at(domain_idx).batch_idx);
-
-        //MCNT diff and new value
-        m_package_mcnt.at(domain_idx).sample = m_platform_io.sample(m_package_mcnt.at(domain_idx).batch_idx) -
-                                               m_package_mcnt.at(domain_idx).signal;
-        m_package_mcnt.at(domain_idx).signal = m_platform_io.sample(m_package_mcnt.at(domain_idx).batch_idx);
 
         //PCNT diff and new value
         m_package_pcnt.at(domain_idx).sample = m_platform_io.sample(m_package_pcnt.at(domain_idx).batch_idx) -

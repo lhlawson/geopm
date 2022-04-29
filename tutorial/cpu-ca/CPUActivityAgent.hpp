@@ -119,16 +119,12 @@ class CPUActivityAgent : public geopm::Agent
         std::vector<control> m_package_core_freq_control;
         std::vector<control> m_package_uncore_freq_min_control;
         std::vector<control> m_package_uncore_freq_max_control;
-        std::vector<signal> m_package_power;
         std::vector<signal> m_package_freq_status;
-        std::vector<signal> m_package_temperature;
         std::vector<signal> m_package_uncore_freq_status;
         std::vector<signal> m_package_qm_rate;
         std::vector<signal> m_package_inst_retired;
         std::vector<signal> m_package_cycles_unhalted;
-        std::vector<signal> m_package_energy;
         std::vector<signal> m_package_acnt;
-        std::vector<signal> m_package_mcnt;
         std::vector<signal> m_package_pcnt;
 
         void init_platform_io(void);
