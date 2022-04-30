@@ -17,6 +17,7 @@
 #include "geopm/Helper.hpp"
 #include "geopm/Exception.hpp"
 #include "geopm/Agg.hpp"
+#include "geopm_hash.h"
 
 #include <string>
 
@@ -109,9 +110,11 @@ void CPURegionActivityAgent::init_platform_io(void)
         m_region_runtime.push_back({m_platform_io.push_signal("REGION_HINT",
                                     GEOPM_DOMAIN_PACKAGE,
                                     domain_idx), NAN});
-        m_region_count.push_back({m_platform_io.push_signal("REGION_COUNT",
-                                  GEOPM_DOMAIN_PACKAGE,
-                                  domain_idx), NAN});
+        const struct m_region_info_s DEFAULT_REGION { .hash = GEOPM_REGION_HASH_UNMARKED,
+                                                      .runtime = 0.0};
+
+        m_last_region_info = std::vector<struct m_region_info_s>(M_NUM_PACKAGE, DEFAULT_REGION);
+        m_region_map.push_back({});
     }
 
     for (int domain_idx = 0; domain_idx < M_NUM_PACKAGE; ++domain_idx) {
@@ -235,7 +238,6 @@ void CPURegionActivityAgent::adjust_platform(const std::vector<double>& in_polic
     double uncore_fe = in_policy[M_POLICY_CORE_FREQ_MIN];
     double uncore_range = in_policy[M_POLICY_UNCORE_FREQ_MAX] - in_policy[M_POLICY_UNCORE_FREQ_MIN];
 
-
     for (int domain_idx = 0; domain_idx < M_NUM_PACKAGE; ++domain_idx) {
         //Gather metrics
         double uncore_freq = (double) m_uncore_freq_status.at(domain_idx).signal;
@@ -258,17 +260,19 @@ void CPURegionActivityAgent::adjust_platform(const std::vector<double>& in_polic
         //Check region
         struct m_region_info_s current_region_info {
             .hash = (uint64_t) m_region_hash.at(domain_idx).signal,
-            .runtime = m_region_runtime.at(domain_idx).signal,
-            .count = (uint64_t) m_region_count.at(domain_idx).signal};
+            .runtime = m_region_runtime.at(domain_idx).signal};
 
         // If region changed
-        if (m_last_region_info.at(domain_idx).hash != current_region_info.hash ||
-            m_last_region_info.at(domain_idx).count != current_region_info.count) {
+        if (m_last_region_info.at(domain_idx).hash != current_region_info.hash) {
 
             auto current_region_it = m_region_map.at(domain_idx).find(current_region_info.hash);
             if (current_region_it == m_region_map.at(domain_idx).end()) {
                 //If it's the first time we've seen it, initialize
                 m_region_map.at(domain_idx)[current_region_info.hash] = {qm_normalized, ipc, scalability, 1};
+
+                //Set to max
+                core_freq_request.push_back(in_policy[M_POLICY_CORE_FREQ_MAX]);
+                uncore_freq_request.push_back(in_policy[M_POLICY_CORE_FREQ_MAX]);
             }
             else {
                 //If we've ever seen it before, then make a frequency request
@@ -300,41 +304,42 @@ void CPURegionActivityAgent::adjust_platform(const std::vector<double>& in_polic
         }
     }
 
-    // set frequency control per package
-    for (int domain_idx = 0; domain_idx < M_NUM_PACKAGE; ++domain_idx) {
-        if(std::isnan(core_freq_request.at(domain_idx))) {
-            core_freq_request.at(domain_idx) = in_policy[M_POLICY_CORE_FREQ_MAX];
+    // Set frequency control per package
+    if(core_freq_request.size() == M_NUM_PACKAGE && uncore_freq_request.size() == M_NUM_PACKAGE) {
+        for (int domain_idx = 0; domain_idx < M_NUM_PACKAGE; ++domain_idx) {
+            if(std::isnan(core_freq_request.at(domain_idx))) {
+                core_freq_request.at(domain_idx) = in_policy[M_POLICY_CORE_FREQ_MAX];
+            }
+            if(std::isnan(uncore_freq_request.at(domain_idx))) {
+                uncore_freq_request.at(domain_idx) = in_policy[M_POLICY_UNCORE_FREQ_MAX];
+            }
+
+            if (core_freq_request.at(domain_idx) !=
+                m_core_freq_control.at(domain_idx).last_setting ||
+                uncore_freq_request.at(domain_idx) !=
+                m_uncore_freq_min_control.at(domain_idx).last_setting ||
+                uncore_freq_request.at(domain_idx) !=
+                m_uncore_freq_max_control.at(domain_idx).last_setting) {
+                //Adjust
+                m_platform_io.adjust(m_core_freq_control.at(domain_idx).batch_idx,
+                                    core_freq_request.at(domain_idx));
+
+                m_platform_io.adjust(m_uncore_freq_min_control.at(domain_idx).batch_idx,
+                                    uncore_freq_request.at(domain_idx));
+
+                m_platform_io.adjust(m_uncore_freq_max_control.at(domain_idx).batch_idx,
+                                    uncore_freq_request.at(domain_idx));
+
+                //save the value for future comparison
+                m_core_freq_control.at(domain_idx).last_setting = core_freq_request.at(domain_idx);
+                m_uncore_freq_min_control.at(domain_idx).last_setting = uncore_freq_request.at(domain_idx);
+                m_uncore_freq_max_control.at(domain_idx).last_setting = uncore_freq_request.at(domain_idx);
+
+                ++m_frequency_requests;
+                ++m_uncore_frequency_requests;
+                m_do_write_batch = true;
+            }
         }
-        if(std::isnan(uncore_freq_request.at(domain_idx))) {
-            uncore_freq_request.at(domain_idx) = in_policy[M_POLICY_UNCORE_FREQ_MAX];
-        }
-
-        if (core_freq_request.at(domain_idx) !=
-            m_core_freq_control.at(domain_idx).last_setting ||
-            uncore_freq_request.at(domain_idx) !=
-            m_uncore_freq_min_control.at(domain_idx).last_setting ||
-            uncore_freq_request.at(domain_idx) !=
-            m_uncore_freq_max_control.at(domain_idx).last_setting) {
-            //Adjust
-            m_platform_io.adjust(m_core_freq_control.at(domain_idx).batch_idx,
-                                core_freq_request.at(domain_idx));
-
-            m_platform_io.adjust(m_uncore_freq_min_control.at(domain_idx).batch_idx,
-                                uncore_freq_request.at(domain_idx));
-
-            m_platform_io.adjust(m_uncore_freq_max_control.at(domain_idx).batch_idx,
-                                uncore_freq_request.at(domain_idx));
-
-            //save the value for future comparison
-            m_core_freq_control.at(domain_idx).last_setting = core_freq_request.at(domain_idx);
-            m_uncore_freq_min_control.at(domain_idx).last_setting = uncore_freq_request.at(domain_idx);
-            m_uncore_freq_max_control.at(domain_idx).last_setting = uncore_freq_request.at(domain_idx);
-
-            ++m_frequency_requests;
-            ++m_uncore_frequency_requests;
-            m_do_write_batch = true;
-        }
-
     }
 }
 
@@ -369,7 +374,6 @@ void CPURegionActivityAgent::sample_platform(std::vector<double> &out_sample)
 
         m_region_hash.at(domain_idx).signal = m_platform_io.sample(m_region_hash.at(domain_idx).batch_idx);
         m_region_runtime.at(domain_idx).signal = m_platform_io.sample(m_region_runtime.at(domain_idx).batch_idx);
-        m_region_count.at(domain_idx).signal = m_platform_io.sample(m_region_count.at(domain_idx).batch_idx);
     }
 }
 
