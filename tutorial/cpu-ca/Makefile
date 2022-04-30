@@ -31,6 +31,7 @@
 #
 
 TUTORIAL_LIB = libgeopmagent_cpu_activity_agent.so.0.0.0 \
+               libgeopmagent_cpu_region_activity_agent.so.0.0.0 \
                # end
 
 GEOPM_PLUGIN_FLAGS=-fPIC -shared
@@ -53,6 +54,8 @@ LDFLAGS=$(GEOPM_LDFLAGS) $(OMP_FLAGS)
 
 libgeopmagent_cpu_activity_agent.so.0.0.0: CPUActivityAgent.cpp CPUActivityAgent.hpp
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(GEOPM_PLUGIN_FLAGS) $(EXTRA_CPPFLAGS) CPUActivityAgent.cpp -o $@
+libgeopmagent_cpu_region_activity_agent.so.0.0.0: CPURegionActivityAgent.cpp CPURegionActivityAgent.hpp
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(GEOPM_PLUGIN_FLAGS) $(EXTRA_CPPFLAGS) CPURegionActivityAgent.cpp -o $@
 
 clean:
 	rm -f $(TUTORIAL_LIB) *.o
