@@ -237,8 +237,6 @@ void CPUActivityAgent::adjust_platform(const std::vector<double>& in_policy)
         double ipc = (double) m_inst_retired.at(domain_idx).sample /
                               m_cycles_unhalted.at(domain_idx).sample;
 
-        //double scalability = (double) m_pcnt.at(domain_idx).sample /
-        //                              m_acnt.at(domain_idx).sample;
         double scalability = (double) m_scal.at(domain_idx).signal;
         if (std::isnan(scalability)) {
             scalability = 1.0;
@@ -318,7 +316,7 @@ void CPUActivityAgent::sample_platform(std::vector<double> &out_sample)
                                                        m_inst_retired.at(domain_idx).signal;
         m_inst_retired.at(domain_idx).signal = m_platform_io.sample(m_inst_retired.at(domain_idx).batch_idx);
 
-        m_scal.at(domain_idx).sample = m_platform_io.sample(m_scal.at(domain_idx).batch_idx);
+        m_scal.at(domain_idx).signal = m_platform_io.sample(m_scal.at(domain_idx).batch_idx);
     }
 }
 
