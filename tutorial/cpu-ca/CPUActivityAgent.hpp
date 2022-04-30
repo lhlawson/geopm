@@ -85,21 +85,19 @@ class CPUActivityAgent : public geopm::Agent
 
         std::map<std::string, double> m_policy_available;
 
-        double m_package_frequency_requests;
-        double m_package_uncore_frequency_requests;
-        std::map<double,double> m_package_qm_max_rate;
+        double m_frequency_requests;
+        double m_uncore_frequency_requests;
+        std::map<double,double> m_qm_max_rate;
 
-        std::vector<control> m_package_core_freq_control;
-        std::vector<control> m_package_uncore_freq_min_control;
-        std::vector<control> m_package_uncore_freq_max_control;
-        std::vector<signal> m_package_freq_status;
-        std::vector<signal> m_package_uncore_freq_status;
-        std::vector<signal> m_package_qm_rate;
-        std::vector<signal> m_package_inst_retired;
-        std::vector<signal> m_package_cycles_unhalted;
-        //std::vector<signal> m_package_acnt;
-        //std::vector<signal> m_package_pcnt;
-        std::vector<signal> m_package_scal;
+        std::vector<control> m_core_freq_control;
+        std::vector<control> m_uncore_freq_min_control;
+        std::vector<control> m_uncore_freq_max_control;
+        std::vector<signal> m_freq_status;
+        std::vector<signal> m_uncore_freq_status;
+        std::vector<signal> m_qm_rate;
+        std::vector<signal> m_inst_retired;
+        std::vector<signal> m_cycles_unhalted;
+        std::vector<signal> m_scal;
 
         void init_platform_io(void);
 };

@@ -51,7 +51,7 @@ CPUActivityAgent::CPUActivityAgent(geopm::PlatformIO &plat_io, const geopm::Plat
     , m_do_write_batch(false)
     //TODO: change to a policy as this is not guaranteed across SKUs
     //      and families
-    , m_package_qm_max_rate({
+    , m_qm_max_rate({
                             {1.2e9, 4.56E+10},
                             {1.3e9, 6.53E+10},
                             {1.4e9, 7.42E+10},
@@ -73,8 +73,8 @@ CPUActivityAgent::CPUActivityAgent(geopm::PlatformIO &plat_io, const geopm::Plat
 // Push signals and controls for future batch read/write
 void CPUActivityAgent::init(int level, const std::vector<int> &fan_in, bool is_level_root)
 {
-    m_package_frequency_requests = 0;
-    m_package_uncore_frequency_requests = 0;
+    m_frequency_requests = 0;
+    m_uncore_frequency_requests = 0;
 
     init_platform_io();
 }
@@ -82,41 +82,35 @@ void CPUActivityAgent::init(int level, const std::vector<int> &fan_in, bool is_l
 void CPUActivityAgent::init_platform_io(void)
 {
     for (int domain_idx = 0; domain_idx < M_NUM_PACKAGE; ++domain_idx) {
-        m_package_freq_status.push_back({m_platform_io.push_signal("CPU_FREQUENCY_STATUS",
+        m_freq_status.push_back({m_platform_io.push_signal("CPU_FREQUENCY_STATUS",
                                          GEOPM_DOMAIN_PACKAGE,
                                          domain_idx), NAN});
-        m_package_uncore_freq_status.push_back({m_platform_io.push_signal("MSR::UNCORE_PERF_STATUS:FREQ",
+        m_uncore_freq_status.push_back({m_platform_io.push_signal("MSR::UNCORE_PERF_STATUS:FREQ",
                                                 GEOPM_DOMAIN_PACKAGE,
                                                 domain_idx), NAN});
-        m_package_qm_rate.push_back({m_platform_io.push_signal("QM_CTR_SCALED_RATE",
+        m_qm_rate.push_back({m_platform_io.push_signal("QM_CTR_SCALED_RATE",
                                      GEOPM_DOMAIN_PACKAGE,
                                      domain_idx), NAN});
-        m_package_inst_retired.push_back({m_platform_io.push_signal("INSTRUCTIONS_RETIRED",
+        m_inst_retired.push_back({m_platform_io.push_signal("INSTRUCTIONS_RETIRED",
                                           GEOPM_DOMAIN_PACKAGE,
                                           domain_idx), NAN});
-        m_package_cycles_unhalted.push_back({m_platform_io.push_signal("CYCLES_THREAD",
+        m_cycles_unhalted.push_back({m_platform_io.push_signal("CYCLES_THREAD",
                                              GEOPM_DOMAIN_PACKAGE,
                                              domain_idx), NAN});
-        //m_package_acnt.push_back({m_platform_io.push_signal("MSR::APERF:ACNT",
-        //                          GEOPM_DOMAIN_PACKAGE,
-        //                          domain_idx), NAN});
-        //m_package_pcnt.push_back({m_platform_io.push_signal("MSR::PPERF:PCNT",
-        //                          GEOPM_DOMAIN_PACKAGE,
-        //                          domain_idx), NAN});
-        m_package_scal.push_back({m_platform_io.push_signal("MSR::CPU_SCALABILITY_RATIO",
+        m_scal.push_back({m_platform_io.push_signal("MSR::CPU_SCALABILITY_RATIO",
                                   GEOPM_DOMAIN_PACKAGE,
                                   domain_idx), NAN});
     }
 
     for (int domain_idx = 0; domain_idx < M_NUM_PACKAGE; ++domain_idx) {
-        m_package_core_freq_control.push_back({m_platform_io.push_control("CPU_FREQUENCY_CONTROL",
+        m_core_freq_control.push_back({m_platform_io.push_control("CPU_FREQUENCY_CONTROL",
                                           GEOPM_DOMAIN_PACKAGE,
                                           domain_idx), -1});
 
-        m_package_uncore_freq_min_control.push_back({m_platform_io.push_control("MSR::UNCORE_RATIO_LIMIT:MIN_RATIO",
+        m_uncore_freq_min_control.push_back({m_platform_io.push_control("MSR::UNCORE_RATIO_LIMIT:MIN_RATIO",
                                           GEOPM_DOMAIN_PACKAGE,
                                           domain_idx), -1});
-        m_package_uncore_freq_max_control.push_back({m_platform_io.push_control("MSR::UNCORE_RATIO_LIMIT:MAX_RATIO",
+        m_uncore_freq_max_control.push_back({m_platform_io.push_control("MSR::UNCORE_RATIO_LIMIT:MAX_RATIO",
                                           GEOPM_DOMAIN_PACKAGE,
                                           domain_idx), -1});
     }
@@ -221,8 +215,8 @@ void CPUActivityAgent::adjust_platform(const std::vector<double>& in_policy)
     m_do_write_batch = false;
 
     // Per freq
-    std::vector<double> package_core_freq_request;
-    std::vector<double> package_uncore_freq_request;
+    std::vector<double> core_freq_request;
+    std::vector<double> uncore_freq_request;
     double core_fe = in_policy[M_POLICY_CORE_FREQ_MIN];
     double core_range = in_policy[M_POLICY_CORE_FREQ_MAX] - in_policy[M_POLICY_CORE_FREQ_MIN];
 
@@ -230,23 +224,22 @@ void CPUActivityAgent::adjust_platform(const std::vector<double>& in_policy)
     double uncore_range = in_policy[M_POLICY_UNCORE_FREQ_MAX] - in_policy[M_POLICY_UNCORE_FREQ_MIN];
 
     for (int domain_idx = 0; domain_idx < M_NUM_PACKAGE; ++domain_idx) {
-        //Create an input tensor
-        double package_uncore_freq = (double) m_package_uncore_freq_status.at(domain_idx).signal;
+        double uncore_freq = (double) m_uncore_freq_status.at(domain_idx).signal;
 
         //Lower bound is not ideal here.  We want the lower bound - 1
-        auto qm_max_itr = m_package_qm_max_rate.lower_bound(package_uncore_freq);
-        if(qm_max_itr != m_package_qm_max_rate.begin()) {
+        auto qm_max_itr = m_qm_max_rate.lower_bound(uncore_freq);
+        if(qm_max_itr != m_qm_max_rate.begin()) {
             qm_max_itr = std::prev(qm_max_itr, 1);
         }
-        double qm_normalized = (double) m_package_qm_rate.at(domain_idx).signal /
+        double qm_normalized = (double) m_qm_rate.at(domain_idx).signal /
                                         qm_max_itr->second;
 
-        double ipc = (double) m_package_inst_retired.at(domain_idx).sample /
-                              m_package_cycles_unhalted.at(domain_idx).sample;
+        double ipc = (double) m_inst_retired.at(domain_idx).sample /
+                              m_cycles_unhalted.at(domain_idx).sample;
 
-        //double scalability = (double) m_package_pcnt.at(domain_idx).sample /
-        //                              m_package_acnt.at(domain_idx).sample;
-        double scalability = (double) m_package_scal.at(domain_idx).signal;
+        //double scalability = (double) m_pcnt.at(domain_idx).sample /
+        //                              m_acnt.at(domain_idx).sample;
+        double scalability = (double) m_scal.at(domain_idx).signal;
         if (std::isnan(scalability)) {
             scalability = 1.0;
         }
@@ -256,42 +249,42 @@ void CPUActivityAgent::adjust_platform(const std::vector<double>& in_policy)
                                                               //      if scalability isn't available
         double uncore_req = uncore_fe + uncore_range * qm_normalized;
 
-        package_core_freq_request.push_back(core_req);
-        package_uncore_freq_request.push_back(uncore_req);
+        core_freq_request.push_back(core_req);
+        uncore_freq_request.push_back(uncore_req);
     }
 
     // set frequency control per package
     for (int domain_idx = 0; domain_idx < M_NUM_PACKAGE; ++domain_idx) {
-        if(std::isnan(package_core_freq_request.at(domain_idx))) {
-            package_core_freq_request.at(domain_idx) = in_policy[M_POLICY_CORE_FREQ_MAX];
+        if(std::isnan(core_freq_request.at(domain_idx))) {
+            core_freq_request.at(domain_idx) = in_policy[M_POLICY_CORE_FREQ_MAX];
         }
-        if(std::isnan(package_uncore_freq_request.at(domain_idx))) {
-            package_uncore_freq_request.at(domain_idx) = in_policy[M_POLICY_UNCORE_FREQ_MAX];
+        if(std::isnan(uncore_freq_request.at(domain_idx))) {
+            uncore_freq_request.at(domain_idx) = in_policy[M_POLICY_UNCORE_FREQ_MAX];
         }
 
-        if (package_core_freq_request.at(domain_idx) !=
-            m_package_core_freq_control.at(domain_idx).last_setting ||
-            package_uncore_freq_request.at(domain_idx) !=
-            m_package_uncore_freq_min_control.at(domain_idx).last_setting ||
-            package_uncore_freq_request.at(domain_idx) !=
-            m_package_uncore_freq_max_control.at(domain_idx).last_setting) {
+        if (core_freq_request.at(domain_idx) !=
+            m_core_freq_control.at(domain_idx).last_setting ||
+            uncore_freq_request.at(domain_idx) !=
+            m_uncore_freq_min_control.at(domain_idx).last_setting ||
+            uncore_freq_request.at(domain_idx) !=
+            m_uncore_freq_max_control.at(domain_idx).last_setting) {
             //Adjust
-            m_platform_io.adjust(m_package_core_freq_control.at(domain_idx).batch_idx,
-                                package_core_freq_request.at(domain_idx));
+            m_platform_io.adjust(m_core_freq_control.at(domain_idx).batch_idx,
+                                core_freq_request.at(domain_idx));
 
-            m_platform_io.adjust(m_package_uncore_freq_min_control.at(domain_idx).batch_idx,
-                                package_uncore_freq_request.at(domain_idx));
+            m_platform_io.adjust(m_uncore_freq_min_control.at(domain_idx).batch_idx,
+                                uncore_freq_request.at(domain_idx));
 
-            m_platform_io.adjust(m_package_uncore_freq_max_control.at(domain_idx).batch_idx,
-                                package_uncore_freq_request.at(domain_idx));
+            m_platform_io.adjust(m_uncore_freq_max_control.at(domain_idx).batch_idx,
+                                uncore_freq_request.at(domain_idx));
 
             //save the value for future comparison
-            m_package_core_freq_control.at(domain_idx).last_setting = package_core_freq_request.at(domain_idx);
-            m_package_uncore_freq_min_control.at(domain_idx).last_setting = package_uncore_freq_request.at(domain_idx);
-            m_package_uncore_freq_max_control.at(domain_idx).last_setting = package_uncore_freq_request.at(domain_idx);
+            m_core_freq_control.at(domain_idx).last_setting = core_freq_request.at(domain_idx);
+            m_uncore_freq_min_control.at(domain_idx).last_setting = uncore_freq_request.at(domain_idx);
+            m_uncore_freq_max_control.at(domain_idx).last_setting = uncore_freq_request.at(domain_idx);
 
-            ++m_package_frequency_requests;
-            ++m_package_uncore_frequency_requests;
+            ++m_frequency_requests;
+            ++m_uncore_frequency_requests;
             m_do_write_batch = true;
         }
 
@@ -311,31 +304,21 @@ void CPUActivityAgent::sample_platform(std::vector<double> &out_sample)
 
     // Collect latest signal values
     for (int domain_idx = 0; domain_idx < M_NUM_PACKAGE; ++domain_idx) {
-        m_package_freq_status.at(domain_idx).signal = m_platform_io.sample(m_package_freq_status.at(domain_idx).batch_idx);
-        m_package_uncore_freq_status.at(domain_idx).signal = m_platform_io.sample(m_package_uncore_freq_status.at(domain_idx).batch_idx);
-        m_package_qm_rate.at(domain_idx).signal = m_platform_io.sample(m_package_qm_rate.at(domain_idx).batch_idx);
+        m_freq_status.at(domain_idx).signal = m_platform_io.sample(m_freq_status.at(domain_idx).batch_idx);
+        m_uncore_freq_status.at(domain_idx).signal = m_platform_io.sample(m_uncore_freq_status.at(domain_idx).batch_idx);
+        m_qm_rate.at(domain_idx).signal = m_platform_io.sample(m_qm_rate.at(domain_idx).batch_idx);
 
         //Clk unhalted cycles diff and new value
-        m_package_cycles_unhalted.at(domain_idx).sample = m_platform_io.sample(m_package_cycles_unhalted.at(domain_idx).batch_idx) -
-                                                          m_package_cycles_unhalted.at(domain_idx).signal;
-        m_package_cycles_unhalted.at(domain_idx).signal = m_platform_io.sample(m_package_cycles_unhalted.at(domain_idx).batch_idx);
+        m_cycles_unhalted.at(domain_idx).sample = m_platform_io.sample(m_cycles_unhalted.at(domain_idx).batch_idx) -
+                                                          m_cycles_unhalted.at(domain_idx).signal;
+        m_cycles_unhalted.at(domain_idx).signal = m_platform_io.sample(m_cycles_unhalted.at(domain_idx).batch_idx);
 
         //Inst Retired diff and new value
-        m_package_inst_retired.at(domain_idx).sample = m_platform_io.sample(m_package_inst_retired.at(domain_idx).batch_idx) -
-                                                       m_package_inst_retired.at(domain_idx).signal;
-        m_package_inst_retired.at(domain_idx).signal = m_platform_io.sample(m_package_inst_retired.at(domain_idx).batch_idx);
+        m_inst_retired.at(domain_idx).sample = m_platform_io.sample(m_inst_retired.at(domain_idx).batch_idx) -
+                                                       m_inst_retired.at(domain_idx).signal;
+        m_inst_retired.at(domain_idx).signal = m_platform_io.sample(m_inst_retired.at(domain_idx).batch_idx);
 
-        //ACNT diff and new value
-        //m_package_acnt.at(domain_idx).sample = m_platform_io.sample(m_package_acnt.at(domain_idx).batch_idx) -
-        //                                       m_package_acnt.at(domain_idx).signal;
-        //m_package_acnt.at(domain_idx).signal = m_platform_io.sample(m_package_acnt.at(domain_idx).batch_idx);
-
-        //PCNT diff and new value
-        //m_package_pcnt.at(domain_idx).sample = m_platform_io.sample(m_package_pcnt.at(domain_idx).batch_idx) -
-        //                                       m_package_pcnt.at(domain_idx).signal;
-        //m_package_pcnt.at(domain_idx).signal = m_platform_io.sample(m_package_pcnt.at(domain_idx).batch_idx);
-
-        m_package_scal.at(domain_idx).sample = m_platform_io.sample(m_package_scal.at(domain_idx).batch_idx);
+        m_scal.at(domain_idx).sample = m_platform_io.sample(m_scal.at(domain_idx).batch_idx);
     }
 }
 
@@ -361,8 +344,8 @@ std::vector<std::pair<std::string, std::string> > CPUActivityAgent::report_host(
 {
     std::vector<std::pair<std::string, std::string> > result;
 
-    result.push_back({"Xeon Package Frequency Requests", std::to_string(m_package_frequency_requests)});
-    result.push_back({"Xeon Uncore Frequency Requests", std::to_string(m_package_uncore_frequency_requests)});
+    result.push_back({"Xeon Package Frequency Requests", std::to_string(m_frequency_requests)});
+    result.push_back({"Xeon Uncore Frequency Requests", std::to_string(m_uncore_frequency_requests)});
     return result;
 }
 
