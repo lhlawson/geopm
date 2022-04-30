@@ -101,9 +101,6 @@ void CPURegionActivityAgent::init_platform_io(void)
         m_scal.push_back({m_platform_io.push_signal("MSR::CPU_SCALABILITY_RATIO",
                           GEOPM_DOMAIN_PACKAGE,
                           domain_idx), NAN});
-        m_scal.push_back({m_platform_io.push_signal("MSR::CPU_SCALABILITY_RATIO",
-                          GEOPM_DOMAIN_PACKAGE,
-                          domain_idx), NAN});
         m_region_hash.push_back({m_platform_io.push_signal("REGION_HASH",
                                  GEOPM_DOMAIN_PACKAGE,
                                  domain_idx), NAN});
@@ -269,7 +266,6 @@ void CPURegionActivityAgent::adjust_platform(const std::vector<double>& in_polic
             if (current_region_it == m_region_map.at(domain_idx).end()) {
                 //If it's the first time we've seen it, initialize
                 m_region_map.at(domain_idx)[current_region_info.hash] = {qm_normalized, ipc, scalability, 1};
-
                 //Set to max
                 core_freq_request.push_back(in_policy[M_POLICY_CORE_FREQ_MAX]);
                 uncore_freq_request.push_back(in_policy[M_POLICY_CORE_FREQ_MAX]);
@@ -370,7 +366,7 @@ void CPURegionActivityAgent::sample_platform(std::vector<double> &out_sample)
                                                        m_inst_retired.at(domain_idx).signal;
         m_inst_retired.at(domain_idx).signal = m_platform_io.sample(m_inst_retired.at(domain_idx).batch_idx);
 
-        m_scal.at(domain_idx).sample = m_platform_io.sample(m_scal.at(domain_idx).batch_idx);
+        m_scal.at(domain_idx).signal = m_platform_io.sample(m_scal.at(domain_idx).batch_idx);
 
         m_region_hash.at(domain_idx).signal = m_platform_io.sample(m_region_hash.at(domain_idx).batch_idx);
         m_region_runtime.at(domain_idx).signal = m_platform_io.sample(m_region_runtime.at(domain_idx).batch_idx);
