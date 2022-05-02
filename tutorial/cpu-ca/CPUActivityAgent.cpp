@@ -220,7 +220,7 @@ void CPUActivityAgent::adjust_platform(const std::vector<double>& in_policy)
     double core_fe = in_policy[M_POLICY_CORE_FREQ_MIN];
     double core_range = in_policy[M_POLICY_CORE_FREQ_MAX] - in_policy[M_POLICY_CORE_FREQ_MIN];
 
-    double uncore_fe = in_policy[M_POLICY_CORE_FREQ_MIN];
+    double uncore_fe = in_policy[M_POLICY_UNCORE_FREQ_MIN];
     double uncore_range = in_policy[M_POLICY_UNCORE_FREQ_MAX] - in_policy[M_POLICY_UNCORE_FREQ_MIN];
 
     for (int domain_idx = 0; domain_idx < M_NUM_PACKAGE; ++domain_idx) {

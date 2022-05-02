@@ -104,6 +104,7 @@ void CPURegionActivityAgent::init_platform_io(void)
         m_region_hash.push_back({m_platform_io.push_signal("REGION_HASH",
                                  GEOPM_DOMAIN_PACKAGE,
                                  domain_idx), NAN});
+        //TODO: Use REGION_RUNTIME when it's working again...
         m_region_runtime.push_back({m_platform_io.push_signal("REGION_HINT",
                                     GEOPM_DOMAIN_PACKAGE,
                                     domain_idx), NAN});
@@ -232,7 +233,7 @@ void CPURegionActivityAgent::adjust_platform(const std::vector<double>& in_polic
     double core_fe = in_policy[M_POLICY_CORE_FREQ_MIN];
     double core_range = in_policy[M_POLICY_CORE_FREQ_MAX] - in_policy[M_POLICY_CORE_FREQ_MIN];
 
-    double uncore_fe = in_policy[M_POLICY_CORE_FREQ_MIN];
+    double uncore_fe = in_policy[M_POLICY_UNCORE_FREQ_MIN];
     double uncore_range = in_policy[M_POLICY_UNCORE_FREQ_MAX] - in_policy[M_POLICY_UNCORE_FREQ_MIN];
 
     for (int domain_idx = 0; domain_idx < M_NUM_PACKAGE; ++domain_idx) {
@@ -260,6 +261,7 @@ void CPURegionActivityAgent::adjust_platform(const std::vector<double>& in_polic
             .runtime = m_region_runtime.at(domain_idx).signal};
 
         // If region changed
+        // TODO: OR IF REGION COUNT INCREASED!
         if (m_last_region_info.at(domain_idx).hash != current_region_info.hash) {
 
             auto current_region_it = m_region_map.at(domain_idx).find(current_region_info.hash);
@@ -268,7 +270,7 @@ void CPURegionActivityAgent::adjust_platform(const std::vector<double>& in_polic
                 m_region_map.at(domain_idx)[current_region_info.hash] = {qm_normalized, ipc, scalability, 1};
                 //Set to max
                 core_freq_request.push_back(in_policy[M_POLICY_CORE_FREQ_MAX]);
-                uncore_freq_request.push_back(in_policy[M_POLICY_CORE_FREQ_MAX]);
+                uncore_freq_request.push_back(in_policy[M_POLICY_UNCORE_FREQ_MAX]);
             }
             else {
                 //If we've ever seen it before, then make a frequency request

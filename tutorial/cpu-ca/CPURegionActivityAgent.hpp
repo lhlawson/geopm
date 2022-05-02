@@ -100,6 +100,7 @@ class CPURegionActivityAgent : public geopm::Agent
         std::vector<signal> m_scal;
         std::vector<signal> m_region_hash;
         std::vector<signal> m_region_runtime;
+        std::vector<signal> m_region_count;
 
         struct m_region_info_s {
             uint64_t hash;
