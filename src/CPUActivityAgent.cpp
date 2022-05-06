@@ -63,6 +63,9 @@ namespace geopm
         m_frequency_requests = 0;
         m_uncore_frequency_requests = 0;
 
+        m_freq_uncore_min = m_platform_io.read_signal("MSR::UNCORE_RATIO_LIMIT:MIN_RATIO", GEOPM_DOMAIN_BOARD, 0);
+        m_freq_uncore_max = m_platform_io.read_signal("MSR::UNCORE_RATIO_LIMIT:MAX_RATIO", GEOPM_DOMAIN_BOARD, 0);
+
         init_platform_io();
     }
 
@@ -78,13 +81,10 @@ namespace geopm
             m_qm_rate.push_back({m_platform_io.push_signal("QM_CTR_SCALED_RATE",
                                          GEOPM_DOMAIN_PACKAGE,
                                          domain_idx), NAN});
-            m_inst_retired.push_back({m_platform_io.push_signal("INSTRUCTIONS_RETIRED",
-                                              GEOPM_DOMAIN_PACKAGE,
-                                              domain_idx), NAN});
-            m_cycles_unhalted.push_back({m_platform_io.push_signal("CYCLES_THREAD",
-                                                 GEOPM_DOMAIN_PACKAGE,
-                                                 domain_idx), NAN});
             m_scal.push_back({m_platform_io.push_signal("MSR::CPU_SCALABILITY_RATIO",
+                                      GEOPM_DOMAIN_PACKAGE,
+                                      domain_idx), NAN});
+            m_time_network.push_back({m_platform_io.push_signal("TIME_HINT_NETWORK",
                                       GEOPM_DOMAIN_PACKAGE,
                                       domain_idx), NAN});
         }
@@ -112,48 +112,72 @@ namespace geopm
     void CPUActivityAgent::validate_policy(std::vector<double> &in_policy) const
     {
         assert(in_policy.size() == M_NUM_POLICY);
-        double min_freq = m_platform_io.read_signal("CPU_FREQUENCY_MIN", GEOPM_DOMAIN_BOARD, 0);
-        double max_freq = m_platform_io.read_signal("CPU_FREQUENCY_MAX", GEOPM_DOMAIN_BOARD, 0);
-
         ///////////////////////
         //CPU POLICY CHECKING//
         ///////////////////////
+        double freq_core_min = m_platform_io.read_signal("CPU_FREQUENCY_MIN", GEOPM_DOMAIN_BOARD, 0);
+        double freq_core_max = m_platform_io.read_signal("CPU_FREQUENCY_MAX", GEOPM_DOMAIN_BOARD, 0);
+
         // Check for NAN to set default values for policy
         if (std::isnan(in_policy[M_POLICY_CPU_FREQ_MAX])) {
-            in_policy[M_POLICY_CPU_FREQ_MAX] = max_freq;
+            in_policy[M_POLICY_CPU_FREQ_MAX] = freq_core_max;
         }
 
-        if (in_policy[M_POLICY_CPU_FREQ_MAX] > max_freq ||
-            in_policy[M_POLICY_CPU_FREQ_MAX] < min_freq ) {
+        if (in_policy[M_POLICY_CPU_FREQ_MAX] > freq_core_max ||
+            in_policy[M_POLICY_CPU_FREQ_MAX] < freq_core_min ) {
             throw Exception("CPUActivityAgent::" + std::string(__func__) +
-                            "():_FREQ_MAX out of range: " +
+                            "():CPU_FREQ_MAX out of range: " +
                             std::to_string(in_policy[M_POLICY_CPU_FREQ_MAX]) +
                             ".", GEOPM_ERROR_INVALID, __FILE__, __LINE__);
         }
 
         // Check for NAN to set default values for policy
         if (std::isnan(in_policy[M_POLICY_CPU_FREQ_EFFICIENT])) {
-            in_policy[M_POLICY_CPU_FREQ_EFFICIENT] = min_freq;
+            in_policy[M_POLICY_CPU_FREQ_EFFICIENT] = freq_core_min;
         }
 
-        if (in_policy[M_POLICY_CPU_FREQ_EFFICIENT] > max_freq ||
-            in_policy[M_POLICY_CPU_FREQ_EFFICIENT] < min_freq ) {
+        if (in_policy[M_POLICY_CPU_FREQ_EFFICIENT] > freq_core_max ||
+            in_policy[M_POLICY_CPU_FREQ_EFFICIENT] < freq_core_min ) {
             throw Exception("CPUActivityAgent::" + std::string(__func__) +
-                            "():_FREQ_MIN out of range: " +
+                            "():CPU_FREQ_EFFICIENT out of range: " +
                             std::to_string(in_policy[M_POLICY_CPU_FREQ_EFFICIENT]) +
                             ".", GEOPM_ERROR_INVALID, __FILE__, __LINE__);
         }
 
         if (in_policy[M_POLICY_CPU_FREQ_EFFICIENT] > in_policy[M_POLICY_CPU_FREQ_MAX]) {
             throw Exception("CPUActivityAgent::" + std::string(__func__) +
-                            "():_FREQ_MIN (" +
+                            "():CPU_FREQ_EFFICIENT (" +
                             std::to_string(in_policy[M_POLICY_CPU_FREQ_EFFICIENT]) +
-                            ") value exceeds_FREQ_MAX (" +
+                            ") value exceeds CPU_FREQ_MAX (" +
                             std::to_string(in_policy[M_POLICY_CPU_FREQ_MAX]) +
                             ").", GEOPM_ERROR_INVALID, __FILE__, __LINE__);
         }
 
-        //TODO: Check uncore freq min/max
+        //////////////////////////
+        //UNCORE POLICY CHECKING//
+        //////////////////////////
+
+        if (std::isnan(in_policy[M_POLICY_UNCORE_FREQ_MAX])) {
+            in_policy[M_POLICY_UNCORE_FREQ_MAX] = m_freq_uncore_max;
+        }
+
+        if (in_policy[M_POLICY_UNCORE_FREQ_EFFICIENT] > m_freq_uncore_max ||
+            in_policy[M_POLICY_UNCORE_FREQ_EFFICIENT] < m_freq_uncore_min ) {
+            throw Exception("CPUActivityAgent::" + std::string(__func__) +
+                            "():UNCORE_FREQ_EFFICIENT out of range: " +
+                            std::to_string(in_policy[M_POLICY_UNCORE_FREQ_EFFICIENT]) +
+                            ".  Min: " + std::to_string(m_freq_uncore_min)  + ", Max: " +
+                            std::to_string(m_freq_uncore_max), GEOPM_ERROR_INVALID, __FILE__, __LINE__);
+        }
+
+        if (in_policy[M_POLICY_UNCORE_FREQ_EFFICIENT] > in_policy[M_POLICY_UNCORE_FREQ_MAX]) {
+            throw Exception("CPUActivityAgent::" + std::string(__func__) +
+                            "():UNCORE_FREQ_EFFICIENT (" +
+                            std::to_string(in_policy[M_POLICY_UNCORE_FREQ_EFFICIENT]) +
+                            ") value exceeds UNCORE_FREQ_MAX (" +
+                            std::to_string(in_policy[M_POLICY_UNCORE_FREQ_MAX]) +
+                            ").", GEOPM_ERROR_INVALID, __FILE__, __LINE__);
+        }
 
         // If no sample period is provided assume the default behavior
         if (std::isnan(in_policy[M_POLICY_SAMPLE_PERIOD])) {
@@ -192,7 +216,7 @@ namespace geopm
 
         double phi = in_policy[M_POLICY_CPU_PHI];
 
-        // If phi is not 0.5 we move into the energy or performance biased regions
+        // If phi is not 0.5 we move into the energy or performance biased behavior
         if (phi > 0.5) {
             // Energy Biased.  Scale F_max down to F_efficient based upon phi value
             // Active region phi usage
@@ -259,7 +283,9 @@ namespace geopm
         for (int domain_idx = 0; domain_idx < M_NUM_PACKAGE; ++domain_idx) {
             double uncore_freq = (double) m_uncore_freq_status.at(domain_idx).signal;
 
-            //Lower bound is not ideal here.  We want the lower bound - 1
+            /////////////////////////////////////////////
+            // L3 Total External Bandwidth Measurement //
+            /////////////////////////////////////////////
             auto qm_max_itr = m_qm_max_rate.lower_bound(uncore_freq);
             if(qm_max_itr != m_qm_max_rate.begin()) {
                 qm_max_itr = std::prev(qm_max_itr, 1);
@@ -267,21 +293,63 @@ namespace geopm
             double qm_normalized = (double) m_qm_rate.at(domain_idx).signal /
                                             qm_max_itr->second;
 
-            //double ipc = (double) m_inst_retired.at(domain_idx).sample /
-            //                      m_cycles_unhalted.at(domain_idx).sample;
+            // Network Traffic Measurement
+            double network_time = m_time_network.at(domain_idx).sample;
+            if (std::isnan(network_time)) {
+                network_time = 0;
+            }
 
+            double network_normalized = 0;
+            // If the sample network time is non-zero we should make an intelligent,
+            // architecture based decision to set the minimum uncore frequency
+            // such that the uncore bandwidth is not the bottleneck.
+            if(network_time > 0) {
+                // TODO: Interconnect (node-node) traffic uncore adjustment.
+                //       For now?  We'll set it to 100% --> max uncore speed
+                network_normalized = 1;
+                // We need something that can catch when we're in a network sensitive
+                // MPI region and just increase this, but in testing those regions were
+                // too short for us to react to, meaning we should set this to 0%,
+                // and just characterize the SYSTEM to find the efficienct uncore
+                // frequency per N nodes (1, 2, 4, 8, 16, 32, 64, etc...).  This will
+                // likely raise the uncore freq based upon amount of node-node comms
+            }
+
+            // HBM Traffic Measurement
+            // TODO: HBM uncore adjustment
+            double hbm_normalized = 0;
+
+            // PCIE Traffic Measurement
+            // TODO: PCIE uncore adjustment
+            double pcie_normalized = 0;
+
+            // L3 usage, Network Traffic, HBM, and PCIE all use the uncore.
+            // Therefore all these components need to be taken into account when
+            // scaling the uncore frequency in the efficient - performant range.
+            // A more robust/future proof solution may be to directly query uncore
+            // counters that indicate utilization (when/if available).
+            double scalability_uncore = qm_normalized + network_normalized + hbm_normalized + pcie_normalized;
+            double uncore_req = f_uncore_efficient + f_uncore_range * scalability_uncore;
+
+            //Clip uncore request within policy limits
+            uncore_req = std::max(in_policy[M_POLICY_UNCORE_FREQ_EFFICIENT], uncore_req);
+            uncore_req = std::min(in_policy[M_POLICY_UNCORE_FREQ_MAX], uncore_req);
+            uncore_freq_request.push_back(uncore_req);
+
+            //////////////////////////////////
+            // Core Scalability Measurement //
+            //////////////////////////////////
             double scalability = (double) m_scal.at(domain_idx).signal;
             if (std::isnan(scalability)) {
                 scalability = 1.0;
             }
 
             double core_req = f_core_efficient + f_core_range * scalability;
-            //double core_req = f_core_efficient + f_core_range * (ipc / 4); //TODO: formalize an approach for ipc normalization
-                                                                  //      if scalability isn't available
-            double uncore_req = f_uncore_efficient + f_uncore_range * qm_normalized;
 
+            //Clip core request within policy limits
+            core_req = std::max(in_policy[M_POLICY_CPU_FREQ_EFFICIENT], core_req);
+            core_req = std::min(in_policy[M_POLICY_CPU_FREQ_MAX], core_req);
             core_freq_request.push_back(core_req);
-            uncore_freq_request.push_back(uncore_req);
         }
 
         // set frequency control per package
@@ -335,20 +403,17 @@ namespace geopm
 
         // Collect latest signal values
         for (int domain_idx = 0; domain_idx < M_NUM_PACKAGE; ++domain_idx) {
+            // Frequency signals
             m_freq_status.at(domain_idx).signal = m_platform_io.sample(m_freq_status.at(domain_idx).batch_idx);
             m_uncore_freq_status.at(domain_idx).signal = m_platform_io.sample(m_uncore_freq_status.at(domain_idx).batch_idx);
+
+            // Uncore steering signals
             m_qm_rate.at(domain_idx).signal = m_platform_io.sample(m_qm_rate.at(domain_idx).batch_idx);
+            m_time_network.at(domain_idx).sample = m_platform_io.sample(m_time_network.at(domain_idx).batch_idx) -
+                                                                        m_time_network.at(domain_idx).signal;
+            m_time_network.at(domain_idx).signal = m_platform_io.sample(m_time_network.at(domain_idx).batch_idx);
 
-            //Clk unhalted cycles diff and new value
-            m_cycles_unhalted.at(domain_idx).sample = m_platform_io.sample(m_cycles_unhalted.at(domain_idx).batch_idx) -
-                                                              m_cycles_unhalted.at(domain_idx).signal;
-            m_cycles_unhalted.at(domain_idx).signal = m_platform_io.sample(m_cycles_unhalted.at(domain_idx).batch_idx);
-
-            //Inst Retired diff and new value
-            m_inst_retired.at(domain_idx).sample = m_platform_io.sample(m_inst_retired.at(domain_idx).batch_idx) -
-                                                           m_inst_retired.at(domain_idx).signal;
-            m_inst_retired.at(domain_idx).signal = m_platform_io.sample(m_inst_retired.at(domain_idx).batch_idx);
-
+            // Core steering signals
             m_scal.at(domain_idx).signal = m_platform_io.sample(m_scal.at(domain_idx).batch_idx);
         }
     }

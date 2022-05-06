@@ -88,6 +88,8 @@ namespace geopm
 
             double m_frequency_requests;
             double m_uncore_frequency_requests;
+            double m_freq_uncore_min;
+            double m_freq_uncore_max;
             std::map<double,double> m_qm_max_rate;
 
             std::vector<control> m_core_freq_control;
@@ -96,9 +98,8 @@ namespace geopm
             std::vector<signal> m_freq_status;
             std::vector<signal> m_uncore_freq_status;
             std::vector<signal> m_qm_rate;
-            std::vector<signal> m_inst_retired;
-            std::vector<signal> m_cycles_unhalted;
             std::vector<signal> m_scal;
+            std::vector<signal> m_time_network;
 
             void init_platform_io(void);
     };
