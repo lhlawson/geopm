@@ -10,6 +10,7 @@
 
 #include "geopm_time.h"
 #include "Agent.hpp"
+#include "geopm/CircularBuffer.hpp"
 
 namespace geopm
 {
@@ -100,6 +101,7 @@ namespace geopm
             std::vector<signal> m_qm_rate;
             std::vector<signal> m_scal;
             std::vector<signal> m_time_network;
+            std::vector<std::unique_ptr<CircularBuffer<double> > > m_network_time_samples;
 
             void init_platform_io(void);
     };

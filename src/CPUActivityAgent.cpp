@@ -19,6 +19,7 @@
 #include "geopm/PluginFactory.hpp"
 
 #include "PlatformIOProf.hpp"
+#define DECISION_WINDOW_SAMPLES 25
 
 namespace geopm
 {
@@ -87,6 +88,7 @@ namespace geopm
             m_time_network.push_back({m_platform_io.push_signal("TIME_HINT_NETWORK",
                                       GEOPM_DOMAIN_PACKAGE,
                                       domain_idx), NAN});
+            m_network_time_samples.push_back(geopm::make_unique<CircularBuffer<double> >(DECISION_WINDOW_SAMPLES));
         }
 
         for (int domain_idx = 0; domain_idx < M_NUM_PACKAGE; ++domain_idx) {
@@ -156,9 +158,11 @@ namespace geopm
         //////////////////////////
         //UNCORE POLICY CHECKING//
         //////////////////////////
-
         if (std::isnan(in_policy[M_POLICY_UNCORE_FREQ_MAX])) {
             in_policy[M_POLICY_UNCORE_FREQ_MAX] = m_freq_uncore_max;
+        }
+        if (std::isnan(in_policy[M_POLICY_UNCORE_FREQ_EFFICIENT])) {
+            in_policy[M_POLICY_UNCORE_FREQ_EFFICIENT] = m_freq_uncore_min;
         }
 
         if (in_policy[M_POLICY_UNCORE_FREQ_EFFICIENT] > m_freq_uncore_max ||
@@ -299,21 +303,44 @@ namespace geopm
                 network_time = 0;
             }
 
+            // Approach 0: Do no network tracking.  Assume users have
+            // sized their node count such that comms don't dominate the
+            // runtime
             double network_normalized = 0;
+
+            // Approach 0.5:
+            // Characterize the SYSTEM to find the efficienct uncore
+            // frequency per N nodes (1, 2, 4, 8, 16, 32, 64, etc...).
+            // This will impact the policy, or may be an offset of some sort
+            // applied at runtime
+
+            // Approach 1:
             // If the sample network time is non-zero we should make an intelligent,
             // architecture based decision to set the minimum uncore frequency
             // such that the uncore bandwidth is not the bottleneck.
-            if(network_time > 0) {
-                // TODO: Interconnect (node-node) traffic uncore adjustment.
-                //       For now?  We'll set it to 100% --> max uncore speed
-                network_normalized = 1;
-                // We need something that can catch when we're in a network sensitive
-                // MPI region and just increase this, but in testing those regions were
-                // too short for us to react to, meaning we should set this to 0%,
-                // and just characterize the SYSTEM to find the efficienct uncore
-                // frequency per N nodes (1, 2, 4, 8, 16, 32, 64, etc...).  This will
-                // likely raise the uncore freq based upon amount of node-node comms
-            }
+            // For now?  We'll set it to 100% --> max uncore speed
+            // The downside here is that we'll burn more energy and won't react
+            // in time to bursty & short comms
+            //if(network_time > 0) {
+            //    network_normalized = 1;
+            //}
+
+            // For Approach 2 & 3
+            // We don't care about actual network timer for this, just number of
+            // samples in the network time hint region (i.e. region count)
+            //m_network_time_samples.at(domain_idx)->insert(ceil(network_time));
+
+            // Approach 2:
+            // Increase uncore by % of network time in the last DECISION_WINDOW_SAMPLES?
+            //auto network_time_samples_avg = Agg::average(m_network_time_samples.at(domain_idx)->make_vector());
+            //network_normalized = network_time_samples_avg;
+
+            // Approach 3:
+            // If 15% of the previously seen samples were network time, increase uncore baseline freq
+            // by 50%
+            //if (network_time_samples_avg >= 0.15) {
+            //    network_normalized = 0.50;
+            //}
 
             // HBM Traffic Measurement
             // TODO: HBM uncore adjustment
