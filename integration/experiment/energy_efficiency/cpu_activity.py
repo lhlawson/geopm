@@ -36,10 +36,16 @@ def launch_configs(output_dir, app_conf):
                     "UNCORE_FREQ_MAX": 2400000000,
                     "UNCORE_FREQ_EFFICIENT": 1700000000,
                     "CPU_PHI": 0.5,
-                    "SAMPLE_PERIOD": 0.01}
+                    "SAMPLE_PERIOD": 0.01},
+                   {"CPU_FREQ_MAX": 3700000000,
+                    "CPU_FREQ_EFFICIENT": 1000000000,
+                    "UNCORE_FREQ_MAX": 2400000000,
+                    "UNCORE_FREQ_EFFICIENT": 1200000000,
+                    "CPU_PHI": 0.5,
+                    "SAMPLE_PERIOD": 0.01},
                   ]
     config_names=['phi50',
-                 ]
+                  'phi50-unconstrained']
 
     targets = []
     agent = 'cpu_activity'
