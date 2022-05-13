@@ -121,11 +121,12 @@ def frequency_recommendation(df_region_group, region, cross_region, min_energy_t
                          'proovided\n')
         sys.exit(1)
 
+    # Start with a region analysis for energy efficiency
     df = df_region_group.get_group(region)
     domain_freq_efficient, domain_freq_tolerant = analyze_efficient_energy(df, min_energy_tolerance, freq_col)
 
-    # Second do an analysis of the tolerant frequency impact on the
-    # cross region.
+    # Then do an analysis of the tolerant frequency
+    # impact on the cross region.
     df = df_region_group.get_group(cross_region)
 
     # Fix the frequency of the domain not being searched (core)
@@ -144,7 +145,7 @@ def frequency_recommendation(df_region_group, region, cross_region, min_energy_t
 
     domain_freq_efficient = cross_domain_freq_efficient
 
-    # Second do a cross region degradation analysis if requested
+    # Next do a cross region perf degradation analysis if requested
     if cross_region_degradation is not None and cross_region_degradation > 0.0:
         # Find the performance impact of decreasing
         # frequency below the efficient frequency for a region
@@ -203,7 +204,6 @@ def main(full_df, region_list, min_energy_tolerance, cross_region_degradation):
     # to find the most efficient core frequency (or lower, depending
     # on min_energy_tolerance) when running at the uncore_freq_efficient determined
     # above
-    #df = df.groupby('uncore-frequency (Hz)').get_group(uncore_freq_recommendation)
     df = df[df['uncore-frequency (Hz)'] == uncore_freq_recommendation]
     df_region_group = df.groupby('region')
     core_freq_recommendation = frequency_recommendation(df_region_group, region=region_list[1],
