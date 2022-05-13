@@ -5,9 +5,8 @@
 #
 
 '''
-Creates a model relating power-limit to both runtime and energy
-consumption. Offers power-governor policy recommendations for
-minimum energy use subject to a runtime degradation constraint.
+Finds the energy efficient frequency for a provided frequency sweep
+and characterizes the system memory bandwidth usage for the CPU Activity Agent.
 '''
 
 import code
@@ -24,208 +23,247 @@ import geopmpy.io
 from experiment import common_args
 from experiment import machine
 
-def extract_columns(df, region_filter = None):
+def extract_columns(df, region_list = None):
     """
     Extract the columns of interest from the full report collection
-    dataframe. This returns a dataframe indexed by the power limit
-    and columns 'runtime' and 'energy'. region_filter (if provided)
-    is a container that specifies which regions to include (by default,
-    include all of them)."""
+    dataframe.
+    """
     df_filtered = df
-    if region_filter:
-        df_filtered = df[df['region'].isin(region_filter.split(','))]
+    if region_list:
+        df_filtered = df[df['region'].isin(region_list)]
+
+    if ('QM_CTR_SCALED_RATE' not in df_filtered.columns):
+        df_filtered['QM_CTR_SCALED_RATE'] = (df_filtered['QM_CTR_SCALED_RATE@package-0'] +
+                                             df_filtered['QM_CTR_SCALED_RATE@package-1'])/2
+
+    if ('uncore-frequency (Hz)' not in df_filtered.columns):
+        df_filtered['uncore-frequency (Hz)'] = (df_filtered['MSR::UNCORE_PERF_STATUS:FREQ@package-0'] +
+                                                df_filtered['MSR::UNCORE_PERF_STATUS:FREQ@package-1'])/2
 
     # these are the only columns we need
-    try:
-        df_cols = df_filtered[['region',
-                                'runtime (s)',
-                                'package-energy (J)',
-                                'dram-energy (J)',
-                                'frequency (Hz)',
-                                'QM_CTR_SCALED_RATE@package-0',
-                                'QM_CTR_SCALED_RATE@package-1',
-                                'uncore-frequency (Hz)',]]
-    except:
-        df_cols = df_filtered[['region',
-                                'runtime (s)',
-                                'package-energy (J)',
-                                'dram-energy (J)',
-                                'QM_CTR_SCALED_RATE@package-0',
-                                'QM_CTR_SCALED_RATE@package-1',
-                                'frequency (Hz)']]
+    df_cols = df_filtered[['region',
+                            'runtime (s)',
+                            'package-energy (J)',
+                            'dram-energy (J)',
+                            'frequency (Hz)',
+                            'QM_CTR_SCALED_RATE',
+                            'uncore-frequency (Hz)',]]
 
-        df_cols['uncore-frequency (Hz)'] = (df_filtered['MSR::UNCORE_PERF_STATUS:FREQ@package-0'] +
-                                            df_filtered['MSR::UNCORE_PERF_STATUS:FREQ@package-1'])/2
     return df_cols
 
-def policy_efficient_energy(df, tolerance, domain):
+def analyze_efficient_energy(df, min_energy_tolerance, freq_col_name):
     """
-    Find the power limit over the range plrange (list-like) that
-    has the minimum predicted energy usage (according to the energy model
-    enmodel, an instance of PowerLimitModel), subject to the constraint
-    that its runtime does not exceed the runtime at power limit pltdp
-    by more than a factor of (1 + max_degradation), if max_degradation is
-    specified. Returns a dictionary with keys power, runtime, and energy,
-    and values the optimal power limit and the predicted runtime and energy
-    at that limit, respectively."""
-
-    if domain == "UNCORE":
-        freq_col = 'uncore-frequency (Hz)'
-    elif domain == "CORE":
-        freq_col = 'frequency (Hz)'
-    else:
-        sys.stderr.write('<geopm> Error: unsupported domain ' + domain + \
-                         'proovided\n')
-        sys.exit(1)
+    Find the frequency that provides the minimum package energy consumption
+    within the dataframe provided.  If a tolerance is given, allow for
+    frequency selection below the energy efficient frequency.
+    """
 
     energy_min = df['package-energy (J)'].min()
     energy_max = df['package-energy (J)'].max()
     energy_min_normalized = energy_min/energy_max
     df['package-energy-normalized (%)'] = df['package-energy (J)'] / energy_max
+
     energy_within_tolerance = [e for e in df['package-energy-normalized (%)']
-                                if e < energy_min_normalized + tolerance]
+                                if e <= energy_min_normalized + min_energy_tolerance]
+
+    # Mean is used here as there can be instances where multiple runs meet the criteria
+    # and float cannot handle multiple values
     energy_efficient_frequency = float(df[df['package-energy-normalized (%)'] ==
-                                        energy_within_tolerance[0]][freq_col])
-    recommended_frequency = energy_efficient_frequency
+                                       energy_min_normalized][freq_col_name].mean())
+    energy_tolerant_frequency = float(df[df['package-energy-normalized (%)'] ==
+                                      energy_within_tolerance[0]][freq_col_name].mean())
 
-    return recommended_frequency
+    return energy_efficient_frequency, energy_tolerant_frequency
 
-def system_memory_bandwidth_characterization(df):
-    df['uncore-frequency (GHz)'] = (df['uncore-frequency (Hz)']/1e09).round(decimals=1)
-    uncore_freq_set = sorted(set(df['uncore-frequency (GHz)'].to_list()))
+def system_memory_bandwidth_characterization(df_region_group):
+    """
+    Perform characterization of the system memory bandwidth.  This
+    is used by the agent to help determine the appropriate uncore frequency
+    """
+    df = df_region_group.get_group('intensity_0')
+    uncore_freq_set = sorted(set(df['uncore-frequency (Hz)'].to_list()))
 
     mem_bw_dict = {}
     for k in uncore_freq_set:
-        mem_df = df.groupby('uncore-frequency (GHz)').get_group(k)
-        #TODO: use both packages!  This will skew in favor of package-0, which
-        #      is not optimal
-        mem_bw_dict[k] = mem_df['QM_CTR_SCALED_RATE@package-0'].mean()
+        mem_df = df.groupby('uncore-frequency (Hz)').get_group(k)
+        #TODO: use both packages!  This will skew in favor of package-0
+        mem_bw_dict[k] = mem_df['QM_CTR_SCALED_RATE'].mean()
 
-    #code.interact(local=locals())
     return mem_bw_dict
 
-def policy_perf_deg(df, tolerance, domain):
-    #if domain == "UNCORE":
-    #    freq_col = 'uncore-frequency (Hz)'
-    #elif domain == "CORE":
-    #    freq_col = 'frequency (Hz)'
-    #else:
-    #    sys.stderr.write('<geopm> Error: unsupported domain ' + domain + \
-    #                     'proovided\n')
-    #    sys.exit(1)
-
-    #if max_degradation is not None:
-    #    runtime_min = df['runtime (s)'].min()
-    #    runtime_max = df['runtime (s)'].max()
-    #    df['runtime-normalized (%)'] = df['runtime (s)'] / runtime_max
-    #    runtime_min_normalized = runtime_min / runtime_max
-
-    #    runtime_within_tolerance = [r for r in df['runtime-normalized (%)']
-    #                                if r < runtime_min_normalized + max_degradation]
-    #    perf_deg_frequency = float(df[df['runtime-normalized (%)'] ==
-    #                                        runtime_within_tolerance[0]][freq_col])
-
-    #    code.interact(local=locals())
-    #    recommended_frequency = perf_deg_frequency
-    pass
-
-def main(full_df, region_filter, tolerance, min_energy, max_degradation):
+def analyze_perf_deg(df, cross_region_degradation, freq_col_name):
     """
-    The main function. full_df is a report collection dataframe, region_filter
+    Find the frequency in the dataframe that does comes closest to the
+    specified performance degradation without exceeding it.  If no such
+    value is found return the frequency associated with minimum runtime
+    """
+
+    runtime_min = df['runtime (s)'].min()
+    runtime_max = df['runtime (s)'].max()
+    df['perf-deg (%)'] = (df['runtime (s)'] / runtime_min - 1)
+
+    perf_within_tolerance = [r for r in df['perf-deg (%)']
+                            if r < cross_region_degradation]
+    perf_deg_frequency = float(df[df['perf-deg (%)'] ==
+                                perf_within_tolerance[0]][freq_col_name].mean())
+
+    return perf_deg_frequency
+
+def frequency_recommendation(df_region_group, region, cross_region, min_energy_tolerance, cross_region_degradation, domain):
+    if domain == "UNCORE":
+        freq_col = 'uncore-frequency (Hz)'
+        fixed_freq_col = 'frequency (Hz)'
+    elif domain == "CORE":
+        freq_col = 'frequency (Hz)'
+        fixed_freq_col = 'uncore-frequency (Hz)'
+    else:
+        sys.stderr.write('<geopm> Error: unsupported domain ' + domain + \
+                         'proovided\n')
+        sys.exit(1)
+
+    df = df_region_group.get_group(region)
+    domain_freq_efficient, domain_freq_tolerant = analyze_efficient_energy(df, min_energy_tolerance, freq_col)
+
+    # Second do an analysis of the tolerant frequency impact on the
+    # cross region.
+    df = df_region_group.get_group(cross_region)
+
+    # Fix the frequency of the domain not being searched (core)
+    fixed_domain_freq = float(df[df['runtime (s)'] ==
+                        df['runtime (s)'].min()][fixed_freq_col])
+    df = df[df[fixed_freq_col] == fixed_domain_freq]
+
+    # Build a reduced dataframe of just the experiments that used the
+    # domain_freq_efficient and domain_freq_tolerant
+    tolerant_df = pandas.concat([df[df[freq_col] == domain_freq_efficient],
+                                df[df[freq_col] == domain_freq_tolerant]])
+
+    # Run analysis on reduced dataframe to determine if the domain_freq_tolerant or
+    # domain_freq_efficient is better for the cross region
+    cross_domain_freq_efficient, _ = analyze_efficient_energy(tolerant_df, 0, freq_col)
+
+    domain_freq_efficient = cross_domain_freq_efficient
+
+    # Second do a cross region degradation analysis if requested
+    if cross_region_degradation is not None and cross_region_degradation > 0.0:
+        # Find the performance impact of decreasing
+        # frequency below the efficient frequency for a region
+        # that is NOT as performance sensitive to that frequency
+        # domain.  Update efficient frequency based on this
+        # analysis vs the specified perf degradation
+
+        # Build a dataframe with the most performance option
+        # for perf deg comparison and all frequency options
+        # at or below the uncore efficient frequency.
+        # Then perform the performance degradation analysis
+        df = pandas.concat([df[df[freq_col] <= domain_freq_efficient],
+                        df[df['runtime (s)'] == df['runtime (s)'].min()]])
+
+        perf_deg_recommendation = analyze_perf_deg(df, cross_region_degradation, freq_col)
+
+        # Compare the energy efficiency of the cross region performance degradation
+        # to the previously found region uncore frequency efficient setting
+        df = pandas.concat([df[df[freq_col]==domain_freq_efficient],
+                            df[df[freq_col]==perf_deg_recommendation]])
+        cross_region_efficient, _ = analyze_efficient_energy(df, min_energy_tolerance, freq_col)
+
+        if perf_deg_recommendation < domain_freq_efficient and perf_deg_recommendation >= cross_region_efficient:
+            domain_freq_efficient = perf_deg_recommendation
+
+    return domain_freq_efficient
+
+def main(full_df, region_list, min_energy_tolerance, cross_region_degradation):
+    """
+    The main function. full_df is a report collection dataframe, region_list
     is a list of regions to include.
     """
-    df = extract_columns(full_df, region_filter)
+    df = extract_columns(full_df, region_list)
+    df['frequency (Hz)'] = (df['frequency (Hz)']/1e09).round(decimals=1)*1e09
+    df['uncore-frequency (Hz)'] = (df['uncore-frequency (Hz)']/1e09).round(decimals=1)*1e09
     df_region_group = df.groupby('region')
 
+    # Handle any frequency clipping via rounding to the nearest 100Mhz
+    # An alternative would be to use the FREQ_DEFAULT and FREQ_UNCORE
+    # values from the policy
+
     # Characterize MBM metrics
-    df = df_region_group.get_group('intensity_0')
-    mem_bw_characterization = system_memory_bandwidth_characterization(df)
+    mem_bw_characterization = system_memory_bandwidth_characterization(df_region_group)
 
-    # A two pass approoach is used, first analyze
-    # the most uncore sensitive region (intensity_0)
-    # to find the efficient uncore frequency
-    # (or a lower frequency if tolerance is not 0%)
-
-    uncore_freq_efficient = policy_efficient_energy(df, tolerance, "UNCORE")
-    uncore_freq_max = 2.4e9 #system max
-    #TODO find max intensity_32 perf deg within bounds, may replace tolerance calc
+    # A multi-step approach is used.
+    # First analyze the most uncore sensitive
+    # region (intensity_0)  to find the efficient
+    # uncore frequency (or a lower frequency if
+    # min_energy_tolerance is not 0%)
+    uncore_freq_recommendation = frequency_recommendation(df_region_group, region=region_list[0],
+                                                           cross_region=region_list[1], min_energy_tolerance=min_energy_tolerance,
+                                                           cross_region_degradation=cross_region_degradation,
+                                                           domain="UNCORE")
 
     # Then analyze the most core senstivite region (intensity_32)
     # to find the most efficient core frequency (or lower, depending
-    # on tolerance) when running at the uncore_freq_efficient determined
+    # on min_energy_tolerance) when running at the uncore_freq_efficient determined
     # above
-    df = df_region_group.get_group('intensity_32')
-    df = df.groupby('uncore-frequency (Hz)').get_group(uncore_freq_efficient)
-    #TODO find max intensity_0 perf deg within bounds, may replace tolerance calc
+    #df = df.groupby('uncore-frequency (Hz)').get_group(uncore_freq_recommendation)
+    df = df[df['uncore-frequency (Hz)'] == uncore_freq_recommendation]
+    df_region_group = df.groupby('region')
+    core_freq_recommendation = frequency_recommendation(df_region_group, region=region_list[1],
+                                                         cross_region=region_list[0], min_energy_tolerance=min_energy_tolerance,
+                                                         cross_region_degradation=cross_region_degradation,
+                                                         domain="CORE")
 
-    core_freq_efficient = policy_efficient_energy(df, tolerance, "CORE")
-    core_freq_max = 3.7e9 #system max
-
-    policy = {"CPU_FREQ_MAX" : core_freq_max,
-                "CPU_FREQ_EFFICIENT" : core_freq_efficient,
-                "UNCORE_FREQ_MAX" : uncore_freq_max,
-                "UNCORE_FREQ_EFFICIENT" : uncore_freq_efficient,
-                "CPU_PHI" : 0.5,
-                "SAMPLE_PERIOD" : 0.1}
+    policy = {"CPU_FREQ_MAX" : float('nan'),
+                "CPU_FREQ_EFFICIENT" : core_freq_recommendation,
+                "UNCORE_FREQ_MAX" : float('nan'),
+                "UNCORE_FREQ_EFFICIENT" : uncore_freq_recommendation,
+                "CPU_PHI" : float('nan'),
+                "SAMPLE_PERIOD" : float('nan')}
 
     for k,v in mem_bw_characterization.items():
         policy['MAX_MBM_UNCORE_FREQ_' + str(k)] = v
 
-    #code.interact(local=locals())
     return policy
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--path', required=True,
                         help='path containing reports and machine.json')
-    parser.add_argument('--max-degradation',
-                        default=None, type=float, dest='max_degradation',
+    parser.add_argument('--cross-region-degradation',
+                        default=0.00, type=float, dest='cross_region_degradation',
+                        help='maximum allowed runtime degradation in the cross region '
+                            'evaluation step.  NOTE: This is not the maximum possible '
+                            'degradation for the policy default is 0.00 (i.e., 0%)')
+    parser.add_argument('--min-energy-tolerance',
+                        default=0.05, type=float, dest='min_energy_tolerance',
                         help='maximum allowed runtime degradation, default is '
-                             '0.1 (i.e., 10%%)')
-    parser.add_argument('--min_energy', action='store_true', dest='min_energy', default=True,
-                        help='ignore max degradation, just give the minimum '
-                             'energy possible')
+                             '0.05 (i.e., 5%)')
+    parser.add_argument('--region-list', default="intensity_0,intensity_32", dest='region_list',
+                        help='comma-separated list of the two regions to use, '
+                             'default is intensity_0,intensity_32')
     args = parser.parse_args()
+
+    region_list = args.region_list.split(',')
+    if len(region_list) != 2:
+        sys.stderr.write('<geopm> Error: Exactly two regions are required'\
+                         'for this analysis.\n')
+        sys.exit(1)
+
+    if args.min_energy_tolerance < 0:
+        sys.stderr.write('<geopm> Error: min energy tolerance cannot be negative'\
+                         'for this analysis.\n')
+        sys.exit(1)
+
+    if args.cross_region_degradation < 0:
+        sys.stderr.write('<geopm> Error: cross region degradation cannot be negative'\
+                         'for this analysis.\n')
+        sys.exit(1)
 
     try:
         df = geopmpy.io.RawReportCollection('*report', dir_name=args.path).get_df()
-        #if args.region_filter == 'Epoch':
-        #    df = geopmpy.io.RawReportCollection('*report', dir_name=args.path).get_epoch_df()
-        #else:
-        #    df = geopmpy.io.RawReportCollection('*report', dir_name=args.path).get_df()
     except RuntimeError:
         sys.stderr.write('<geopm> Error: No report data found in ' + path + \
                          '; run a power sweep before using this analysis.\n')
         sys.exit(1)
 
-    tolerance = 0.05
-    region_filter = "intensity_0,intensity_32"
-    output = main(df, region_filter, tolerance, args.min_energy, args.max_degradation)
+    output = main(df, region_list, args.min_energy_tolerance, args.cross_region_degradation)
 
     sys.stdout.write("POLICY: {}\n".format(output))
-    #CPU_FREQ_MAX,CPU_FREQ_EFFICIENT,UNCORE_FREQ_MAX,UNCORE_FREQ_EFFICIENT,CPU_PHI,SAMPLE_PERIOD
-
-    #if args.confidence:
-    #    sys.stdout.write('AT TDP = {power:.0f}W, '
-    #                     'RUNTIME = {runtime:.0f} s +/- {runtimedev:.0f}, '
-    #                     'ENERGY = {energy:.0f} J +/- {energydev:.0f}\n'.format(**output['tdp']))
-    #    if output['best']:
-    #        sys.stdout.write('AT PL  = {power:.0f}W, '
-    #                         'RUNTIME = {runtime:.0f} s +/- {runtimedev:.0f}, '
-    #                         'ENERGY = {energy:.0f} J +/- {energydev:.0f}\n'.format(**output['best']))
-    #    else:
-    #        sys.stdout.write("NO SUITABLE POLICY WAS FOUND.\n")
-    #else:
-    #    sys.stdout.write('AT TDP = {power:.0f}W, '
-    #                     'RUNTIME = {runtime:.0f} s, '
-    #                     'ENERGY = {energy:.0f} J\n'.format(**output['tdp']))
-    #    sys.stdout.write('AT PL  = {power:.0f}W, '
-    #                     'RUNTIME = {runtime:.0f} s, '
-    #                     'ENERGY = {energy:.0f} J\n'.format(**output['best']))
-
-    #relative_delta = lambda new, old: 100 * (new - old) / old
-
-    #if output['best']:
-    #    sys.stdout.write('DELTA          RUNTIME = {:.1f} %,  ENERGY = {:.1f} %\n'
-    #                     .format(relative_delta(output['best']['runtime'], output['tdp']['runtime']),
-    #                             relative_delta(output['best']['energy'], output['tdp']['energy'])))
