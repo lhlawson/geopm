@@ -73,6 +73,13 @@ namespace geopm
         m_freq_uncore_min = m_platform_io.read_signal("MSR::UNCORE_RATIO_LIMIT:MIN_RATIO", GEOPM_DOMAIN_BOARD, 0);
         m_freq_uncore_max = m_platform_io.read_signal("MSR::UNCORE_RATIO_LIMIT:MAX_RATIO", GEOPM_DOMAIN_BOARD, 0);
 
+        try {
+            m_hwp_enabled = (bool) m_platform_io.read_signal("MSR::PM_ENABLE:HWP_ENABLE", GEOPM_DOMAIN_BOARD, 0);
+        }
+        catch {
+            m_hwp_enabled = false;
+        }
+
         init_platform_io();
     }
 
