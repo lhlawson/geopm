@@ -39,6 +39,7 @@ namespace geopm
         , M_NUM_CORE(m_platform_topo.num_domain(GEOPM_DOMAIN_CORE))
         , m_do_per_core(true)
         , m_do_write_batch(false)
+        , m_hwp_enabled(false)
         //TODO: change to a policy as this is not guaranteed across SKUs
         //      and families
         , m_qm_max_rate({
@@ -76,8 +77,10 @@ namespace geopm
         try {
             m_hwp_enabled = (bool) m_platform_io.read_signal("MSR::PM_ENABLE:HWP_ENABLE", GEOPM_DOMAIN_BOARD, 0);
         }
-        catch {
-            m_hwp_enabled = false;
+        catch (const geopm::Exception &ex) {
+            if (ex.err_value() != GEOPM_ERROR_MSR_READ) {
+                throw;
+            }
         }
 
         init_platform_io();
