@@ -49,6 +49,7 @@ from ray.tune.schedulers import ASHAScheduler
 from functools import partial
 
 EPOCH_SIZE = 5
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def main():
     parser = argparse.ArgumentParser(
@@ -79,7 +80,6 @@ def main():
                         help='Specify scheduler metric.')
     args = parser.parse_args()
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print("Using {} device for training".format(device))
 
     df_traces = pd.read_hdf(args.input)
@@ -203,9 +203,13 @@ def main():
                                 'seq_length', 'layer_width',
                                 'layer_count', 'lr'])
 
+        num_gpu_per_sample = 0
+        if torch.cuda.is_available():
+            num_gpu_per_sample = 0.2
+
         result = tune.run(
             tune.with_parameters(training_loop, traces=df_traces, output_control=y_columns),
-            #resources_per_trial={"cpu":, "gpu":}, #TODO: specifying CPU availability as a command line option
+            resources_per_trial={"gpu":num_gpu_per_sample}, #TODO: specifying CPU availability as a command line option
             config = config,
             num_samples=args.train_hp_samples,
             scheduler = scheduler,
@@ -281,6 +285,8 @@ def main():
 
         x_test = torch.tensor(df_x_test.to_numpy()).float()
         y_test = torch.tensor(df_y_test.to_numpy()).float()
+        x_test = x_test.to(device)
+        y_test = y_test.to(device)
 
         test_set = torch.utils.data.TensorDataset(x_test, y_test)
         test_loader = torch.utils.data.DataLoader(dataset = test_set, batch_size = batch_size , shuffle = False)
@@ -346,7 +352,6 @@ def training_loop(config, traces, output_control):
     else:
         print('Error: Invalid net type specified: {}'.format(net_type))
         sys.exit(1)
-    model.to(device)
 
     criterion=config['criterion']
 
@@ -369,6 +374,7 @@ def training_loop(config, traces, output_control):
         tune.report(loss=val_loss, accuracy=val_accuracy)
 
 def train(model, optimizer, criterion, train_loader, seq_length=None):
+    model.to(device)
     flag = False
     for idx, (inputs, target_control) in enumerate(train_loader):
         # Check if mini batches are required (i.e. RNN, LSTM)
@@ -420,6 +426,7 @@ def mini_batch(input_batch, target_batch, input_size, seq_length):
     return inputs, target
 
 def evaluate(model, test_loader, criterion, seq_length=None, rounding=None):
+    model.to(device)
     prediction_total = 0
     prediction_correct = 0
     prediction_min = 0
@@ -440,12 +447,12 @@ def evaluate(model, test_loader, criterion, seq_length=None, rounding=None):
 
             if rounding is not None:
                 # Round to number of decimals specified
-                predicted_control = np.round(predicted_control, rounding)
+                predicted_control = np.round(predicted_control.cpu(), rounding)
 
             # Generate stats
             prediction_correct += (target_control == predicted_control).sum().item()
             loss = criterion(predicted_control, target_control)
-            val_loss += loss.numpy()
+            val_loss += loss.cpu().numpy()
             val_steps += 1;
 
             # Stats for test case
