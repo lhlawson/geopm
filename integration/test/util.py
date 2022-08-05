@@ -104,6 +104,14 @@ def skip_unless_levelzero_power():
 def skip_unless_levelzero():
     return skip_unless_config_enable('levelzero');
 
+def skip_unless_gpu():
+    #try/catch read signal for gpu power
+    try:
+        power = geopm_test_launcher.geopmread("GPU_ENERGY gpu 0")
+    except subprocess.CalledProcessError:
+        return unittest.skip("Read of GPU_ENERGY not supported, skipping test.")
+    return lambda func: func
+
 def skip_unless_platform_bdx():
     fam, mod = geopm_test_launcher.get_platform()
     if fam != 6 or mod not in (45, 47, 79):
