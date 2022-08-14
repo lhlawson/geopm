@@ -46,7 +46,8 @@ if ENABLE_BETA
                        # end
 endif
 
-pkginclude_HEADERS = src/Agent.hpp \
+pkginclude_HEADERS = src/ActivityPerformanceModel.hpp \
+                     src/Agent.hpp \
                      src/FrequencyGovernor.hpp \
                      src/PlatformIOProf.hpp \
                      src/PowerBalancer.hpp \
@@ -347,6 +348,9 @@ endif
 
 libgeopmpolicy_la_SOURCES = src/Accumulator.cpp \
                             src/Accumulator.hpp \
+                            src/ActivityPerformanceModel.cpp \
+                            src/ActivityPerformanceModel.hpp \
+                            src/ActivityPerformanceModelImp.hpp \
                             src/Admin.cpp \
                             src/Admin.hpp \
                             src/Agent.cpp \
@@ -395,6 +399,8 @@ libgeopmpolicy_la_SOURCES = src/Accumulator.cpp \
                             src/FrequencyGovernorImp.hpp \
                             src/FrequencyMapAgent.cpp \
                             src/FrequencyMapAgent.hpp \
+                            src/NodeActivityAgent.cpp \
+                            src/NodeActivityAgent.hpp \
                             src/Imbalancer.cpp \
                             src/ModelParse.cpp \
                             src/ModelParse.hpp \
