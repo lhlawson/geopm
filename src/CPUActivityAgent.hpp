@@ -69,6 +69,12 @@ namespace geopm
             double m_freq_uncore_max;
             double m_freq_core_min;
             double m_freq_core_max;
+            double m_resolved_f_core_low_samples;
+            double m_resolved_f_core_mid_samples;
+            double m_resolved_f_core_high_samples;
+            double m_resolved_f_uncore_low_samples;
+            double m_resolved_f_uncore_mid_samples;
+            double m_resolved_f_uncore_high_samples;
 
             struct signal
             {
@@ -108,11 +114,27 @@ namespace geopm
 
             std::vector<signal> m_core_scal;
             std::vector<control> m_core_freq_control;
+            std::vector<signal> m_region_hash;
 
             std::vector<signal> m_qm_rate;
             std::vector<signal> m_uncore_freq_status;
             std::vector<control> m_uncore_freq_min_control;
             std::vector<control> m_uncore_freq_max_control;
+
+            struct m_region_info_s {
+                uint64_t hash;
+            };
+
+            std::vector<struct m_region_info_s> m_last_region_info;
+            struct m_region_metric_s {
+                double region_scalability_core;
+                double region_scalability_uncore;
+                std::vector<double> region_scalability_core_vec;
+                std::vector<double> region_scalability_uncore_vec;
+                double region_samples;
+            };
+            std::vector<std::map<uint64_t, struct m_region_metric_s> > m_region_map;
+
 
             void init_platform_io(void);
     };

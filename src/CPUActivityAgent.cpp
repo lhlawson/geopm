@@ -18,6 +18,7 @@
 #include "geopm/PlatformTopo.hpp"
 #include "geopm/PluginFactory.hpp"
 #include "geopm_debug.hpp"
+#include "geopm_hash.h"
 
 #include "PlatformIOProf.hpp"
 
@@ -47,6 +48,12 @@ namespace geopm
         , m_resolved_f_uncore_max(0)
         , m_resolved_f_core_efficient(0)
         , m_resolved_f_core_max(0)
+        , m_resolved_f_core_low_samples(0)
+        , m_resolved_f_core_mid_samples(0)
+        , m_resolved_f_core_high_samples(0)
+        , m_resolved_f_uncore_low_samples(0)
+        , m_resolved_f_uncore_mid_samples(0)
+        , m_resolved_f_uncore_high_samples(0)
     {
         geopm_time(&m_last_wait);
     }
@@ -75,6 +82,15 @@ namespace geopm
             m_core_freq_control.push_back({m_platform_io.push_control("CPU_FREQUENCY_MAX_CONTROL",
                                                                       GEOPM_DOMAIN_CORE,
                                                                       domain_idx), NAN});
+
+            m_region_hash.push_back({m_platform_io.push_signal("REGION_HASH",
+                                                               GEOPM_DOMAIN_CORE,
+                                                               domain_idx), NAN});
+            const struct m_region_info_s DEFAULT_REGION { .hash = GEOPM_REGION_HASH_UNMARKED };
+
+            m_last_region_info = std::vector<struct m_region_info_s>(M_NUM_CORE, DEFAULT_REGION);
+            m_region_map.push_back({});
+
         }
 
         for (int domain_idx = 0; domain_idx < M_NUM_PACKAGE; ++domain_idx) {
@@ -92,6 +108,7 @@ namespace geopm
             m_uncore_freq_max_control.push_back({m_platform_io.push_control("CPU_UNCORE_FREQUENCY_MAX_CONTROL",
                                               GEOPM_DOMAIN_PACKAGE,
                                               domain_idx), -1});
+
         }
 
         // Configuration of QM_CTR must match QM_CTR config used for tuning/training data.
@@ -284,6 +301,14 @@ namespace geopm
         return false;
     }
 
+    static double quantile(std::vector<double> &samples, double q)
+    {
+        const size_t idx = q * samples.size();
+        std::nth_element(samples.begin(),
+        samples.begin() + idx, samples.end());
+        return samples[idx];
+    }
+
     void CPUActivityAgent::adjust_platform(const std::vector<double>& in_policy)
     {
         m_do_send_policy = false;
@@ -312,10 +337,71 @@ namespace geopm
             }
         }
 
-        // Per package freq
-        std::vector<double> uncore_freq_request;
         m_resolved_f_uncore_efficient = in_policy[M_POLICY_UNCORE_FREQ_EFFICIENT];
         m_resolved_f_uncore_max = in_policy[M_POLICY_UNCORE_FREQ_MAX];
+
+        m_resolved_f_core_efficient = in_policy[M_POLICY_CPU_FREQ_EFFICIENT];
+        m_resolved_f_core_max = in_policy[M_POLICY_CPU_FREQ_MAX];
+
+        // REGION AWARE
+        for (int domain_idx = 0; domain_idx < M_NUM_CORE; ++domain_idx) {
+            struct m_region_info_s current_region_info {
+                .hash = (uint64_t) m_region_hash.at(domain_idx).value };
+            if (m_last_region_info.at(domain_idx).hash != current_region_info.hash) {
+                auto current_region_it = m_region_map.at(domain_idx).find(current_region_info.hash);
+                if (current_region_it != m_region_map.at(domain_idx).end()) {
+                    //If we've ever seen it before, then choose the Fe curve
+                    double region_samples = m_region_map.at(domain_idx)[current_region_info.hash].region_samples;
+
+                    //TODO: use quantile
+                    double region_core_scalability = m_region_map.at(domain_idx)[current_region_info.hash].region_scalability_core / region_samples;
+                    double region_uncore_scalability = m_region_map.at(domain_idx)[current_region_info.hash].region_scalability_uncore / region_samples;
+
+                    //double core_samples = m_region_map.at(domain_idx)[current_region_info.hash].region_scalability_core_vec;
+                    //double uncore_samples = m_region_map.at(domain_idx)[current_region_info.hash].region_scalability_uncore_vec;
+                    //auto qtile = quantile(core_samples, 0.75);
+
+                    if(region_core_scalability < 0.2) {
+                        m_resolved_f_core_efficient = 1.2e9;
+                        m_resolved_f_core_low_samples++;
+                    }
+                    else if (region_core_scalability < 0.6) {
+                        m_resolved_f_core_efficient = 1.6e9;
+                        m_resolved_f_core_mid_samples++;
+                    }
+                    else {
+                        m_resolved_f_core_efficient = in_policy[M_POLICY_CPU_FREQ_EFFICIENT];
+                        m_resolved_f_core_high_samples++;
+                    }
+
+                    if(region_uncore_scalability < 0.2) {
+                        m_resolved_f_uncore_efficient = 1.2e9;
+                        m_resolved_f_uncore_low_samples++;
+                    }
+                    else if (region_uncore_scalability < 0.6) {
+                        m_resolved_f_uncore_efficient = 1.6e9;
+                        m_resolved_f_uncore_mid_samples++;
+                    }
+                    else {
+                        m_resolved_f_uncore_efficient = in_policy[M_POLICY_UNCORE_FREQ_EFFICIENT];
+                        m_resolved_f_uncore_high_samples++;
+                    }
+                }
+                else {
+                    m_resolved_f_uncore_efficient = in_policy[M_POLICY_UNCORE_FREQ_EFFICIENT];
+                    m_resolved_f_uncore_high_samples++;
+
+                    m_resolved_f_core_efficient = in_policy[M_POLICY_CPU_FREQ_EFFICIENT];
+                    m_resolved_f_core_high_samples++;
+                }
+            }
+        }
+
+        std::vector<double> scalability_uncore_vec;
+        std::vector<double> scalability_core_vec;
+
+        // Per package freq
+        std::vector<double> uncore_freq_request;
         double f_uncore_range = in_policy[M_POLICY_UNCORE_FREQ_MAX] - in_policy[M_POLICY_UNCORE_FREQ_EFFICIENT];
 
         for (int domain_idx = 0; domain_idx < M_NUM_PACKAGE; ++domain_idx) {
@@ -344,6 +430,8 @@ namespace geopm
                                          qm_max_itr->second;
             }
 
+            scalability_uncore_vec.push_back(scalability_uncore);
+
             // L3 usage, Network Traffic, HBM, and PCIE (GPUs) all use the uncore.
             // Eventually all these components should be considered when scaling
             // the uncore frequency in the efficient - performant range.
@@ -363,8 +451,6 @@ namespace geopm
 
         // Per core freq
         std::vector<double> core_freq_request;
-        m_resolved_f_core_efficient = in_policy[M_POLICY_CPU_FREQ_EFFICIENT];
-        m_resolved_f_core_max = in_policy[M_POLICY_CPU_FREQ_MAX];
         double f_core_range = in_policy[M_POLICY_CPU_FREQ_MAX] - in_policy[M_POLICY_CPU_FREQ_EFFICIENT];
 
         for (int domain_idx = 0; domain_idx < M_NUM_CORE; ++domain_idx) {
@@ -376,6 +462,8 @@ namespace geopm
                 scalability = 1.0;
             }
 
+            scalability_core_vec.push_back(scalability);
+
             double core_req = m_resolved_f_core_efficient + f_core_range * scalability;
 
             // Clip core request within policy limits
@@ -386,6 +474,36 @@ namespace geopm
             core_req = std::max(in_policy[M_POLICY_CPU_FREQ_EFFICIENT], core_req);
             core_req = std::min(in_policy[M_POLICY_CPU_FREQ_MAX], core_req);
             core_freq_request.push_back(core_req);
+        }
+
+        // REGION AWARE
+        for (int domain_idx = 0; domain_idx < M_NUM_CORE; ++domain_idx) {
+            int package_idx = domain_idx < (M_NUM_CORE / 2) ? 0 : 1;
+
+            struct m_region_info_s current_region_info {
+                .hash = (uint64_t) m_region_hash.at(domain_idx).value };
+            if (m_last_region_info.at(domain_idx).hash != current_region_info.hash) {
+                auto current_region_it = m_region_map.at(domain_idx).find(current_region_info.hash);
+                if (current_region_it == m_region_map.at(domain_idx).end()) {
+                    //If it's the first time we've seen it, initialize
+                    m_region_map.at(domain_idx)[current_region_info.hash] = {scalability_core_vec.at(domain_idx),
+                                                                             scalability_uncore_vec.at(package_idx),
+                                                                             {}, {}, 1};
+                }
+                m_last_region_info.at(domain_idx) = current_region_info;
+            }
+            else {
+                //Update existing region values
+                m_region_map.at(domain_idx)[current_region_info.hash].region_scalability_core +=
+                             scalability_core_vec.at(domain_idx);
+                m_region_map.at(domain_idx)[current_region_info.hash].region_scalability_core_vec.push_back(scalability_core_vec.at(domain_idx));
+
+                m_region_map.at(domain_idx)[current_region_info.hash].region_scalability_uncore +=
+                             scalability_uncore_vec.at(package_idx);
+                m_region_map.at(domain_idx)[current_region_info.hash].region_scalability_uncore_vec.push_back(scalability_uncore_vec.at(package_idx));
+
+                m_region_map.at(domain_idx)[current_region_info.hash].region_samples++;
+            }
         }
 
         // Set per core controls
@@ -460,7 +578,10 @@ namespace geopm
         for (int domain_idx = 0; domain_idx < M_NUM_CORE; ++domain_idx) {
             // Core steering signals
             m_core_scal.at(domain_idx).value = m_platform_io.sample(m_core_scal.at(domain_idx).batch_idx);
+
+            m_region_hash.at(domain_idx).value = m_platform_io.sample(m_region_hash.at(domain_idx).batch_idx);
         }
+
     }
 
     // Wait for the remaining cycle time to keep Controller loop cadence
@@ -495,6 +616,12 @@ namespace geopm
         result.push_back({"Resolved Maximum Uncore Frequency", std::to_string(m_resolved_f_uncore_max)});
         result.push_back({"Resolved Efficient Uncore Frequency", std::to_string(m_resolved_f_uncore_efficient)});
         result.push_back({"Resolved Uncore Frequency Range", std::to_string(m_resolved_f_uncore_max - m_resolved_f_uncore_efficient)});
+        result.push_back({"Resolved Uncore Frequency Low Samples", std::to_string(m_resolved_f_uncore_low_samples)});
+        result.push_back({"Resolved Uncore Frequency Mid Samples", std::to_string(m_resolved_f_uncore_mid_samples)});
+        result.push_back({"Resolved Uncore Frequency High Samples", std::to_string(m_resolved_f_uncore_high_samples)});
+        result.push_back({"Resolved Core Frequency Low Samples", std::to_string(m_resolved_f_core_low_samples)});
+        result.push_back({"Resolved Core Frequency Mid Samples", std::to_string(m_resolved_f_core_mid_samples)});
+        result.push_back({"Resolved Core Frequency High Samples", std::to_string(m_resolved_f_core_high_samples)});
         return result;
     }
 
