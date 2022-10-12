@@ -10,6 +10,7 @@
 
 #include "geopm_time.h"
 #include "Agent.hpp"
+#include "geopm/CircularBuffer.hpp"
 
 namespace geopm
 {
@@ -69,6 +70,12 @@ namespace geopm
             double m_freq_uncore_max;
             double m_freq_core_min;
             double m_freq_core_max;
+            double m_resolved_f_uncore_low;
+            double m_resolved_f_uncore_mid;
+            double m_resolved_f_uncore_high;
+            double m_resolved_f_core_low;
+            double m_resolved_f_core_mid;
+            double m_resolved_f_core_high;
 
             struct signal
             {
@@ -113,6 +120,9 @@ namespace geopm
             std::vector<signal> m_uncore_freq_status;
             std::vector<control> m_uncore_freq_min_control;
             std::vector<control> m_uncore_freq_max_control;
+
+            std::vector<std::unique_ptr<CircularBuffer<double> > > m_core_scalability;
+            std::vector<std::unique_ptr<CircularBuffer<double> > > m_uncore_scalability;
 
             void init_platform_io(void);
     };

@@ -47,6 +47,12 @@ namespace geopm
         , m_resolved_f_uncore_max(0)
         , m_resolved_f_core_efficient(0)
         , m_resolved_f_core_max(0)
+        , m_resolved_f_uncore_low(0)
+        , m_resolved_f_uncore_mid(0)
+        , m_resolved_f_uncore_high(0)
+        , m_resolved_f_core_low(0)
+        , m_resolved_f_core_mid(0)
+        , m_resolved_f_core_high(0)
     {
         geopm_time(&m_last_wait);
     }
@@ -284,6 +290,14 @@ namespace geopm
         return false;
     }
 
+    static double quantile(std::vector<double> &samples, double q)
+    {
+        const size_t idx = q * samples.size();
+        std::nth_element(samples.begin(),
+        samples.begin() + idx, samples.end());
+        return samples[idx];
+    }
+
     void CPUActivityAgent::adjust_platform(const std::vector<double>& in_policy)
     {
         m_do_send_policy = false;
@@ -344,6 +358,23 @@ namespace geopm
                                          qm_max_itr->second;
             }
 
+            m_uncore_scalability[domain_idx]->insert(scalability_uncore);
+            auto uncore_samples = m_uncore_scalability[domain_idx]->make_vector();
+            auto qtile = quantile(uncore_samples, 0.75);
+
+            if (qtile < 0.2) {
+                m_resolved_f_uncore_efficient = 1.2e9;
+                m_resolved_f_uncore_low++;
+            }
+            else if (qtile < 0.6) {
+                m_resolved_f_uncore_efficient = 1.6e9;
+                m_resolved_f_uncore_mid++;
+            }
+            else {
+                m_resolved_f_uncore_efficient = in_policy[M_POLICY_UNCORE_FREQ_EFFICIENT];
+                m_resolved_f_uncore_high++;
+            }
+
             // L3 usage, Network Traffic, HBM, and PCIE (GPUs) all use the uncore.
             // Eventually all these components should be considered when scaling
             // the uncore frequency in the efficient - performant range.
@@ -374,6 +405,23 @@ namespace geopm
             double scalability = (double) m_core_scal.at(domain_idx).value;
             if (std::isnan(scalability)) {
                 scalability = 1.0;
+            }
+
+            m_core_scalability[domain_idx]->insert(scalability);
+            auto core_samples = m_core_scalability[domain_idx]->make_vector();
+            auto qtile = quantile(core_samples, 0.75);
+
+            if (qtile < 0.2) {
+                m_resolved_f_core_efficient = 1.2e9;
+                m_resolved_f_core_low++;
+            }
+            else if (qtile < 0.6) {
+                m_resolved_f_core_efficient = 1.6e9;
+                m_resolved_f_core_mid++;
+            }
+            else {
+                m_resolved_f_core_efficient = in_policy[M_POLICY_CPU_FREQ_EFFICIENT];
+                m_resolved_f_core_high++;
             }
 
             double core_req = m_resolved_f_core_efficient + f_core_range * scalability;
