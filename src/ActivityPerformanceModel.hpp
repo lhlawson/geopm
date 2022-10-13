@@ -1,0 +1,49 @@
+/*
+ * Copyright (c) 2015 - 2022, Intel Corporation
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
+#ifndef ACTIVITYPERFORMANCEMODEL_HPP_INCLUDE
+#define ACTIVITYPERFORMANCEMODEL_HPP_INCLUDE
+
+#include <memory>
+
+namespace geopm
+{
+    class PlatformTopo;
+    class PlatformIO;
+
+    class ActivityPerformanceModel
+    {
+        public:
+            ActivityPerformanceModel() = default;
+            virtual ~ActivityPerformanceModel() = default;
+            /// @brief Query the system for signals & controls at the domains
+            /// required for the algorithm
+            virtual void init(void) = 0;
+
+            /// @brief Informs user if algorithm is valid/functioning (i.e. if all signals needed are present)
+            /// @return Boolean indicating if the algorithm is functioning as expected
+            virtual bool algorithm_valid() = 0;
+
+            /// @brief Provides calling classes a map of controls algorithm will
+            ///        provide settings for and the GEOPM control domain
+            virtual std::map<std::string, int> controls_recommended() = 0;
+
+            /// @brief Queries all signals of interest and updates the recommendations for controls
+            /// @returns map of control idx and recommended values
+            virtual void update_recommendation(double phi) = 0;
+
+            /// @brief Provides recommendations for control provided
+            /// @returns recommended value for specified control
+            virtual std::vector<double> sample_recommendation(std::string control_name) const = 0;
+
+            //virtual void update_uncore_bandwidth_map(std::map<double, double> uncore_max_mem_bw) = 0;
+            //virtual double get_uncore_activity(double uncore_freq,
+            //                                   double uncore_bandwidth) const = 0;
+    };
+
+    ActivityPerformanceModel &activity_perf_model();
+}
+
+#endif

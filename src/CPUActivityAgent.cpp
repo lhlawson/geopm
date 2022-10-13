@@ -20,6 +20,7 @@
 #include "geopm/PlatformTopo.hpp"
 #include "geopm/PluginFactory.hpp"
 #include "geopm_debug.hpp"
+#include "ActivityPerformanceModel.hpp"
 
 #include "PlatformIOProf.hpp"
 
@@ -28,12 +29,15 @@ namespace geopm
     CPUActivityAgent::CPUActivityAgent()
         : CPUActivityAgent(platform_io(), platform_topo())
     {
-
+        //auto pm = activity_perf_model();
+        //pm.init();
     }
 
-    CPUActivityAgent::CPUActivityAgent(PlatformIO &plat_io, const PlatformTopo &topo)
+    CPUActivityAgent::CPUActivityAgent(PlatformIO &plat_io, const PlatformTopo &topo
+                                       )
         : m_platform_io(plat_io)
         , m_platform_topo(topo)
+//        , m_activity_perf_model(activity_perf_model)
         , m_last_wait{{0, 0}}
         , M_WAIT_SEC(0.010) // 10ms wait default
         , M_POLICY_PHI_DEFAULT(0.5)
@@ -65,6 +69,7 @@ namespace geopm
 
         if (level == 0) {
             init_platform_io();
+//            m_activity_perf_model.init();
         }
     }
 
