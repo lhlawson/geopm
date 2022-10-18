@@ -37,12 +37,15 @@ namespace geopm
             const int M_NUM_GPU;
             double m_freq_uncore_min;
             double m_freq_uncore_max;
+            double m_freq_uncore_efficient;
             double m_freq_core_min;
             double m_freq_core_max;
+            double m_freq_core_efficient;
             double m_freq_core_sticker;
             double m_freq_core_step;
             double m_freq_gpu_min;
             double m_freq_gpu_max;
+            double m_freq_gpu_efficient;
 
             struct signal
             {
@@ -59,8 +62,11 @@ namespace geopm
             std::map< std::string, std::vector<double> > m_recommendation;
             std::map<std::string, int> m_supported_controls;
 
-            void init_platform_io(void);
+            void init_platform_core_io(void);
+            void init_platform_uncore_io(void);
+            void init_platform_gpu_io(void);
             double frequency_fit(double f_e, double f_max, double scalability, double phi);
+            double update_recommendation_core(double phi);
             //std::map<double, double> m_max_mem_bw;
     };
 }

@@ -299,7 +299,15 @@ GTEST_TESTS = test/gtest_links/AccumulatorTest.empty \
               # end
 
 if ENABLE_BETA
-    GTEST_TESTS += test/gtest_links/CPUActivityAgentTest.name \
+    GTEST_TESTS += test/gtest_links/ActivityPerformanceModelTest.valid \
+                   test/gtest_links/ActivityPerformanceModelTest.control_recommendation \
+                   test/gtest_links/ActivityPerformanceModelTest.update_and_sample_recommendation \
+                   test/gtest_links/ActivityPerformanceModelTest.update_and_sample_core_recommendation \
+                   test/gtest_links/ActivityPerformanceModelTest.update_and_sample_uncore_recommendation \
+                   test/gtest_links/ActivityPerformanceModelTest.update_and_sample_gpu_recommendation \
+                   test/gtest_links/ActivityPerformanceModelTest.update_and_sample_phi_low \
+                   test/gtest_links/ActivityPerformanceModelTest.update_and_sample_phi_high \
+                   test/gtest_links/CPUActivityAgentTest.name \
                    test/gtest_links/CPUActivityAgentTest.validate_policy \
                    test/gtest_links/CPUActivityAgentTest.adjust_platform_high \
                    test/gtest_links/CPUActivityAgentTest.adjust_platform_medium \
@@ -431,7 +439,8 @@ test_geopm_test_SOURCES = test/AccumulatorTest.cpp \
                           test/geopm_test.hpp \
                           # end
 
-beta_test_sources = test/CPUActivityAgentTest.cpp \
+beta_test_sources = test/ActivityPerformanceModelTest.cpp \
+                    test/CPUActivityAgentTest.cpp \
                     test/DaemonTest.cpp \
                     test/MockPolicyStore.hpp \
                     test/PolicyStoreImpTest.cpp \

@@ -37,20 +37,23 @@ namespace geopm
         , M_NUM_CORE(m_platform_topo.num_domain(GEOPM_DOMAIN_CORE))
         , M_NUM_GPU(m_platform_topo.num_domain(GEOPM_DOMAIN_GPU))
     {
-        init();
     }
 
     ActivityPerformanceModelImp::~ActivityPerformanceModelImp()
     {
-
     }
 
     void ActivityPerformanceModelImp::init(void)
     {
-        init_platform_io();
+        m_supported_controls = {};
+        m_recommendation = {};
+
+        init_platform_core_io();
+        init_platform_uncore_io();
+        init_platform_gpu_io();
     }
 
-    void ActivityPerformanceModelImp::init_platform_io(void) {
+    void ActivityPerformanceModelImp::init_platform_core_io(void) {
         // push back signals of interest
         auto all_names = m_platform_io.signal_names();
 
@@ -65,6 +68,27 @@ namespace geopm
             m_freq_core_sticker = m_platform_io.read_signal("CPU_FREQUENCY_STICKER", GEOPM_DOMAIN_BOARD, 0);
             m_freq_core_step = m_platform_io.read_signal("CPU_FREQUENCY_STEP", GEOPM_DOMAIN_BOARD, 0);
 
+            // Gather Fe value
+            //use constconfig efficient freq or sticker
+            m_freq_core_efficient = NAN;
+            std::string constconfig_fe_core = "CONSTCONFIG::CPU_CORE_FREQUENCY_EFFICIENT";
+            if (all_names.count(constconfig_fe_core) != 0) {
+                m_freq_core_efficient = m_platform_io.read_signal(constconfig_fe_core,
+                                                                  GEOPM_DOMAIN_BOARD, 0);
+            }
+
+            if (std::isnan(m_freq_core_efficient)) {
+                if (! std::isnan(m_freq_core_sticker) &&
+                    ! std::isnan(m_freq_core_step)) {
+                    // Sticker - 2 steps is generally energy efficient
+                    m_freq_core_efficient = m_freq_core_sticker - m_freq_core_step * 2;
+                }
+                else {
+                    // Use min
+                    m_freq_core_efficient = m_freq_core_min;
+                }
+            }
+
             // Core Scalability
             std::string core_scalability_signal = "MSR::CPU_SCALABILITY_RATIO";
             if (all_names.count(core_scalability_signal) != 0) {
@@ -77,14 +101,31 @@ namespace geopm
                 // If all the above checks have been met we support these controls
                 m_supported_controls["CPU_FREQUENCY_MAX_CONTROL"] = GEOPM_DOMAIN_CORE;
             }
-
         }
+    }
+
+    void ActivityPerformanceModelImp::init_platform_uncore_io(void) {
+        auto all_names = m_platform_io.signal_names();
 
         // Setup Uncore Algorithm Signals
         if (all_names.count("CPU_UNCORE_FREQUENCY_MIN_CONTROL") != 0 &&
             all_names.count("CPU_UNCORE_FREQUENCY_MAX_CONTROL") != 0) {
             m_freq_uncore_min = m_platform_io.read_signal("CPU_UNCORE_FREQUENCY_MIN_CONTROL", GEOPM_DOMAIN_BOARD, 0);
             m_freq_uncore_max = m_platform_io.read_signal("CPU_UNCORE_FREQUENCY_MAX_CONTROL", GEOPM_DOMAIN_BOARD, 0);
+
+            //TODO: Use ConstConfigIO to set defaults for Fe, Fmax, QM Max Rate, etc
+            std::string constconfig_fe_uncore = "CONSTCONFIG::CPU_UNCORE_FREQUENCY_EFFICIENT";
+            m_freq_uncore_efficient = NAN;
+
+            if (all_names.count(constconfig_fe_uncore) != 0) {
+                m_freq_uncore_efficient = m_platform_io.read_signal(constconfig_fe_uncore,
+                                                                    GEOPM_DOMAIN_BOARD, 0);
+            }
+
+            if (std::isnan(m_freq_uncore_efficient)) {
+                // If not available as a signal estimate it
+                m_freq_uncore_efficient = (m_freq_uncore_min + m_freq_uncore_max) / 2;
+            }
 
             // Uncore Scalability
             std::string uncore_scalability_signal = "MSR::QM_CTR_SCALED_RATE";
@@ -105,12 +146,43 @@ namespace geopm
                 m_supported_controls["CPU_UNCORE_FREQUENCY_MIN_CONTROL"] = GEOPM_DOMAIN_PACKAGE;
                 m_supported_controls["CPU_UNCORE_FREQUENCY_MAX_CONTROL"] = GEOPM_DOMAIN_PACKAGE;
             }
+
+            // Configuration of QM_CTR must match QM_CTR config used for tuning/training data.
+            // Assign all cores to resource monitoring association ID 0.  This allows for
+            // monitoring the resource usage of all cores.
+            m_platform_io.write_control("MSR::PQR_ASSOC:RMID", GEOPM_DOMAIN_BOARD, 0, 0);
+            // Assign the resource monitoring ID for QM Events to match the per core resource
+            // association ID above (0)
+            m_platform_io.write_control("MSR::QM_EVTSEL:RMID", GEOPM_DOMAIN_BOARD, 0, 0);
+            // Select monitoring event ID 0x2 - Total Memory Bandwidth Monitoring.  This
+            // is used to determine the Xeon Uncore utilization.
+            m_platform_io.write_control("MSR::QM_EVTSEL:EVENT_ID", GEOPM_DOMAIN_BOARD, 0, 2);
         }
+    }
+
+    void ActivityPerformanceModelImp::init_platform_gpu_io(void) {
+        auto all_names = m_platform_io.signal_names();
 
         if (all_names.count("GPU_FREQUENCY_MIN_AVAIL") != 0 &&
             all_names.count("GPU_FREQUENCY_MAX_AVAIL") != 0) {
             m_freq_gpu_min = m_platform_io.read_signal("GPU_FREQUENCY_MIN_AVAIL", GEOPM_DOMAIN_BOARD, 0);
             m_freq_gpu_max = m_platform_io.read_signal("GPU_FREQUENCY_MAX_AVAIL", GEOPM_DOMAIN_BOARD, 0);
+
+            // Gather Fe value
+            // TODO: use constconfig efficient freq or sticker
+            m_freq_gpu_efficient = NAN;
+            std::string constconfig_fe_gpu = "CONSTCONFIG::GPU_CORE_FREQUENCY_EFFICIENT";
+
+            if (std::isnan(m_freq_gpu_efficient)) {
+                // TODO: check for F_e signal from level zero
+                if (all_names.count("LEVELZERO::GPU_FREQUENCY_EFFICIENT") != 0) {
+                    m_freq_gpu_efficient = m_platform_io.read_signal("LEVELZERO::GPU_FREQUENCY_EFFICIENT", GEOPM_DOMAIN_BOARD, 0);
+                }
+                else {
+                    // If not available as a signal estimate it
+                    m_freq_gpu_efficient = (m_freq_gpu_min + m_freq_gpu_max) / 2;
+                }
+            }
 
             // GPU Scalability
             std::string gpu_scalability_signal = "GPU_CORE_ACTIVITY";
@@ -122,16 +194,11 @@ namespace geopm
                 }
 
                 // If all the above checks have been met we support these controls
-                m_supported_controls["GPU_FREQUENCY_MIN_CONTROL"] = GEOPM_DOMAIN_GPU;
-                m_supported_controls["GPU_FREQUENCY_MAX_CONTROL"] = GEOPM_DOMAIN_GPU;
+                m_supported_controls["GPU_CORE_FREQUENCY_MIN_CONTROL"] = GEOPM_DOMAIN_GPU;
+                m_supported_controls["GPU_CORE_FREQUENCY_MAX_CONTROL"] = GEOPM_DOMAIN_GPU;
             }
 
         }
-
-        std::string constconfig_fe_gpu = "CONSTCONFIG::GPU_CORE_FREQUENCY_EFFICIENT";
-        std::string constconfig_fe_cpu = "CONSTCONFIG::CPU_CORE_FREQUENCY_EFFICIENT";
-        std::string constconfig_fe_uncore = "CONSTCONFIG::CPU_UNCORE_FREQUENCY_EFFICIENT";
-        //TODO: Use ConstConfigIO to set defaults for Fe, Fmax, QM Max Rate, etc
     }
 
     bool ActivityPerformanceModelImp::algorithm_valid(void) {
@@ -179,36 +246,17 @@ namespace geopm
     }
 
     void ActivityPerformanceModelImp::update_recommendation(double phi) {
-        double f_e = NAN;
-        double f_max = NAN;
-
         // CORE
         m_recommendation["CPU_FREQUENCY_MAX_CONTROL"] = {};
         if (m_supported_controls.count("CPU_FREQUENCY_MAX_CONTROL") != 0) {
-            // Gather Fe value
-            //use constconfig efficient freq or sticker
-
-            if (std::isnan(f_e)) {
-                if (! std::isnan(m_freq_core_sticker) &&
-                    ! std::isnan(m_freq_core_step)) {
-                    // Sticker - 2 steps is generally energy efficient
-                    f_e = m_freq_core_sticker - m_freq_core_step * 2;
-                }
-                else {
-                    // Use min
-                    f_e = m_freq_core_min;
-                }
-            }
-
-            if (std::isnan(f_max)) {
-                //use system maximum
-                f_max = m_freq_core_max;
-            }
-
             // Generate per core frequency recommendation
             for (int domain_idx = 0; domain_idx < M_NUM_CORE; ++domain_idx) {
                 m_core_scal.at(domain_idx).value = m_platform_io.sample(m_core_scal.at(domain_idx).batch_idx);
-                double freq_rec = frequency_fit(f_e, f_max, m_core_scal.at(domain_idx).value, 0.5);
+                double freq_rec = frequency_fit(m_freq_core_efficient,
+                                                m_freq_core_max,
+                                                m_core_scal.at(domain_idx).value,
+                                                phi);
+
                 m_recommendation["CPU_FREQUENCY_MAX_CONTROL"].push_back(freq_rec);
             }
         }
@@ -236,50 +284,52 @@ namespace geopm
         }
 
         //GPU
-        m_recommendation["GPU_FREQUENCY_MIN_CONTROL"] = {};
-        m_recommendation["GPU_FREQUENCY_MAX_CONTROL"] = {};
+        m_recommendation["GPU_CORE_FREQUENCY_MIN_CONTROL"] = {};
+        m_recommendation["GPU_CORE_FREQUENCY_MAX_CONTROL"] = {};
         if (m_supported_controls.count("GPU_CORE_FREQUENCY_MIN_CONTROL") != 0 &&
             m_supported_controls.count("GPU_CORE_FREQUENCY_MAX_CONTROL") != 0) {
-                // Gather Fe value
-
-                // TODO: use constconfig efficient freq or sticker
-
-                if (std::isnan(f_e)) {
-                    // TODO: check for F_e signal
-
-                    // If not available as a signal estimate it
-                    f_e = (m_freq_gpu_min + m_freq_gpu_max) / 2;
-                }
-
-                if (std::isnan(f_max)) {
-                    //use system maximum
-                    f_max = m_freq_gpu_max;
-                }
-
                 // Generate per GPU frequency recommendation
                 for (int domain_idx = 0; domain_idx < M_NUM_GPU; ++domain_idx) {
                     m_gpu_scal.at(domain_idx).value = m_platform_io.sample(m_gpu_scal.at(domain_idx).batch_idx);
-                    double freq_rec = frequency_fit(f_e, f_max, m_gpu_scal.at(domain_idx).value, 0.5);
-                    m_recommendation["GPU_FREQUENCY_MIN_CONTROL"].push_back(freq_rec);
-                    m_recommendation["GPU_FREQUENCY_MAX_CONTROL"].push_back(freq_rec);
+                    double freq_rec = frequency_fit(m_freq_gpu_efficient,
+                                                    m_freq_gpu_max,
+                                                    m_gpu_scal.at(domain_idx).value,
+                                                    phi);
+                    m_recommendation["GPU_CORE_FREQUENCY_MIN_CONTROL"].push_back(freq_rec);
+                    m_recommendation["GPU_CORE_FREQUENCY_MAX_CONTROL"].push_back(freq_rec);
                 }
         }
         else {
             for (int domain_idx = 0; domain_idx < M_NUM_GPU; ++domain_idx) {
-                m_recommendation["GPU_FREQUENCY_MIN_CONTROL"].push_back(NAN);
-                m_recommendation["GPU_FREQUENCY_MAX_CONTROL"].push_back(NAN);
+                m_recommendation["GPU_CORE_FREQUENCY_MIN_CONTROL"].push_back(NAN);
+                m_recommendation["GPU_CORE_FREQUENCY_MAX_CONTROL"].push_back(NAN);
             }
         }
     }
 
     double ActivityPerformanceModelImp::frequency_fit(double f_e, double f_max, double scalability, double phi) {
+
+        // If phi is not 0.5 we move into the energy or performance biased behavior
+        if (phi > 0.5) {
+            // Energy Biased.  Scale F_max down to F_efficient based upon phi value
+            // Active region phi usage
+            f_max = std::max(f_e, f_max - (f_max - f_e) *
+                                  (phi-0.5) / 0.5);
+        }
+        else if (phi < 0.5) {
+            // Perf Biased.  Scale F_efficient up to F_max based upon phi value
+            // Active region phi usage
+            f_e = std::min(f_max, f_e + (f_max - f_e) *
+                                  (0.5-phi) / 0.5);
+        }
+
         double freq_rec = f_max;
         // Core steering signals
         if (std::isnan(scalability)) {
             scalability = 1;
         }
 
-        freq_rec = f_e +  (f_max - f_e) * scalability;
+        freq_rec = f_e + (f_max - f_e) * scalability;
 
         // Request should never be above the per domain f_max
         freq_rec = std::min(f_max, freq_rec);
