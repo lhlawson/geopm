@@ -21,4 +21,4 @@ if __name__ == '__main__':
     mach = machine.init_output_dir(args.output_dir)
     app_conf = parres.create_nstream_appconf(mach, args)
     gpu_activity.launch(app_conf=app_conf, args=args,
-                   experiment_cli_args=extra_args)
+                        experiment_cli_args=extra_args)
