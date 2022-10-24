@@ -87,6 +87,8 @@ void GPUActivityAgentTest::SetUp()
         .WillByDefault(Return(M_NUM_BOARD));
     ON_CALL(*m_platform_topo, num_domain(GEOPM_DOMAIN_GPU))
         .WillByDefault(Return(M_NUM_GPU));
+    ON_CALL(*m_platform_topo, num_domain(GEOPM_DOMAIN_GPU_CHIP))
+        .WillByDefault(Return(M_NUM_GPU_CHIP));
 
     ON_CALL(*m_platform_io, push_signal("GPU_CORE_ACTIVITY", _, _))
         .WillByDefault(Return(GPU_CORE_ACTIVITY_IDX));
@@ -105,11 +107,16 @@ void GPUActivityAgentTest::SetUp()
         .WillByDefault(Return(geopm::Agg::average));
 
     ON_CALL(*m_platform_io, control_domain_type("GPU_CORE_FREQUENCY_MIN_CONTROL"))
-        .WillByDefault(Return(GEOPM_DOMAIN_GPU));
+        .WillByDefault(Return(GEOPM_DOMAIN_GPU_CHIP));
     ON_CALL(*m_platform_io, control_domain_type("GPU_CORE_FREQUENCY_MAX_CONTROL"))
-        .WillByDefault(Return(GEOPM_DOMAIN_GPU));
+        .WillByDefault(Return(GEOPM_DOMAIN_GPU_CHIP));
     ON_CALL(*m_platform_io, signal_domain_type("GPU_CORE_ACTIVITY"))
-        .WillByDefault(Return(GEOPM_DOMAIN_GPU));
+        .WillByDefault(Return(GEOPM_DOMAIN_GPU_CHIP));
+    ON_CALL(*m_platform_io, signal_domain_type("GPU_CORE_FREQUENCY_STATUS"))
+        .WillByDefault(Return(GEOPM_DOMAIN_GPU_CHIP));
+    ON_CALL(*m_platform_io, signal_domain_type("GPU_CORE_UTILIZATION"))
+        .WillByDefault(Return(GEOPM_DOMAIN_GPU_CHIP));
+
     ON_CALL(*m_platform_io, read_signal("GPU_CORE_FREQUENCY_MIN_AVAIL", GEOPM_DOMAIN_BOARD, 0))
         .WillByDefault(Return(M_FREQ_MIN));
     ON_CALL(*m_platform_io, read_signal("GPU_CORE_FREQUENCY_MAX_AVAIL", GEOPM_DOMAIN_BOARD, 0))
@@ -259,8 +266,8 @@ void GPUActivityAgentTest::test_adjust_platform(std::vector<double> &policy,
 
     //Adjust
     //Check frequency
-    EXPECT_CALL(*m_platform_io, adjust(GPU_FREQUENCY_CONTROL_MIN_IDX, expected_freq)).Times(M_NUM_GPU);
-    EXPECT_CALL(*m_platform_io, adjust(GPU_FREQUENCY_CONTROL_MAX_IDX, expected_freq)).Times(M_NUM_GPU);
+    EXPECT_CALL(*m_platform_io, adjust(GPU_FREQUENCY_CONTROL_MIN_IDX, expected_freq)).Times(M_NUM_GPU_CHIP);
+    EXPECT_CALL(*m_platform_io, adjust(GPU_FREQUENCY_CONTROL_MAX_IDX, expected_freq)).Times(M_NUM_GPU_CHIP);
 
     m_agent->adjust_platform(policy);
 
