@@ -115,7 +115,7 @@ void GPUActivityAgentTest::SetUp()
         .WillByDefault(Return(GEOPM_DOMAIN_GPU_CHIP));
     ON_CALL(*m_platform_io, signal_domain_type("GPU_CORE_FREQUENCY_STATUS"))
         .WillByDefault(Return(GEOPM_DOMAIN_GPU_CHIP));
-    ON_CALL(*m_platform_io, signal_domain_type("GPU_CORE_UTILIZATION"))
+    ON_CALL(*m_platform_io, signal_domain_type("GPU_UTILIZATION"))
         .WillByDefault(Return(GEOPM_DOMAIN_GPU_CHIP));
 
     ON_CALL(*m_platform_io, read_signal("GPU_CORE_FREQUENCY_MIN_AVAIL", GEOPM_DOMAIN_BOARD, 0))

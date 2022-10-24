@@ -79,7 +79,7 @@ namespace geopm
         std::vector<int> signal_domains;
         signal_domains.push_back(m_platform_io.signal_domain_type("GPU_CORE_FREQUENCY_STATUS"));
         signal_domains.push_back(m_platform_io.signal_domain_type("GPU_CORE_ACTIVITY"));
-        signal_domains.push_back(m_platform_io.signal_domain_type("GPU_CORE_UTILIZATION"));
+        signal_domains.push_back(m_platform_io.signal_domain_type("GPU_UTILIZATION"));
 
         // We'll use the coarsest granularity supported by any of the controls or signals except Energy
         // i.e. GPU if one control supports GPU and another supports GPU_CHIP
