@@ -65,6 +65,7 @@ class GPUActivityAgentTest : public :: testing :: Test
         static const double M_FREQ_MAX;
         static const std::vector<double> M_DEFAULT_POLICY;
         size_t m_num_policy;
+        std::set<std::string> empty_set;
         std::unique_ptr<GPUActivityAgent> m_agent;
         std::unique_ptr<MockPlatformIO> m_platform_io;
         std::unique_ptr<MockPlatformTopo> m_platform_topo;
@@ -122,6 +123,9 @@ void GPUActivityAgentTest::SetUp()
     ON_CALL(*m_platform_io, read_signal("GPU_CORE_FREQUENCY_MAX_AVAIL", GEOPM_DOMAIN_BOARD, 0))
         .WillByDefault(Return(M_FREQ_MAX));
 
+    ON_CALL(*m_platform_io, signal_names())
+        .WillByDefault(Return(empty_set));
+
     ASSERT_LT(M_FREQ_MIN, 0.2e9);
     ASSERT_LT(1.4e9, M_FREQ_MAX);
 
@@ -156,6 +160,7 @@ TEST_F(GPUActivityAgentTest, validate_policy)
     set_up_val_policy_expectations();
 
     const std::vector<double> empty(m_num_policy, NAN);
+    EXPECT_CALL(*m_platform_io, signal_names()).WillRepeatedly(Return(empty_set));
 
     // default policy is accepted
     // load default policy
@@ -178,8 +183,24 @@ TEST_F(GPUActivityAgentTest, validate_policy)
     EXPECT_EQ((policy[FREQ_MAX] + M_FREQ_MIN) / 2, policy[FREQ_EFFICIENT]);
     EXPECT_EQ(0.5, policy[PHI]);
 
+    // all-NAN policy is accepted
+    // setup & load NAN policy
+    std::set<std::string> sig_set = {"LEVELZERO::GPU_CORE_FREQUENCY_EFFICIENT"};
+    EXPECT_CALL(*m_platform_io, signal_names()).WillOnce(Return(sig_set));
+    double fe_sig_val = M_FREQ_MAX - M_FREQ_MIN + 0.123;
+    EXPECT_CALL(*m_platform_io, read_signal("LEVELZERO::GPU_CORE_FREQUENCY_EFFICIENT",
+                                            GEOPM_DOMAIN_BOARD, 0)).WillOnce(Return(fe_sig_val));
+    policy = empty;
+    EXPECT_NO_THROW(m_agent->validate_policy(policy));
+    // validate policy defaults are applied
+    ASSERT_EQ(m_num_policy, policy.size());
+    EXPECT_EQ(M_FREQ_MAX, policy[FREQ_MAX]);
+    EXPECT_EQ(fe_sig_val, policy[FREQ_EFFICIENT]);
+    EXPECT_EQ(0.5, policy[PHI]);
+
     // non-default policy is accepted
     // setup & load policy
+    EXPECT_CALL(*m_platform_io, signal_names()).WillRepeatedly(Return(empty_set));
     policy[FREQ_MAX] = M_FREQ_MAX;
     policy[FREQ_EFFICIENT] = M_FREQ_MAX / 2;
     policy[PHI] = 0.1;
