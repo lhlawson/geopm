@@ -462,9 +462,11 @@ libgeopmpolicy_la_SOURCES = src/Accumulator.cpp \
 
 beta_source_files = src/CPUActivityAgent.cpp \
                     src/CPUActivityAgent.hpp \
-                    src/ActivityPerformanceModel.cpp \
                     src/ActivityPerformanceModel.hpp \
-                    src/ActivityPerformanceModelImp.hpp \
+                    src/CPUActivityPerformanceModel.cpp \
+                    src/CPUActivityPerformanceModelImp.hpp \
+                    src/UncoreActivityPerformanceModel.cpp \
+                    src/UncoreActivityPerformanceModelImp.hpp \
                     src/Daemon.cpp \
                     src/Daemon.hpp \
                     src/DaemonImp.hpp \
@@ -473,6 +475,8 @@ beta_source_files = src/CPUActivityAgent.cpp \
                     src/PolicyStoreImp.cpp \
                     src/PolicyStoreImp.hpp \
                     #end
+                    #src/ActivityPerformanceModel.cpp
+                    #src/ActivityPerformanceModelImp.hpp
 
 if ENABLE_BETA
     libgeopmpolicy_la_SOURCES += $(beta_source_files)

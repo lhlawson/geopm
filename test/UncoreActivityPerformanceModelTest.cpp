@@ -12,7 +12,7 @@
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 
-#include "ActivityPerformanceModelImp.hpp"
+#include "UncoreActivityPerformanceModelImp.hpp"
 #include "geopm/Exception.hpp"
 #include "geopm/Helper.hpp"
 #include "geopm/Agg.hpp"
@@ -28,11 +28,11 @@ using ::testing::Sequence;
 using ::testing::Return;
 using ::testing::AtLeast;
 using ::testing::DoubleNear;
-using geopm::ActivityPerformanceModelImp;
+using geopm::UncoreActivityPerformanceModelImp;
 using geopm::PlatformTopo;
 using testing::StrictMock;
 
-class ActivityPerformanceModelTest : public ::testing::Test
+class UncoreActivityPerformanceModelTest : public ::testing::Test
 {
     protected:
         enum mock_pio_idx_e {
@@ -55,7 +55,7 @@ class ActivityPerformanceModelTest : public ::testing::Test
         static const int M_NUM_PACKAGE;
         static const int M_NUM_GPU;
         static const size_t M_NUM_UNCORE_MBM_READINGS;
-        std::unique_ptr<ActivityPerformanceModelImp> m_perf;
+        std::unique_ptr<UncoreActivityPerformanceModelImp> m_perf;
         std::vector<double> m_default_policy;
         size_t m_num_policy;
         double m_cpu_freq_min;
@@ -72,14 +72,14 @@ class ActivityPerformanceModelTest : public ::testing::Test
         std::unique_ptr<MockPlatformTopo> m_platform_topo;
 };
 
-const int ActivityPerformanceModelTest::M_NUM_CPU = 1;
-const int ActivityPerformanceModelTest::M_NUM_CORE = 1;
-const int ActivityPerformanceModelTest::M_NUM_BOARD = 1;
-const int ActivityPerformanceModelTest::M_NUM_PACKAGE = 1;
-const int ActivityPerformanceModelTest::M_NUM_GPU = 1;
-const size_t ActivityPerformanceModelTest::M_NUM_UNCORE_MBM_READINGS = 13;
+const int UncoreActivityPerformanceModelTest::M_NUM_CPU = 1;
+const int UncoreActivityPerformanceModelTest::M_NUM_CORE = 1;
+const int UncoreActivityPerformanceModelTest::M_NUM_BOARD = 1;
+const int UncoreActivityPerformanceModelTest::M_NUM_PACKAGE = 1;
+const int UncoreActivityPerformanceModelTest::M_NUM_GPU = 1;
+const size_t UncoreActivityPerformanceModelTest::M_NUM_UNCORE_MBM_READINGS = 13;
 
-void ActivityPerformanceModelTest::SetUp()
+void UncoreActivityPerformanceModelTest::SetUp()
 {
 
     m_platform_io = geopm::make_unique<MockPlatformIO>();
@@ -143,15 +143,15 @@ void ActivityPerformanceModelTest::SetUp()
     ON_CALL(*m_platform_io, agg_function(_))
         .WillByDefault(Return(geopm::Agg::average));
 
-    m_perf = geopm::make_unique<ActivityPerformanceModelImp>(*m_platform_io, *m_platform_topo);
+    m_perf = geopm::make_unique<UncoreActivityPerformanceModelImp>(*m_platform_io, *m_platform_topo);
 }
 
-void ActivityPerformanceModelTest::TearDown()
+void UncoreActivityPerformanceModelTest::TearDown()
 {
 
 }
 
-TEST_F(ActivityPerformanceModelTest, valid)
+TEST_F(UncoreActivityPerformanceModelTest, valid)
 {
     EXPECT_CALL(*m_platform_io, write_control("MSR::PQR_ASSOC:RMID", _, _, _)).Times(1);
     EXPECT_CALL(*m_platform_io, write_control("MSR::QM_EVTSEL:RMID", _, _, _)).Times(1);
@@ -175,7 +175,7 @@ TEST_F(ActivityPerformanceModelTest, valid)
     EXPECT_EQ(false, m_perf->algorithm_valid());
 }
 
-TEST_F(ActivityPerformanceModelTest, control_recommendation)
+TEST_F(UncoreActivityPerformanceModelTest, control_recommendation)
 {
     EXPECT_CALL(*m_platform_io, write_control("MSR::PQR_ASSOC:RMID", _, _, _)).Times(1);
     EXPECT_CALL(*m_platform_io, write_control("MSR::QM_EVTSEL:RMID", _, _, _)).Times(1);
@@ -248,7 +248,7 @@ TEST_F(ActivityPerformanceModelTest, control_recommendation)
     }
 }
 
-TEST_F(ActivityPerformanceModelTest, update_and_sample_recommendation)
+TEST_F(UncoreActivityPerformanceModelTest, update_and_sample_recommendation)
 {
     EXPECT_CALL(*m_platform_io, write_control("MSR::PQR_ASSOC:RMID", _, _, _)).Times(1);
     EXPECT_CALL(*m_platform_io, write_control("MSR::QM_EVTSEL:RMID", _, _, _)).Times(1);
@@ -291,7 +291,7 @@ TEST_F(ActivityPerformanceModelTest, update_and_sample_recommendation)
     EXPECT_EQ(rec.size(), M_NUM_GPU);
 }
 
-TEST_F(ActivityPerformanceModelTest, update_and_sample_core_recommendation)
+TEST_F(UncoreActivityPerformanceModelTest, update_and_sample_core_recommendation)
 {
     // All Controls
     std::set<std::string> signal_set = {"CPU_FREQUENCY_MIN_AVAIL", "CPU_FREQUENCY_MAX_AVAIL",
@@ -372,7 +372,7 @@ TEST_F(ActivityPerformanceModelTest, update_and_sample_core_recommendation)
     }
 }
 
-TEST_F(ActivityPerformanceModelTest, update_and_sample_uncore_recommendation)
+TEST_F(UncoreActivityPerformanceModelTest, update_and_sample_uncore_recommendation)
 {
     EXPECT_CALL(*m_platform_io, write_control("MSR::PQR_ASSOC:RMID", _, _, _)).Times(1);
     EXPECT_CALL(*m_platform_io, write_control("MSR::QM_EVTSEL:RMID", _, _, _)).Times(1);
@@ -428,7 +428,7 @@ TEST_F(ActivityPerformanceModelTest, update_and_sample_uncore_recommendation)
     //m_perf->update_recommendation(0.8);
 }
 
-TEST_F(ActivityPerformanceModelTest, update_and_sample_gpu_recommendation)
+TEST_F(UncoreActivityPerformanceModelTest, update_and_sample_gpu_recommendation)
 {
     // All Controls
     std::set<std::string> signal_set = {"GPU_FREQUENCY_MIN_AVAIL", "GPU_FREQUENCY_MAX_AVAIL",
@@ -526,12 +526,12 @@ TEST_F(ActivityPerformanceModelTest, update_and_sample_gpu_recommendation)
     }
 }
 
-TEST_F(ActivityPerformanceModelTest, update_and_sample_phi_low)
+TEST_F(UncoreActivityPerformanceModelTest, update_and_sample_phi_low)
 {
 
 }
 
-TEST_F(ActivityPerformanceModelTest, update_and_sample_phi_high)
+TEST_F(UncoreActivityPerformanceModelTest, update_and_sample_phi_high)
 {
 
 }

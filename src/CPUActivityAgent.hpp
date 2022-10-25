@@ -15,6 +15,7 @@ namespace geopm
 {
     class PlatformTopo;
     class PlatformIO;
+    class ActivityPerformanceModel;
 
     /// @brief Agent
     class CPUActivityAgent : public Agent
@@ -113,6 +114,9 @@ namespace geopm
             std::vector<signal> m_uncore_freq_status;
             std::vector<control> m_uncore_freq_min_control;
             std::vector<control> m_uncore_freq_max_control;
+
+            ActivityPerformanceModel &m_cpu_perf_model;
+            ActivityPerformanceModel &m_uncore_perf_model;
 
             void init_platform_io(void);
     };

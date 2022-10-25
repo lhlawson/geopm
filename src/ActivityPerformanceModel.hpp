@@ -32,18 +32,19 @@ namespace geopm
 
             /// @brief Queries all signals of interest and updates the recommendations for controls
             /// @returns map of control idx and recommended values
-            virtual void update_recommendation(double phi) = 0;
+            //virtual void update_recommendation(double phi) = 0;
+            virtual void update_recommendation(const std::vector<double>& in_policy) = 0;
 
             /// @brief Provides recommendations for control provided
             /// @returns recommended value for specified control
             virtual std::vector<double> sample_recommendation(std::string control_name) const = 0;
+            virtual void validate_policy(std::vector<double> &in_policy) const = 0;
 
-            //virtual void update_uncore_bandwidth_map(std::map<double, double> uncore_max_mem_bw) = 0;
-            //virtual double get_uncore_activity(double uncore_freq,
-            //                                   double uncore_bandwidth) const = 0;
     };
 
-    ActivityPerformanceModel &activity_perf_model();
+    //ActivityPerformanceModel &activity_perf_model(int perf_domain);
+    ActivityPerformanceModel &cpu_activity_perf_model();
+    ActivityPerformanceModel &uncore_activity_perf_model();
 }
 
 #endif

@@ -299,15 +299,7 @@ GTEST_TESTS = test/gtest_links/AccumulatorTest.empty \
               # end
 
 if ENABLE_BETA
-    GTEST_TESTS += test/gtest_links/ActivityPerformanceModelTest.valid \
-                   test/gtest_links/ActivityPerformanceModelTest.control_recommendation \
-                   test/gtest_links/ActivityPerformanceModelTest.update_and_sample_recommendation \
-                   test/gtest_links/ActivityPerformanceModelTest.update_and_sample_core_recommendation \
-                   test/gtest_links/ActivityPerformanceModelTest.update_and_sample_uncore_recommendation \
-                   test/gtest_links/ActivityPerformanceModelTest.update_and_sample_gpu_recommendation \
-                   test/gtest_links/ActivityPerformanceModelTest.update_and_sample_phi_low \
-                   test/gtest_links/ActivityPerformanceModelTest.update_and_sample_phi_high \
-                   test/gtest_links/CPUActivityAgentTest.name \
+    GTEST_TESTS += test/gtest_links/CPUActivityAgentTest.name \
                    test/gtest_links/CPUActivityAgentTest.validate_policy \
                    test/gtest_links/CPUActivityAgentTest.adjust_platform_high \
                    test/gtest_links/CPUActivityAgentTest.adjust_platform_medium \
@@ -316,6 +308,12 @@ if ENABLE_BETA
                    test/gtest_links/CPUActivityAgentTest.adjust_platform_nan \
                    test/gtest_links/CPUActivityAgentTest.adjust_platform_lower_bound_check \
                    test/gtest_links/CPUActivityAgentTest.adjust_platform_signal_out_of_bounds \
+                   test/gtest_links/CPUActivityPerformanceModelTest.valid \
+                   test/gtest_links/CPUActivityPerformanceModelTest.control_recommendation \
+                   test/gtest_links/CPUActivityPerformanceModelTest.update_and_sample_recommendation \
+                   test/gtest_links/CPUActivityPerformanceModelTest.update_sample_check_recommendation \
+                   test/gtest_links/DaemonTest.get_default_policy \
+                   test/gtest_links/DaemonTest.get_profile_policy \
                    test/gtest_links/DaemonTest.get_default_policy \
                    test/gtest_links/DaemonTest.get_profile_policy \
                    test/gtest_links/PolicyStoreImpTest.self_consistent \
@@ -439,12 +437,13 @@ test_geopm_test_SOURCES = test/AccumulatorTest.cpp \
                           test/geopm_test.hpp \
                           # end
 
-beta_test_sources = test/ActivityPerformanceModelTest.cpp \
+beta_test_sources = test/CPUActivityPerformanceModelTest.cpp \
                     test/CPUActivityAgentTest.cpp \
                     test/DaemonTest.cpp \
                     test/MockPolicyStore.hpp \
                     test/PolicyStoreImpTest.cpp \
                     # end
+                    #test/UncoreActivityPerformanceModelTest.cpp
 
 if ENABLE_BETA
     test_geopm_test_SOURCES += $(beta_test_sources)

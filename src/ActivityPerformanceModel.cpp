@@ -71,7 +71,7 @@ namespace geopm
             // Gather Fe value
             //use constconfig efficient freq or sticker
             m_freq_core_efficient = NAN;
-            std::string constconfig_fe_core = "CONSTCONFIG::CPU_CORE_FREQUENCY_EFFICIENT";
+            std::string constconfig_fe_core = "CONSTCONFIG::CPU_CORE_FREQUENCY_EFFICIENT_HIGH_INTENSITY";
             if (all_names.count(constconfig_fe_core) != 0) {
                 m_freq_core_efficient = m_platform_io.read_signal(constconfig_fe_core,
                                                                   GEOPM_DOMAIN_BOARD, 0);
@@ -114,7 +114,7 @@ namespace geopm
             m_freq_uncore_max = m_platform_io.read_signal("CPU_UNCORE_FREQUENCY_MAX_CONTROL", GEOPM_DOMAIN_BOARD, 0);
 
             //TODO: Use ConstConfigIO to set defaults for Fe, Fmax, QM Max Rate, etc
-            std::string constconfig_fe_uncore = "CONSTCONFIG::CPU_UNCORE_FREQUENCY_EFFICIENT";
+            std::string constconfig_fe_uncore = "CONSTCONFIG::CPU_UNCORE_FREQUENCY_EFFICIENT_HIGH_INTENSITY";
             m_freq_uncore_efficient = NAN;
 
             if (all_names.count(constconfig_fe_uncore) != 0) {
@@ -171,7 +171,7 @@ namespace geopm
             // Gather Fe value
             // TODO: use constconfig efficient freq or sticker
             m_freq_gpu_efficient = NAN;
-            std::string constconfig_fe_gpu = "CONSTCONFIG::GPU_CORE_FREQUENCY_EFFICIENT";
+            std::string constconfig_fe_gpu = "CONSTCONFIG::GPU_CORE_FREQUENCY_EFFICIENT_HIGH_INTENSITY";
 
             if (std::isnan(m_freq_gpu_efficient)) {
                 // TODO: check for F_e signal from level zero
@@ -183,6 +183,8 @@ namespace geopm
                     m_freq_gpu_efficient = (m_freq_gpu_min + m_freq_gpu_max) / 2;
                 }
             }
+
+            update_uncore_bandwidth_map();
 
             // GPU Scalability
             std::string gpu_scalability_signal = "GPU_CORE_ACTIVITY";
@@ -209,31 +211,48 @@ namespace geopm
         return m_supported_controls;
     }
 
-    //void ActivityPerformanceModelImp::update_uncore_bandwidth_map(std::map<double, double> uncore_max_mem_bw) {
-    //    m_max_mem_bw = uncore_max_mem_bw;
-    //}
+    void ActivityPerformanceModelImp::update_uncore_bandwidth_map(void) {
+        auto all_names = m_platform_io.signal_names();
+        // We do not guarantee an ordering or limit to the MBM characterization entries,
+        // so we check all characterization entries to see if they are MBM characterization
+        for (int entry_idx = 0; entry_idx < (int)all_names.size(); ++entry_idx) {
+            std::string key_name = "CONSTCONFIG::CPU_UNCORE_FREQUENCY_" +
+                                   std::to_string(entry_idx);
+            std::string val_name = "CONSTCONFIG::CPU_UNCORE_MAXIMUM_MEMORY_BANDWIDTH_" +
+                                   std::to_string(entry_idx);
+            if (all_names.find(key_name) != all_names.end() &&
+                all_names.find(val_name) != all_names.end()) {
+                double uncore_freq = m_platform_io.read_signal(key_name, GEOPM_DOMAIN_BOARD, 0);
+                double max_mem_bw = m_platform_io.read_signal(val_name, GEOPM_DOMAIN_BOARD, 0);
+                if (!std::isnan(uncore_freq) && uncore_freq != 0 &&
+                    max_mem_bw != 0) {
+                    m_max_mem_bw[uncore_freq] = max_mem_bw;
+                }
+            }
+        }
+    }
 
-    //double ActivityPerformanceModelImp::get_uncore_activity(double uncore_freq,
-    //                                                        double uncore_bandwidth)
-    //                                                       const {
-    //    double uncore_activity = NAN;
-    //    if (m_max_mem_bw.size() != 0) {
-    //        auto bw_max_itr = m_max_mem_bw.lower_bound(uncore_freq);
-    //        if(bw_max_itr != m_max_mem_bw.begin()) {
-    //            bw_max_itr = std::prev(bw_max_itr, 1);
-    //        }
+    double ActivityPerformanceModelImp::get_uncore_activity(double uncore_freq,
+                                                            double uncore_bandwidth)
+                                                           const {
+        double uncore_activity = NAN;
+        if (m_max_mem_bw.size() != 0) {
+            auto bw_max_itr = m_max_mem_bw.lower_bound(uncore_freq);
+            if(bw_max_itr != m_max_mem_bw.begin()) {
+                bw_max_itr = std::prev(bw_max_itr, 1);
+            }
 
-    //        // Handle divided by zero, either numerator or
-    //        // denominator being NAN, and the un-characterized case
-    //        if (!std::isnan(uncore_bandwidth) &&
-    //            !std::isnan(bw_max_itr->second)) {
-    //            uncore_activity  = (double) uncore_bandwidth /
-    //                                        bw_max_itr->second;
-    //        }
-    //    }
+            // Handle divided by zero, either numerator or
+            // denominator being NAN, and the un-characterized case
+            if (!std::isnan(uncore_bandwidth) &&
+                !std::isnan(bw_max_itr->second)) {
+                uncore_activity  = (double) uncore_bandwidth /
+                                            bw_max_itr->second;
+            }
+        }
 
-    //    return uncore_activity;
-    //}
+        return uncore_activity;
+    }
 
     std::vector<double> ActivityPerformanceModelImp::sample_recommendation(std::string control_name) const {
         std::vector<double> result = {};
@@ -272,8 +291,19 @@ namespace geopm
         if (m_supported_controls.count("CPU_UNCORE_FREQUENCY_MIN_CONTROL") != 0 &&
             m_supported_controls.count("CPU_UNCORE_FREQUENCY_MAX_CONTROL") != 0) {
             for (int domain_idx = 0; domain_idx < M_NUM_PACKAGE; ++domain_idx) {
-                m_recommendation["CPU_UNCORE_FREQUENCY_MIN_CONTROL"].push_back(NAN);
-                m_recommendation["CPU_UNCORE_FREQUENCY_MAX_CONTROL"].push_back(NAN);
+                m_qm_rate.at(domain_idx).value = m_platform_io.sample(m_qm_rate.at(domain_idx).batch_idx);
+                m_uncore_freq_status.at(domain_idx).value = m_platform_io.sample(m_uncore_freq_status.at(domain_idx).batch_idx);
+
+                double uncore_scalability = get_uncore_activity(m_qm_rate.at(domain_idx).value,
+                                                                m_uncore_freq_status.at(domain_idx).value);
+
+                double freq_rec = frequency_fit(m_freq_uncore_efficient,
+                                                m_freq_uncore_max,
+                                                uncore_scalability,
+                                                phi);
+
+                m_recommendation["CPU_UNCORE_FREQUENCY_MIN_CONTROL"].push_back(freq_rec);
+                m_recommendation["CPU_UNCORE_FREQUENCY_MAX_CONTROL"].push_back(freq_rec);
             }
         }
         else {
@@ -307,8 +337,8 @@ namespace geopm
         }
     }
 
-    double ActivityPerformanceModelImp::frequency_fit(double f_e, double f_max, double scalability, double phi) {
-
+    double ActivityPerformanceModelImp::frequency_fit(double f_e, double f_max, double scalability, double phi)
+    {
         // If phi is not 0.5 we move into the energy or performance biased behavior
         if (phi > 0.5) {
             // Energy Biased.  Scale F_max down to F_efficient based upon phi value

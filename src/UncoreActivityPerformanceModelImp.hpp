@@ -16,36 +16,40 @@ namespace geopm
     class PlatformTopo;
     class PlatformIO;
 
-    class ActivityPerformanceModelImp : public ActivityPerformanceModel
+    class UncoreActivityPerformanceModelImp : public ActivityPerformanceModel
     {
         public:
-            ActivityPerformanceModelImp();
-            ActivityPerformanceModelImp(PlatformIO &platform_io, const PlatformTopo &platform_topo);
-            virtual ~ActivityPerformanceModelImp();
+            UncoreActivityPerformanceModelImp();
+            UncoreActivityPerformanceModelImp(PlatformIO &platform_io, const PlatformTopo &platform_topo);
+            virtual ~UncoreActivityPerformanceModelImp();
             void init(void) override;
             bool algorithm_valid(void) override;
             std::map<std::string, int> controls_recommended() override;
-            void update_recommendation(double phi) override;
+            void update_recommendation(const std::vector<double>& in_policy) override;
             std::vector<double> sample_recommendation(std::string control_name) const override;
+            std::vector<std::string> policy_names(void) const;
+            void validate_policy(std::vector<double> &in_policy) const;
 
         private:
             PlatformIO &m_platform_io;
             const PlatformTopo &m_platform_topo;
 
             const int M_NUM_PACKAGE;
-            const int M_NUM_CORE;
-            const int M_NUM_GPU;
-            double m_freq_uncore_min;
-            double m_freq_uncore_max;
-            double m_freq_uncore_efficient;
-            double m_freq_core_min;
-            double m_freq_core_max;
-            double m_freq_core_efficient;
-            double m_freq_core_sticker;
-            double m_freq_core_step;
-            double m_freq_gpu_min;
-            double m_freq_gpu_max;
-            double m_freq_gpu_efficient;
+            double m_freq_min;
+            double m_freq_max;
+            double m_freq_efficient;
+
+            // Policy indices; must match policy_names()
+            enum m_policy_e {
+                M_POLICY_PHI,
+                M_POLICY_FREQ_MAX,
+                M_POLICY_FREQ_EFFICIENT,
+                M_POLICY_FIRST_UNCORE_FREQ,
+                M_POLICY_FIRST_MAX_MEM_BW,
+                // The remainder of policy values can be additional pairs of
+                // (uncore freq, max memory bandwidth)
+                M_NUM_POLICY = 63,
+            };
 
             struct signal
             {
@@ -53,20 +57,14 @@ namespace geopm
                 double value;
             };
 
-            std::vector<signal> m_core_scal;
-            std::vector<signal> m_gpu_scal;
-
             std::vector<signal> m_qm_rate;
             std::vector<signal> m_uncore_freq_status;
 
             std::map< std::string, std::vector<double> > m_recommendation;
             std::map<std::string, int> m_supported_controls;
 
-            void init_platform_core_io(void);
-            void init_platform_uncore_io(void);
-            void init_platform_gpu_io(void);
-            double frequency_fit(double f_e, double f_max, double scalability, double phi);
-            double update_recommendation_core(double phi);
+            void init_platform_io(void);
+            double frequency_fit(double f_e, double f_max, double scalability);
 
             void update_uncore_bandwidth_map(void);
             double get_uncore_activity(double uncore_freq, double uncore_bandwidth) const;
