@@ -71,6 +71,9 @@ namespace geopm
             double m_freq_core_min;
             double m_freq_core_max;
 
+            std::map<std::string, int> m_core_ctl_domain_map;
+            std::map<std::string, int> m_uncore_ctl_domain_map;
+
             struct signal
             {
                 int batch_idx;
@@ -90,11 +93,8 @@ namespace geopm
                 M_POLICY_UNCORE_FREQ_MAX,
                 M_POLICY_UNCORE_FREQ_EFFICIENT,
                 M_POLICY_CPU_PHI,
-                M_POLICY_FIRST_UNCORE_FREQ,
-                M_POLICY_FIRST_MAX_MEM_BW,
-                // The remainder of policy values can be additional pairs of
-                // (uncore freq, max memory bandwidth)
-                M_NUM_POLICY = 63,
+                M_POLICY_MAX_MEM_BW,
+                M_NUM_POLICY
             };
 
             // Sample indices; must match sample_names()

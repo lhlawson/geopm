@@ -126,66 +126,6 @@ namespace geopm
         return result;
     }
 
-    void UncoreActivityPerformanceModelImp::update_uncore_bandwidth_map(const std::vector<double> &in_policy) {
-        auto all_names = m_platform_io.signal_names();
-        // Try the policy first
-        // We do not guarantee an ordering or limit to the MBM characterization entries,
-        // so we check all characterization entries to see if they are MBM characterization
-        for (auto it = in_policy.begin() + M_POLICY_FIRST_UNCORE_FREQ;
-             it != in_policy.end() && std::next(it) != in_policy.end();
-             std::advance(it, 2)) {
-
-            auto uncore_freq = (*it);
-            auto max_mem_bw = *(it + 1);
-            if (!std::isnan(uncore_freq)) {
-                // Not valid to have NAN max mem bw for uncore freq.
-                GEOPM_DEBUG_ASSERT(!std::isnan(max_mem_bw),
-                                   "mapped CPU_UNCORE_FREQUENCY with no max memory bandwidth assigned.");
-                m_max_mem_bw[uncore_freq] = max_mem_bw;
-            }
-        }
-
-        if (m_max_mem_bw.empty()) {
-            for (int entry_idx = 0; entry_idx < (int)all_names.size(); ++entry_idx) {
-                std::string key_name = "CONSTCONFIG::CPU_UNCORE_FREQUENCY_" +
-                                       std::to_string(entry_idx);
-                std::string val_name = "CONSTCONFIG::CPU_UNCORE_MAXIMUM_MEMORY_BANDWIDTH_" +
-                                       std::to_string(entry_idx);
-                if (all_names.find(key_name) != all_names.end() &&
-                    all_names.find(val_name) != all_names.end()) {
-                    double uncore_freq = m_platform_io.read_signal(key_name, GEOPM_DOMAIN_BOARD, 0);
-                    double max_mem_bw = m_platform_io.read_signal(val_name, GEOPM_DOMAIN_BOARD, 0);
-                    if (!std::isnan(uncore_freq) && uncore_freq != 0 &&
-                        max_mem_bw != 0) {
-                        m_max_mem_bw[uncore_freq] = max_mem_bw;
-                    }
-                }
-            }
-        }
-    }
-
-    double UncoreActivityPerformanceModelImp::get_uncore_activity(double uncore_freq,
-                                                            double uncore_bandwidth)
-                                                           const {
-        double uncore_activity = 1;
-        if (!m_max_mem_bw.empty()) {
-            auto bw_max_itr = m_max_mem_bw.lower_bound(uncore_freq);
-            if(bw_max_itr != m_max_mem_bw.begin()) {
-                bw_max_itr = std::prev(bw_max_itr, 1);
-            }
-
-            // Handle divided by zero, either numerator or
-            // denominator being NAN, and the un-characterized case
-            if (!std::isnan(uncore_bandwidth) &&
-                !std::isnan(bw_max_itr->second)) {
-                uncore_activity  = (double) uncore_bandwidth /
-                                   (double) bw_max_itr->second;
-            }
-        }
-
-        return uncore_activity;
-    }
-
     void UncoreActivityPerformanceModelImp::update_recommendation() {
         // UNCORE
         m_recommendation["CPU_UNCORE_FREQUENCY_MIN_CONTROL"] = {};
@@ -196,8 +136,7 @@ namespace geopm
                 m_qm_rate.at(domain_idx).value = m_platform_io.sample(m_qm_rate.at(domain_idx).batch_idx);
                 m_uncore_freq_status.at(domain_idx).value = m_platform_io.sample(m_uncore_freq_status.at(domain_idx).batch_idx);
 
-                double uncore_scalability = get_uncore_activity(m_uncore_freq_status.at(domain_idx).value,
-                                                                m_qm_rate.at(domain_idx).value);
+                double uncore_scalability = m_qm_rate.at(domain_idx).value / m_max_mem_bw;
 
                 double freq_rec = frequency_fit(m_freq_efficient,
                                                 m_freq_max,
@@ -218,13 +157,7 @@ namespace geopm
     // Describes expected policies to be provided by the resource manager or user
     std::vector<std::string> UncoreActivityPerformanceModelImp::policy_names(void) const
     {
-        std::vector<std::string> names{"PHI", "FREQ_MAX", "FREQ_EFFICIENT"};
-        names.reserve(M_NUM_POLICY);
-
-        for (size_t i = 0; names.size() < M_NUM_POLICY; ++i) {
-            names.emplace_back("CPU_UNCORE_FREQ_" + std::to_string(i));
-            names.emplace_back("MAX_MEMORY_BANDWIDTH_" + std::to_string(i));
-        }
+        std::vector<std::string> names{"PHI", "FREQ_MAX", "FREQ_EFFICIENT", "MAX_MEM_BW"};
         return names;
     }
 
@@ -239,6 +172,13 @@ namespace geopm
         // If no phi value is provided assume the default behavior.
         if (std::isnan(in_policy[M_POLICY_PHI])) {
             in_policy[M_POLICY_PHI] = M_POLICY_PHI_DEFAULT;
+        }
+
+        if (std::isnan(in_policy[M_POLICY_MAX_MEM_BW]) ||
+            in_policy[M_POLICY_MAX_MEM_BW] == 0) {
+            throw Exception("UncoreActivityPerformanceModel::" + std::string(__func__) +
+                            "(): Provided Maximum memory bandwidth is invalid (NAN or 0).",
+                            GEOPM_ERROR_INVALID, __FILE__, __LINE__);
         }
 
         // Check for NAN to set default values for policy
@@ -297,43 +237,6 @@ namespace geopm
         //Update Policy
         in_policy[M_POLICY_FREQ_MAX] = f_max;
         in_policy[M_POLICY_FREQ_EFFICIENT] = f_efficient;
-
-        // Validate all (uncore frequency, max memory bandwidth) pairs
-        // Example policy values parsed here:
-        //
-        // UNCORE_FREQ_0": 1800000000.0,
-        // "MAX_MEMORY_BANDWIDTH_0": 108066060000.0,
-        // "CPU_UNCORE_FREQ_1": 1900000000.0,
-        // "MAX_MEMORY_BANDWIDTH_1": 116333135000.0,
-        // ...
-        // CPU_UNCORE_FREQ_<#>": 2400000000.0,
-        // "MAX_MEMORY_BANDWIDTH_<#>": 106613110000.0
-        std::set<double> policy_uncore_freqs;
-        for (auto it = in_policy.begin() + M_POLICY_FIRST_UNCORE_FREQ;
-             it != in_policy.end() && std::next(it) != in_policy.end(); std::advance(it, 2)) {
-            auto mapped_mem_bw = *(it + 1);
-            auto uncore_freq = (*it);
-            if (!std::isnan(uncore_freq)) {
-                if (std::isnan(mapped_mem_bw)) {
-                    throw Exception("UncoreActivityPerformanceModel::" + std::string(__func__) +
-                                    "(): mapped CPU_UNCORE_FREQUENCY with no max memory bandwidth.",
-                                    GEOPM_ERROR_INVALID, __FILE__, __LINE__);
-                }
-                // Just make sure the frequency does not have multiple definitions.
-                if (!policy_uncore_freqs.insert(uncore_freq).second) {
-                    throw Exception("UncoreActivityPerformanceModel::" + std::string(__func__) +
-                                    "(): policy has multiple entries for CPU_UNCORE_FREQUENCY " +
-                                    std::to_string(uncore_freq),
-                                    GEOPM_ERROR_INVALID, __FILE__, __LINE__);
-                }
-            }
-            else if (!std::isnan(mapped_mem_bw)) {
-                throw Exception("UncoreActivityPerformanceModel::" + std::string(__func__) +
-                                "(): policy maps a NaN CPU_UNCORE_FREQUENCY with max memory bandwidth: " +
-                                std::to_string(mapped_mem_bw),
-                                GEOPM_ERROR_INVALID, __FILE__, __LINE__);
-            }
-        }
     }
 
     void UncoreActivityPerformanceModelImp::set_policy(std::vector<double> &in_policy)
@@ -346,8 +249,7 @@ namespace geopm
 
         m_freq_max = in_policy[M_POLICY_FREQ_MAX];
         m_freq_efficient = in_policy[M_POLICY_FREQ_EFFICIENT];
-
-        update_uncore_bandwidth_map(in_policy);
+        m_max_mem_bw = in_policy[M_POLICY_MAX_MEM_BW];
     }
 
     double UncoreActivityPerformanceModelImp::frequency_fit(double f_e, double f_max, double scalability)

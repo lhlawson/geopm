@@ -46,10 +46,7 @@ class UncoreActivityPerformanceModelTest : public ::testing::Test
             PHI = 0,
             CPU_FREQ_MAX = 1,
             CPU_FREQ_EFFICIENT = 2,
-            UNCORE_FREQ_0 = 3,
-            UNCORE_MEM_BW_0 = 4,
-            UNCORE_FREQ_1 = 5,
-            UNCORE_MEM_BW_1 = 6,
+            UNCORE_MEM_BW = 3,
         };
 
         void SetUp();
@@ -59,7 +56,6 @@ class UncoreActivityPerformanceModelTest : public ::testing::Test
         static const int M_NUM_BOARD;
         static const int M_NUM_PACKAGE;
         static const int M_NUM_GPU;
-        static const size_t M_NUM_UNCORE_MBM_READINGS;
         std::unique_ptr<UncoreActivityPerformanceModelImp> m_perf;
         std::vector<double> m_default_policy;
         size_t m_num_policy;
@@ -71,8 +67,7 @@ class UncoreActivityPerformanceModelTest : public ::testing::Test
         double m_cpu_uncore_freq_max;
         double m_gpu_freq_min;
         double m_gpu_freq_max;
-        std::vector<double> m_cpu_uncore_freqs;
-        std::vector<double> m_mbm_max;
+        double m_mbm_max;
         std::unique_ptr<MockPlatformIO> m_platform_io;
         std::unique_ptr<MockPlatformTopo> m_platform_topo;
 };
@@ -82,7 +77,6 @@ const int UncoreActivityPerformanceModelTest::M_NUM_CORE = 1;
 const int UncoreActivityPerformanceModelTest::M_NUM_BOARD = 1;
 const int UncoreActivityPerformanceModelTest::M_NUM_PACKAGE = 1;
 const int UncoreActivityPerformanceModelTest::M_NUM_GPU = 1;
-const size_t UncoreActivityPerformanceModelTest::M_NUM_UNCORE_MBM_READINGS = 13;
 
 void UncoreActivityPerformanceModelTest::SetUp()
 {
@@ -124,26 +118,8 @@ void UncoreActivityPerformanceModelTest::SetUp()
 
     m_num_policy = m_perf->policy_names().size();
 
-    m_default_policy = {NAN, m_cpu_uncore_freq_max, m_cpu_uncore_freq_min};
-
-    m_cpu_uncore_freqs = {1.2e9, 1.3e9, 1.4e9, 1.5e9, 1.6e9, 1.7e9, 1.8e9,
-                      1.9e9, 2.0e9, 2.1e9, 2.2e9, 2.3e9, 2.4e9};
-    m_mbm_max = {45414967307.69231, 64326515384.61539, 72956528846.15384,
-                 77349315384.61539, 82345998076.92308, 87738286538.46153,
-                 91966364814.81482, 96728174074.07408, 100648379629.62962,
-                 102409246296.2963, 103624103703.7037, 104268944444.44444,
-                 104748888888.88889};
-    ASSERT_EQ(m_cpu_uncore_freqs.size(), m_mbm_max.size());
-    ASSERT_EQ(m_mbm_max.size(), M_NUM_UNCORE_MBM_READINGS);
-
-    for (size_t i = 0; i < M_NUM_UNCORE_MBM_READINGS; ++i) {
-        m_default_policy.push_back(m_cpu_uncore_freqs[i]);
-        m_default_policy.push_back(m_mbm_max[i]);
-    }
-
-    for (size_t i = m_default_policy.size(); i < m_num_policy; ++i) {
-        m_default_policy.push_back(NAN);
-    }
+    m_mbm_max = 104748888888.88889;
+    m_default_policy = {NAN, m_cpu_uncore_freq_max, m_cpu_uncore_freq_min, m_mbm_max};
 
 }
 
@@ -267,12 +243,12 @@ TEST_F(UncoreActivityPerformanceModelTest, update_sample_check_recommendation)
     EXPECT_EQ(rec.size(), 0);
 
     // Low intensity
+    double bw_measure = 41966364814.81482;
+
     double f_e = (m_cpu_uncore_freq_min + m_cpu_uncore_freq_max) / 2;
     double expected_freq = m_cpu_uncore_freq_min +
                            (m_cpu_uncore_freq_max - m_cpu_uncore_freq_min) *
-                           (m_mbm_max.at(2) /
-                           m_mbm_max.at(m_mbm_max.size() - 2));
-
+                           (bw_measure / m_mbm_max);
 
     std::vector<double> policy;
     policy = m_default_policy;
@@ -282,7 +258,7 @@ TEST_F(UncoreActivityPerformanceModelTest, update_sample_check_recommendation)
     m_perf->set_policy(policy);
 
     EXPECT_CALL(*m_platform_io, sample(QM_CTR_SCALED_RATE_IDX))
-                .WillRepeatedly(Return(m_mbm_max.at(2)));
+                .WillRepeatedly(Return(bw_measure));
 
     EXPECT_CALL(*m_platform_io, sample(CPU_UNCORE_FREQUENCY_IDX))
                 .WillRepeatedly(Return(m_cpu_uncore_freq_max));
@@ -306,11 +282,11 @@ TEST_F(UncoreActivityPerformanceModelTest, update_sample_check_recommendation)
     rec = m_perf->sample_recommendation("GPU_CORE_FREQUENCY_MAX_CONTROL");
     EXPECT_EQ(rec.size(), 0);
 
-    // ?? intensity
+    // Medium intensity
+    bw_measure = 71966364814.81482;
     expected_freq = m_cpu_uncore_freq_min +
                     (m_cpu_uncore_freq_max - m_cpu_uncore_freq_min) *
-                    (m_mbm_max.at(m_mbm_max.size() / 2) /
-                    m_mbm_max.at(m_mbm_max.size() - 2));
+                    bw_measure / m_mbm_max;
 
 
     policy = m_default_policy;
@@ -320,7 +296,7 @@ TEST_F(UncoreActivityPerformanceModelTest, update_sample_check_recommendation)
     m_perf->set_policy(policy);
 
     EXPECT_CALL(*m_platform_io, sample(QM_CTR_SCALED_RATE_IDX))
-                .WillRepeatedly(Return(m_mbm_max.at(m_mbm_max.size() / 2)));
+                .WillRepeatedly(Return(bw_measure));
 
     EXPECT_CALL(*m_platform_io, sample(CPU_UNCORE_FREQUENCY_IDX))
                 .WillRepeatedly(Return(m_cpu_uncore_freq_max - 0.05e9));
@@ -354,7 +330,7 @@ TEST_F(UncoreActivityPerformanceModelTest, update_sample_check_recommendation)
     m_perf->set_policy(policy);
 
     EXPECT_CALL(*m_platform_io, sample(QM_CTR_SCALED_RATE_IDX))
-                .WillRepeatedly(Return(m_mbm_max.at(m_mbm_max.size()-1)));
+                .WillRepeatedly(Return(m_mbm_max));
 
     EXPECT_CALL(*m_platform_io, sample(CPU_UNCORE_FREQUENCY_IDX))
                 .WillRepeatedly(Return(m_cpu_uncore_freq_max));
