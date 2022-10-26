@@ -31,8 +31,7 @@ namespace geopm
     {
     }
 
-    CPUActivityAgent::CPUActivityAgent(PlatformIO &plat_io, const PlatformTopo &topo
-                                       )
+    CPUActivityAgent::CPUActivityAgent(PlatformIO &plat_io, const PlatformTopo &topo)
         : m_platform_io(plat_io)
         , m_platform_topo(topo)
         , m_cpu_perf_model(cpu_activity_perf_model())
@@ -63,8 +62,11 @@ namespace geopm
             init_platform_io();
             m_cpu_perf_model.init();
             m_uncore_perf_model.init();
-            if (!m_cpu_perf_model.algorithm_valid()) {
-                //TODO: THROW?
+            if (!m_cpu_perf_model.algorithm_valid() &&
+                !m_uncore_perf_model.algorithm_valid()) {
+                throw Exception("CPUActivityAgent::" + std::string(__func__) +
+                                "(): Neither performance model is valid",
+                                GEOPM_ERROR_INVALID, __FILE__, __LINE__);
             }
         }
     }
@@ -72,23 +74,62 @@ namespace geopm
     void CPUActivityAgent::init_platform_io(void)
     {
         //TODO: query perf model for controls and domains
-        std::map<std::string, int> ctl_domain_map = m_cpu_perf_model.controls_recommended();
-        //TODO: and use it
+        std::map<std::string, int> core_ctl_domain_map = m_cpu_perf_model.controls_recommended();
+        std::map<std::string, int> uncore_ctl_domain_map = m_uncore_perf_model.controls_recommended();
 
-        for (int domain_idx = 0; domain_idx < M_NUM_CORE; ++domain_idx) {
-            m_core_freq_control.push_back({m_platform_io.push_control("CPU_FREQUENCY_MAX_CONTROL",
-                                                                      GEOPM_DOMAIN_CORE,
-                                                                      domain_idx), NAN});
+        //TODO: track core and uncore domain
+        for (auto sv : core_ctl_domain_map) {
+            if (sv.first == "CPU_FREQUENCY_MAX_CONTROL" ) {
+                for (int domain_idx = 0; domain_idx < m_platform_topo.num_domain(sv.second);
+                     ++domain_idx) {
+                    m_core_freq_max_control.push_back({m_platform_io.push_control(sv.first,
+                                                                              sv.second,
+                                                                              domain_idx), NAN});
+                }
+            }
         }
 
-        for (int domain_idx = 0; domain_idx < M_NUM_PACKAGE; ++domain_idx) {
-            m_uncore_freq_min_control.push_back({m_platform_io.push_control("CPU_UNCORE_FREQUENCY_MIN_CONTROL",
-                                                                            GEOPM_DOMAIN_PACKAGE,
-                                                                            domain_idx), -1});
-            m_uncore_freq_max_control.push_back({m_platform_io.push_control("CPU_UNCORE_FREQUENCY_MAX_CONTROL",
-                                                                            GEOPM_DOMAIN_PACKAGE,
-                                                                            domain_idx), -1});
+        for (auto sv : core_ctl_domain_map) {
+            if (sv.first == "CPU_UNCORE_FREQUENCY_MIN_CONTROL" ) {
+                for (int domain_idx = 0; domain_idx < m_platform_topo.num_domain(sv.second);
+                     ++domain_idx) {
+                    m_uncore_freq_min_control.push_back({m_platform_io.push_control(sv.first,
+                                                                                    sv.second,
+                                                                                    domain_idx), NAN});
+                }
+            }
+            else if (sv.first == "CPU_UNCORE_FREQUENCY_MAX_CONTROL" ) {
+                for (int domain_idx = 0; domain_idx < m_platform_topo.num_domain(sv.second);
+                     ++domain_idx) {
+                    m_uncore_freq_max_control.push_back({m_platform_io.push_control(sv.first,
+                                                                                    sv.second,
+                                                                                    domain_idx), NAN});
+                }
+            }
         }
+
+        if (m_core_freq_max_control.size() == 0 ||
+            m_uncore_freq_min_control.size() == 0 ||
+            m_uncore_freq_max_control.size() == 0 ) {
+                throw Exception("CPUActivityAgent::" + std::string(__func__) +
+                                "(): Performance model did not provide Core or Uncore recommendations.",
+                                GEOPM_ERROR_INVALID, __FILE__, __LINE__);
+        }
+
+        //for (int domain_idx = 0; domain_idx < M_NUM_CORE; ++domain_idx) {
+        //    m_core_freq_max_control.push_back({m_platform_io.push_control("CPU_FREQUENCY_MAX_CONTROL",
+        //                                                              GEOPM_DOMAIN_CORE,
+        //                                                              domain_idx), NAN});
+        //}
+
+        //for (int domain_idx = 0; domain_idx < M_NUM_PACKAGE; ++domain_idx) {
+        //    m_uncore_freq_min_control.push_back({m_platform_io.push_control("CPU_UNCORE_FREQUENCY_MIN_CONTROL",
+        //                                                                    GEOPM_DOMAIN_PACKAGE,
+        //                                                                    domain_idx), -1});
+        //    m_uncore_freq_max_control.push_back({m_platform_io.push_control("CPU_UNCORE_FREQUENCY_MAX_CONTROL",
+        //                                                                    GEOPM_DOMAIN_PACKAGE,
+        //                                                                    domain_idx), -1});
+        //}
     }
 
     // Validate incoming policy and configure default policy requests.
@@ -100,16 +141,26 @@ namespace geopm
                            std::to_string(M_NUM_POLICY) + ", actual: " +
                            std::to_string(in_policy.size()));
 
-        std::vector<double> cpm_policy = {in_policy[M_POLICY_CPU_PHI],
-                                          in_policy[M_POLICY_CPU_FREQ_MAX],
-                                          in_policy[M_POLICY_CPU_FREQ_EFFICIENT]};
-
-        m_cpu_perf_model.validate_policy(cpm_policy);
+        std::vector<double> core_policy = {in_policy[M_POLICY_CPU_PHI],
+                                           in_policy[M_POLICY_CPU_FREQ_MAX],
+                                           in_policy[M_POLICY_CPU_FREQ_EFFICIENT]};
+        m_cpu_perf_model.validate_policy(core_policy);
 
         //Is this needed?
-        in_policy[M_POLICY_CPU_FREQ_MAX] = cpm_policy[M_POLICY_CPU_FREQ_MAX];
-        in_policy[M_POLICY_CPU_FREQ_EFFICIENT] = cpm_policy[M_POLICY_CPU_FREQ_EFFICIENT];
-        in_policy[M_POLICY_CPU_PHI] = cpm_policy[M_POLICY_CPU_PHI];
+        in_policy[M_POLICY_CPU_FREQ_MAX] = core_policy[M_POLICY_CPU_FREQ_MAX];
+        in_policy[M_POLICY_CPU_FREQ_EFFICIENT] = core_policy[M_POLICY_CPU_FREQ_EFFICIENT];
+        in_policy[M_POLICY_CPU_PHI] = core_policy[M_POLICY_CPU_PHI];
+
+        std::vector<double> uncore_policy = {in_policy[M_POLICY_CPU_PHI],
+                                             in_policy[M_POLICY_UNCORE_FREQ_MAX],
+                                             in_policy[M_POLICY_UNCORE_FREQ_EFFICIENT],
+                                            };
+
+        // TODO: just use insert
+        for (size_t i = M_POLICY_FIRST_UNCORE_FREQ; i < M_NUM_POLICY; ++i) {
+            uncore_policy.push_back(in_policy.at(i));
+        }
+        m_uncore_perf_model.validate_policy(uncore_policy);
     }
 
     // Distribute incoming policy to children
@@ -145,29 +196,48 @@ namespace geopm
         m_do_write_batch = false;
 
         // Per core freq
-        m_cpu_perf_model.update_recommendation({in_policy[M_POLICY_CPU_PHI],
-                                                in_policy[M_POLICY_CPU_FREQ_MAX],
-                                                in_policy[M_POLICY_CPU_FREQ_EFFICIENT]});
+        std::vector<double> core_policy = {in_policy[M_POLICY_CPU_PHI],
+                                           in_policy[M_POLICY_CPU_FREQ_MAX],
+                                           in_policy[M_POLICY_CPU_FREQ_EFFICIENT]};
+        m_cpu_perf_model.set_policy(core_policy);
+        m_cpu_perf_model.update_recommendation();
 
         std::vector<double> core_freq_request = m_cpu_perf_model.sample_recommendation("CPU_FREQUENCY_STATUS_MAX_CONTROL");
 
         // Set per core controls
+        //TODO: use the core and uncore domain we tracked earlier
         for (int domain_idx = 0; domain_idx < M_NUM_CORE; ++domain_idx) {
             if (std::isnan(core_freq_request.at(domain_idx))) {
                 core_freq_request.at(domain_idx) = in_policy[M_POLICY_CPU_FREQ_MAX];
             }
             if (core_freq_request.at(domain_idx) !=
-                m_core_freq_control.at(domain_idx).last_setting) {
+                m_core_freq_max_control.at(domain_idx).last_setting) {
                 // Adjust
-                m_platform_io.adjust(m_core_freq_control.at(domain_idx).batch_idx,
+                m_platform_io.adjust(m_core_freq_max_control.at(domain_idx).batch_idx,
                                      core_freq_request.at(domain_idx));
 
                 // Save the value for future comparison
-                m_core_freq_control.at(domain_idx).last_setting = core_freq_request.at(domain_idx);
+                m_core_freq_max_control.at(domain_idx).last_setting = core_freq_request.at(domain_idx);
                 ++m_core_frequency_requests;
                 m_do_write_batch = true;
             }
         }
+
+        std::vector<double> uncore_policy = {in_policy[M_POLICY_CPU_PHI],
+                                             in_policy[M_POLICY_UNCORE_FREQ_MAX],
+                                             in_policy[M_POLICY_UNCORE_FREQ_EFFICIENT]};
+
+        // TODO: just use insert
+        for (size_t i = M_POLICY_FIRST_UNCORE_FREQ; i < M_NUM_POLICY; ++i) {
+            uncore_policy.push_back(in_policy.at(i));
+        }
+        m_uncore_perf_model.set_policy(uncore_policy);
+        m_uncore_perf_model.update_recommendation();
+
+        std::vector<double> uncore_freq_min_request = m_uncore_perf_model.sample_recommendation("CPU_UNCORE_FREQUENCY_MIN_CONTROL");
+        std::vector<double> uncore_freq_max_request = m_uncore_perf_model.sample_recommendation("CPU_UNCORE_FREQUENCY_MAX_CONTROL");
+
+        //TODO: use the core and uncore domain we tracked earlier
     }
 
     // If controls have a valid updated value write them.
@@ -184,20 +254,6 @@ namespace geopm
                            "(): sample vector not correctly sized.  Expected  " +
                            std::to_string(M_NUM_SAMPLE) + ", actual: " +
                            std::to_string(out_sample.size()));
-
-        // Collect latest signal values
-        for (int domain_idx = 0; domain_idx < M_NUM_PACKAGE; ++domain_idx) {
-            // Frequency signals
-            m_uncore_freq_status.at(domain_idx).value = m_platform_io.sample(m_uncore_freq_status.at(domain_idx).batch_idx);
-
-            // Uncore steering signals
-            m_qm_rate.at(domain_idx).value = m_platform_io.sample(m_qm_rate.at(domain_idx).batch_idx);
-        }
-
-        for (int domain_idx = 0; domain_idx < M_NUM_CORE; ++domain_idx) {
-            // Core steering signals
-            m_core_scal.at(domain_idx).value = m_platform_io.sample(m_core_scal.at(domain_idx).batch_idx);
-        }
     }
 
     // Wait for the remaining cycle time to keep Controller loop cadence

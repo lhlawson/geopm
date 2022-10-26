@@ -108,7 +108,8 @@ namespace geopm
             std::map<double, double> m_qm_max_rate;
 
             std::vector<signal> m_core_scal;
-            std::vector<control> m_core_freq_control;
+            std::vector<control> m_core_freq_min_control;
+            std::vector<control> m_core_freq_max_control;
 
             std::vector<signal> m_qm_rate;
             std::vector<signal> m_uncore_freq_status;

@@ -90,29 +90,10 @@ void CPUActivityAgentTest::SetUp()
     m_platform_io = geopm::make_unique<MockPlatformIO>();
     m_platform_topo = geopm::make_unique<MockPlatformTopo>();
 
-    ON_CALL(*m_platform_topo, num_domain(GEOPM_DOMAIN_BOARD))
-        .WillByDefault(Return(M_NUM_BOARD));
-    ON_CALL(*m_platform_topo, num_domain(GEOPM_DOMAIN_PACKAGE))
-        .WillByDefault(Return(M_NUM_PACKAGE));
     ON_CALL(*m_platform_topo, num_domain(GEOPM_DOMAIN_CORE))
         .WillByDefault(Return(M_NUM_CORE));
-    ON_CALL(*m_platform_topo, num_domain(GEOPM_DOMAIN_CPU))
-        .WillByDefault(Return(M_NUM_CPU));
 
-    EXPECT_CALL(*m_platform_topo, num_domain(GEOPM_DOMAIN_PACKAGE)).Times(1);
     EXPECT_CALL(*m_platform_topo, num_domain(GEOPM_DOMAIN_CORE)).Times(1);
-
-    // Signals
-    ON_CALL(*m_platform_io, push_signal("MSR::QM_CTR_SCALED_RATE", _, _))
-        .WillByDefault(Return(QM_CTR_SCALED_RATE_IDX));
-    ON_CALL(*m_platform_io, push_signal("MSR::CPU_SCALABILITY_RATIO", _, _))
-        .WillByDefault(Return(CPU_SCALABILITY_IDX));
-    ON_CALL(*m_platform_io, push_signal("CPU_UNCORE_FREQUENCY_STATUS", _, _))
-        .WillByDefault(Return(CPU_UNCORE_FREQUENCY_IDX));
-
-    EXPECT_CALL(*m_platform_io, push_signal("MSR::QM_CTR_SCALED_RATE", _, _)).Times(1);
-    EXPECT_CALL(*m_platform_io, push_signal("MSR::CPU_SCALABILITY_RATIO", _, _)).Times(1);
-    EXPECT_CALL(*m_platform_io, push_signal("CPU_UNCORE_FREQUENCY_STATUS", _, _)).Times(1);
 
     // Controls
     ON_CALL(*m_platform_io, push_control("CPU_FREQUENCY_MAX_CONTROL", _, _))
@@ -135,8 +116,6 @@ void CPUActivityAgentTest::SetUp()
 
     ON_CALL(*m_platform_io, control_domain_type("CPU_FREQUENCY_MAX_CONTROL"))
             .WillByDefault(Return(GEOPM_DOMAIN_CPU));
-    ON_CALL(*m_platform_io, signal_domain_type("MSR::CPU_SCALABILITY_RATIO"))
-            .WillByDefault(Return(GEOPM_DOMAIN_CPU));
 
     ON_CALL(*m_platform_io, read_signal("CPU_FREQUENCY_MIN_AVAIL", GEOPM_DOMAIN_BOARD, 0))
             .WillByDefault(Return(m_cpu_freq_min));
@@ -154,14 +133,6 @@ void CPUActivityAgentTest::SetUp()
     ASSERT_LT(m_cpu_uncore_freq_min, 2e9);
     ASSERT_LT(m_cpu_uncore_freq_max, 3e9);
     ASSERT_LT(m_cpu_uncore_freq_min, m_cpu_uncore_freq_max);
-
-    EXPECT_CALL(*m_platform_io, write_control("MSR::PQR_ASSOC:RMID", _, _, _)).Times(1);
-    EXPECT_CALL(*m_platform_io, write_control("MSR::QM_EVTSEL:RMID", _, _, _)).Times(1);
-    EXPECT_CALL(*m_platform_io, write_control("MSR::QM_EVTSEL:EVENT_ID", _, _, _)).Times(1);
-    EXPECT_CALL(*m_platform_io, read_signal("CPU_UNCORE_FREQUENCY_MIN_CONTROL", _, _)).Times(1);
-    EXPECT_CALL(*m_platform_io, read_signal("CPU_UNCORE_FREQUENCY_MAX_CONTROL", _, _)).Times(1);
-    EXPECT_CALL(*m_platform_io, read_signal("CPU_FREQUENCY_MIN_AVAIL", _, _)).Times(1);
-    EXPECT_CALL(*m_platform_io, read_signal("CPU_FREQUENCY_MAX_AVAIL", _, _)).Times(1);
 
     m_agent = geopm::make_unique<CPUActivityAgent>(*m_platform_io, *m_platform_topo);
     m_num_policy = m_agent->policy_names().size();

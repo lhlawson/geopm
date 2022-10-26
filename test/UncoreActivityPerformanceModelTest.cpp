@@ -37,14 +37,19 @@ class UncoreActivityPerformanceModelTest : public ::testing::Test
     protected:
         enum mock_pio_idx_e {
             QM_CTR_SCALED_RATE_IDX,
-            CPU_SCALABILITY_IDX,
             CPU_UNCORE_FREQUENCY_IDX,
-            CPU_FREQUENCY_CONTROL_IDX,
             CPU_UNCORE_MIN_CONTROL_IDX,
             CPU_UNCORE_MAX_CONTROL_IDX,
-            GPU_CORE_MIN_CONTROL_IDX,
-            GPU_CORE_MAX_CONTROL_IDX,
-            GPU_ACTIVITY_IDX
+        };
+
+        enum policy_idx_e {
+            PHI = 0,
+            CPU_FREQ_MAX = 1,
+            CPU_FREQ_EFFICIENT = 2,
+            UNCORE_FREQ_0 = 3,
+            UNCORE_MEM_BW_0 = 4,
+            UNCORE_FREQ_1 = 5,
+            UNCORE_MEM_BW_1 = 6,
         };
 
         void SetUp();
@@ -87,16 +92,8 @@ void UncoreActivityPerformanceModelTest::SetUp()
     //m_platform_io = geopm::make_unique<StrictMock<MockPlatformIO> >();
     //m_platform_topo = geopm::make_unique<StrictMock<MockPlatformTopo> >();
 
-    ON_CALL(*m_platform_topo, num_domain(GEOPM_DOMAIN_BOARD))
-        .WillByDefault(Return(M_NUM_BOARD));
     ON_CALL(*m_platform_topo, num_domain(GEOPM_DOMAIN_PACKAGE))
         .WillByDefault(Return(M_NUM_PACKAGE));
-    ON_CALL(*m_platform_topo, num_domain(GEOPM_DOMAIN_CORE))
-        .WillByDefault(Return(M_NUM_CORE));
-    ON_CALL(*m_platform_topo, num_domain(GEOPM_DOMAIN_CPU))
-        .WillByDefault(Return(M_NUM_CPU));
-    ON_CALL(*m_platform_topo, num_domain(GEOPM_DOMAIN_GPU))
-        .WillByDefault(Return(M_NUM_GPU));
 
     m_cpu_freq_min = 1000000000.0;
     m_cpu_freq_sticker = 2100000000.0;
@@ -107,43 +104,47 @@ void UncoreActivityPerformanceModelTest::SetUp()
     m_gpu_freq_min =  400000000.0;
     m_gpu_freq_max = 1600000000.0;
 
-    ON_CALL(*m_platform_io, read_signal("CPU_FREQUENCY_MIN_AVAIL", GEOPM_DOMAIN_BOARD, 0))
-            .WillByDefault(Return(m_cpu_freq_min));
-    ON_CALL(*m_platform_io, read_signal("CPU_FREQUENCY_MAX_AVAIL", GEOPM_DOMAIN_BOARD, 0))
-            .WillByDefault(Return(m_cpu_freq_max));
-
-    ON_CALL(*m_platform_io, read_signal("CPU_FREQUENCY_STICKER", GEOPM_DOMAIN_BOARD, 0))
-            .WillByDefault(Return(m_cpu_freq_sticker));
-    ON_CALL(*m_platform_io, read_signal("CPU_FREQUENCY_STEP", GEOPM_DOMAIN_BOARD, 0))
-            .WillByDefault(Return(m_cpu_freq_step));
-
     ON_CALL(*m_platform_io, read_signal("CPU_UNCORE_FREQUENCY_MIN_CONTROL", GEOPM_DOMAIN_BOARD, 0))
             .WillByDefault(Return(m_cpu_uncore_freq_min));
     ON_CALL(*m_platform_io, read_signal("CPU_UNCORE_FREQUENCY_MAX_CONTROL", GEOPM_DOMAIN_BOARD, 0))
             .WillByDefault(Return(m_cpu_uncore_freq_max));
 
-    ON_CALL(*m_platform_io, read_signal("GPU_FREQUENCY_MIN_AVAIL", GEOPM_DOMAIN_BOARD, 0))
-            .WillByDefault(Return(m_gpu_freq_min));
-    ON_CALL(*m_platform_io, read_signal("GPU_FREQUENCY_MAX_AVAIL", GEOPM_DOMAIN_BOARD, 0))
-            .WillByDefault(Return(m_gpu_freq_max));
-
     EXPECT_CALL(*m_platform_topo, num_domain(GEOPM_DOMAIN_PACKAGE)).Times(1);
-    EXPECT_CALL(*m_platform_topo, num_domain(GEOPM_DOMAIN_CORE)).Times(1);
-    EXPECT_CALL(*m_platform_topo, num_domain(GEOPM_DOMAIN_GPU)).Times(1);
 
     // Signals
     ON_CALL(*m_platform_io, push_signal("MSR::QM_CTR_SCALED_RATE", _, _))
         .WillByDefault(Return(QM_CTR_SCALED_RATE_IDX));
-    ON_CALL(*m_platform_io, push_signal("MSR::CPU_SCALABILITY_RATIO", _, _))
-        .WillByDefault(Return(CPU_SCALABILITY_IDX));
     ON_CALL(*m_platform_io, push_signal("CPU_UNCORE_FREQUENCY_STATUS", _, _))
         .WillByDefault(Return(CPU_UNCORE_FREQUENCY_IDX));
-    ON_CALL(*m_platform_io, push_signal("GPU_CORE_ACTIVITY", _, _))
-        .WillByDefault(Return(GPU_ACTIVITY_IDX));
     ON_CALL(*m_platform_io, agg_function(_))
         .WillByDefault(Return(geopm::Agg::average));
 
+
     m_perf = geopm::make_unique<UncoreActivityPerformanceModelImp>(*m_platform_io, *m_platform_topo);
+
+    m_num_policy = m_perf->policy_names().size();
+
+    m_default_policy = {NAN, m_cpu_uncore_freq_max, m_cpu_uncore_freq_min};
+
+    m_cpu_uncore_freqs = {1.2e9, 1.3e9, 1.4e9, 1.5e9, 1.6e9, 1.7e9, 1.8e9,
+                      1.9e9, 2.0e9, 2.1e9, 2.2e9, 2.3e9, 2.4e9};
+    m_mbm_max = {45414967307.69231, 64326515384.61539, 72956528846.15384,
+                 77349315384.61539, 82345998076.92308, 87738286538.46153,
+                 91966364814.81482, 96728174074.07408, 100648379629.62962,
+                 102409246296.2963, 103624103703.7037, 104268944444.44444,
+                 104748888888.88889};
+    ASSERT_EQ(m_cpu_uncore_freqs.size(), m_mbm_max.size());
+    ASSERT_EQ(m_mbm_max.size(), M_NUM_UNCORE_MBM_READINGS);
+
+    for (size_t i = 0; i < M_NUM_UNCORE_MBM_READINGS; ++i) {
+        m_default_policy.push_back(m_cpu_uncore_freqs[i]);
+        m_default_policy.push_back(m_mbm_max[i]);
+    }
+
+    for (size_t i = m_default_policy.size(); i < m_num_policy; ++i) {
+        m_default_policy.push_back(NAN);
+    }
+
 }
 
 void UncoreActivityPerformanceModelTest::TearDown()
@@ -153,17 +154,8 @@ void UncoreActivityPerformanceModelTest::TearDown()
 
 TEST_F(UncoreActivityPerformanceModelTest, valid)
 {
-    EXPECT_CALL(*m_platform_io, write_control("MSR::PQR_ASSOC:RMID", _, _, _)).Times(1);
-    EXPECT_CALL(*m_platform_io, write_control("MSR::QM_EVTSEL:RMID", _, _, _)).Times(1);
-    EXPECT_CALL(*m_platform_io, write_control("MSR::QM_EVTSEL:EVENT_ID", _, _, _)).Times(1);
-
-    std::set<std::string> signal_set = {"CPU_FREQUENCY_MIN_AVAIL", "CPU_FREQUENCY_MAX_AVAIL",
-                                        "CPU_FREQUENCY_STICKER", "CPU_FREQUENCY_STEP",
-                                        "MSR::CPU_SCALABILITY_RATIO",
-                                        "CPU_UNCORE_FREQUENCY_MIN_CONTROL", "CPU_UNCORE_FREQUENCY_MAX_CONTROL",
+    std::set<std::string> signal_set = {"CPU_UNCORE_FREQUENCY_MIN_CONTROL", "CPU_UNCORE_FREQUENCY_MAX_CONTROL",
                                         "CPU_UNCORE_FREQUENCY_STATUS", "MSR::QM_CTR_SCALED_RATE",
-                                        "GPU_FREQUENCY_MIN_AVAIL", "GPU_FREQUENCY_MAX_AVAIL",
-                                        "GPU_CORE_ACTIVITY"
                                        };
     EXPECT_CALL(*m_platform_io, signal_names()).WillRepeatedly(Return(signal_set));
     m_perf->init();
@@ -193,15 +185,13 @@ TEST_F(UncoreActivityPerformanceModelTest, control_recommendation)
     EXPECT_CALL(*m_platform_io, signal_names()).WillRepeatedly(Return(signal_set));
     m_perf->init();
 
-    std::map<std::string, int> expected = {{"CPU_FREQUENCY_MAX_CONTROL", GEOPM_DOMAIN_CORE},
-                                           {"CPU_UNCORE_FREQUENCY_MIN_CONTROL", GEOPM_DOMAIN_PACKAGE},
+    std::map<std::string, int> expected = {{"CPU_UNCORE_FREQUENCY_MIN_CONTROL", GEOPM_DOMAIN_PACKAGE},
                                            {"CPU_UNCORE_FREQUENCY_MAX_CONTROL", GEOPM_DOMAIN_PACKAGE},
-                                           {"GPU_CORE_FREQUENCY_MIN_CONTROL", GEOPM_DOMAIN_GPU},
-                                           {"GPU_CORE_FREQUENCY_MAX_CONTROL", GEOPM_DOMAIN_GPU}
                                           };
 
     std::map<std::string, int> actual = m_perf->controls_recommended();
 
+    EXPECT_EQ(actual.size(), 2);
     for (auto itr : actual) {
         EXPECT_EQ(expected.at(itr.first), itr.second);
     }
@@ -217,35 +207,8 @@ TEST_F(UncoreActivityPerformanceModelTest, control_recommendation)
     EXPECT_CALL(*m_platform_io, signal_names()).WillRepeatedly(Return(signal_set));
     m_perf->init();
 
-    expected = {{"CPU_FREQUENCY_MAX_CONTROL", GEOPM_DOMAIN_CORE},
-                {"GPU_CORE_FREQUENCY_MIN_CONTROL", GEOPM_DOMAIN_GPU},
-                {"GPU_CORE_FREQUENCY_MAX_CONTROL", GEOPM_DOMAIN_GPU}
-               };
     actual = m_perf->controls_recommended();
-
-    for (auto itr : actual) {
-        EXPECT_EQ(expected.count(itr.first), 1);
-        EXPECT_EQ(expected.at(itr.first), itr.second);
-    }
-
-    // GPU only
-    signal_set = {"MSR::CPU_SCALABILITY_RATIO",
-                  "GPU_FREQUENCY_MIN_AVAIL", "GPU_FREQUENCY_MAX_AVAIL",
-                  "GPU_CORE_ACTIVITY"
-                 };
-    EXPECT_CALL(*m_platform_io, signal_names()).WillRepeatedly(Return(signal_set));
-    m_perf->init();
-
-    expected = {{"GPU_CORE_FREQUENCY_MIN_CONTROL", GEOPM_DOMAIN_GPU},
-                {"GPU_CORE_FREQUENCY_MAX_CONTROL", GEOPM_DOMAIN_GPU}
-               };
-
-    actual = m_perf->controls_recommended();
-
-    for (auto itr : actual) {
-        EXPECT_EQ(expected.count(itr.first), 1);
-        EXPECT_EQ(expected.at(itr.first), itr.second);
-    }
+    EXPECT_EQ(actual.size(), 0);
 }
 
 TEST_F(UncoreActivityPerformanceModelTest, update_and_sample_recommendation)
@@ -255,276 +218,167 @@ TEST_F(UncoreActivityPerformanceModelTest, update_and_sample_recommendation)
     EXPECT_CALL(*m_platform_io, write_control("MSR::QM_EVTSEL:EVENT_ID", _, _, _)).Times(1);
 
     // All Controls
-    std::set<std::string> signal_set = {"CPU_FREQUENCY_MIN_AVAIL", "CPU_FREQUENCY_MAX_AVAIL",
-                                        "CPU_FREQUENCY_STICKER", "CPU_FREQUENCY_STEP",
-                                        "MSR::CPU_SCALABILITY_RATIO",
-                                        "CPU_UNCORE_FREQUENCY_MIN_CONTROL", "CPU_UNCORE_FREQUENCY_MAX_CONTROL",
+    std::set<std::string> signal_set = {"CPU_UNCORE_FREQUENCY_MIN_CONTROL", "CPU_UNCORE_FREQUENCY_MAX_CONTROL",
                                         "CPU_UNCORE_FREQUENCY_STATUS", "MSR::QM_CTR_SCALED_RATE",
-                                        "GPU_FREQUENCY_MIN_AVAIL", "GPU_FREQUENCY_MAX_AVAIL",
-                                        "GPU_CORE_ACTIVITY"
                                        };
     EXPECT_CALL(*m_platform_io, signal_names()).WillRepeatedly(Return(signal_set));
     m_perf->init();
 
+    std::map<std::string, int> actual = m_perf->controls_recommended();
+    EXPECT_EQ(actual.size(), 2);
+
     // Size should be 0 by default
-    std::vector<double> rec = m_perf->sample_recommendation("CPU_FREQUENCY_MAX_CONTROL");
-    EXPECT_EQ(rec.size(), 0);
-    rec = m_perf->sample_recommendation("CPU_UNCORE_FREQUENCY_MIN_CONTROL");
+    std::vector<double> rec = m_perf->sample_recommendation("CPU_UNCORE_FREQUENCY_MIN_CONTROL");
     EXPECT_EQ(rec.size(), 0);
     rec = m_perf->sample_recommendation("CPU_UNCORE_FREQUENCY_MAX_CONTROL");
-    EXPECT_EQ(rec.size(), 0);
-    rec = m_perf->sample_recommendation("GPU_CORE_FREQUENCY_MIN_CONTROL");
-    EXPECT_EQ(rec.size(), 0);
-    rec = m_perf->sample_recommendation("GPU_CORE_FREQUENCY_MAX_CONTROL");
     EXPECT_EQ(rec.size(), 0);
 
-    m_perf->update_recommendation(0.5);
-    rec = m_perf->sample_recommendation("CPU_FREQUENCY_MAX_CONTROL");
-    EXPECT_EQ(rec.size(), M_NUM_CORE);
+    std::vector<double> policy;
+    policy = m_default_policy;
+    m_perf->validate_policy(policy);
+    EXPECT_EQ(0.5, policy[PHI]);
+    m_perf->set_policy(policy);
+    m_perf->update_recommendation();
+
     rec = m_perf->sample_recommendation("CPU_UNCORE_FREQUENCY_MIN_CONTROL");
     EXPECT_EQ(rec.size(), M_NUM_PACKAGE);
     rec = m_perf->sample_recommendation("CPU_UNCORE_FREQUENCY_MAX_CONTROL");
     EXPECT_EQ(rec.size(), M_NUM_PACKAGE);
-    rec = m_perf->sample_recommendation("GPU_CORE_FREQUENCY_MIN_CONTROL");
-    EXPECT_EQ(rec.size(), M_NUM_GPU);
-    rec = m_perf->sample_recommendation("GPU_CORE_FREQUENCY_MAX_CONTROL");
-    EXPECT_EQ(rec.size(), M_NUM_GPU);
 }
 
-TEST_F(UncoreActivityPerformanceModelTest, update_and_sample_core_recommendation)
+TEST_F(UncoreActivityPerformanceModelTest, update_sample_check_recommendation)
 {
     // All Controls
-    std::set<std::string> signal_set = {"CPU_FREQUENCY_MIN_AVAIL", "CPU_FREQUENCY_MAX_AVAIL",
-                                        "CPU_FREQUENCY_STICKER", "CPU_FREQUENCY_STEP",
-                                        "MSR::CPU_SCALABILITY_RATIO"
+    std::set<std::string> signal_set = {"CPU_UNCORE_FREQUENCY_MIN_CONTROL", "CPU_UNCORE_FREQUENCY_MAX_CONTROL",
+                                        "CPU_UNCORE_FREQUENCY_STATUS", "MSR::QM_CTR_SCALED_RATE",
                                        };
-    EXPECT_CALL(*m_platform_io, signal_names()).WillRepeatedly(Return(signal_set));
 
+    EXPECT_CALL(*m_platform_io, signal_names()).WillRepeatedly(Return(signal_set));
     m_perf->init();
 
+    std::map<std::string, int> actual = m_perf->controls_recommended();
+    EXPECT_EQ(actual.size(), 2);
+
     // Size should be 0 by default
-    std::vector<double> rec = m_perf->sample_recommendation("CPU_FREQUENCY_MAX_CONTROL");
-    EXPECT_EQ(rec.size(), 0);
+    std::vector<double> rec = m_perf->sample_recommendation("CPU_UNCORE_FREQUENCY_MIN_CONTROL");
     rec = m_perf->sample_recommendation("CPU_UNCORE_FREQUENCY_MIN_CONTROL");
     EXPECT_EQ(rec.size(), 0);
     rec = m_perf->sample_recommendation("CPU_UNCORE_FREQUENCY_MAX_CONTROL");
     EXPECT_EQ(rec.size(), 0);
+
+    // Low intensity
+    double f_e = (m_cpu_uncore_freq_min + m_cpu_uncore_freq_max) / 2;
+    double expected_freq = m_cpu_uncore_freq_min +
+                           (m_cpu_uncore_freq_max - m_cpu_uncore_freq_min) *
+                           (m_mbm_max.at(2) /
+                           m_mbm_max.at(m_mbm_max.size() - 2));
+
+
+    std::vector<double> policy;
+    policy = m_default_policy;
+    m_perf->validate_policy(policy);
+    EXPECT_EQ(0.5, policy[PHI]);
+
+    m_perf->set_policy(policy);
+
+    EXPECT_CALL(*m_platform_io, sample(QM_CTR_SCALED_RATE_IDX))
+                .WillRepeatedly(Return(m_mbm_max.at(2)));
+
+    EXPECT_CALL(*m_platform_io, sample(CPU_UNCORE_FREQUENCY_IDX))
+                .WillRepeatedly(Return(m_cpu_uncore_freq_max));
+
+    m_perf->update_recommendation();
+
+    rec = m_perf->sample_recommendation("CPU_UNCORE_FREQUENCY_MIN_CONTROL");
+    EXPECT_EQ(rec.size(), M_NUM_PACKAGE);
+    for (auto r : rec) {
+        EXPECT_EQ(r, expected_freq);
+    }
+
+    rec = m_perf->sample_recommendation("CPU_UNCORE_FREQUENCY_MAX_CONTROL");
+    EXPECT_EQ(rec.size(), M_NUM_PACKAGE);
+    for (auto r : rec) {
+        EXPECT_EQ(r, expected_freq);
+    }
+
     rec = m_perf->sample_recommendation("GPU_CORE_FREQUENCY_MIN_CONTROL");
     EXPECT_EQ(rec.size(), 0);
     rec = m_perf->sample_recommendation("GPU_CORE_FREQUENCY_MAX_CONTROL");
     EXPECT_EQ(rec.size(), 0);
 
-    double mock_active = 0.5;
-    EXPECT_CALL(*m_platform_io, sample(CPU_SCALABILITY_IDX))
-                .WillRepeatedly(Return(mock_active));
+    // ?? intensity
+    expected_freq = m_cpu_uncore_freq_min +
+                    (m_cpu_uncore_freq_max - m_cpu_uncore_freq_min) *
+                    (m_mbm_max.at(m_mbm_max.size() / 2) /
+                    m_mbm_max.at(m_mbm_max.size() - 2));
 
-    double f_e = m_cpu_freq_sticker - m_cpu_freq_step * 2;
-    double expected_core_freq = f_e + mock_active *
-                                (m_cpu_freq_max - f_e);
 
-    m_perf->update_recommendation(0.5);
-    rec = m_perf->sample_recommendation("CPU_FREQUENCY_MAX_CONTROL");
-    EXPECT_EQ(rec.size(), M_NUM_CORE);
+    policy = m_default_policy;
+    m_perf->validate_policy(policy);
+    EXPECT_EQ(0.5, policy[PHI]);
 
-    for (auto r : rec) {
-        EXPECT_EQ(r, expected_core_freq);
-    }
+    m_perf->set_policy(policy);
+
+    EXPECT_CALL(*m_platform_io, sample(QM_CTR_SCALED_RATE_IDX))
+                .WillRepeatedly(Return(m_mbm_max.at(m_mbm_max.size() / 2)));
+
+    EXPECT_CALL(*m_platform_io, sample(CPU_UNCORE_FREQUENCY_IDX))
+                .WillRepeatedly(Return(m_cpu_uncore_freq_max - 0.05e9));
+
+    m_perf->update_recommendation();
 
     rec = m_perf->sample_recommendation("CPU_UNCORE_FREQUENCY_MIN_CONTROL");
-    EXPECT_EQ(rec.size(), 0);
+    EXPECT_EQ(rec.size(), M_NUM_PACKAGE);
+    for (auto r : rec) {
+        EXPECT_EQ(r, expected_freq);
+    }
+
     rec = m_perf->sample_recommendation("CPU_UNCORE_FREQUENCY_MAX_CONTROL");
-    EXPECT_EQ(rec.size(), 0);
+    EXPECT_EQ(rec.size(), M_NUM_PACKAGE);
+    for (auto r : rec) {
+        EXPECT_EQ(r, expected_freq);
+    }
+
     rec = m_perf->sample_recommendation("GPU_CORE_FREQUENCY_MIN_CONTROL");
     EXPECT_EQ(rec.size(), 0);
     rec = m_perf->sample_recommendation("GPU_CORE_FREQUENCY_MAX_CONTROL");
     EXPECT_EQ(rec.size(), 0);
-
-    // Lower intensity
-    mock_active = 0.2;
-    EXPECT_CALL(*m_platform_io, sample(CPU_SCALABILITY_IDX))
-                .WillRepeatedly(Return(mock_active));
-
-    expected_core_freq = f_e + mock_active *
-                         (m_cpu_freq_max - f_e);
-
-    m_perf->update_recommendation(0.5);
-    rec = m_perf->sample_recommendation("CPU_FREQUENCY_MAX_CONTROL");
-    EXPECT_EQ(rec.size(), M_NUM_CORE);
-
-    for (auto r : rec) {
-        EXPECT_EQ(r, expected_core_freq);
-    }
 
     // Higher intensity
-    mock_active = 0.8;
-    EXPECT_CALL(*m_platform_io, sample(CPU_SCALABILITY_IDX))
-                .WillRepeatedly(Return(mock_active));
+    expected_freq = m_cpu_uncore_freq_max;
 
-    expected_core_freq = f_e + mock_active *
-                         (m_cpu_freq_max - f_e);
+    policy = m_default_policy;
+    m_perf->validate_policy(policy);
+    EXPECT_EQ(0.5, policy[PHI]);
 
-    m_perf->update_recommendation(0.5);
-    rec = m_perf->sample_recommendation("CPU_FREQUENCY_MAX_CONTROL");
-    EXPECT_EQ(rec.size(), M_NUM_CORE);
+    m_perf->set_policy(policy);
 
-    for (auto r : rec) {
-        EXPECT_EQ(r, expected_core_freq);
-    }
-}
+    EXPECT_CALL(*m_platform_io, sample(QM_CTR_SCALED_RATE_IDX))
+                .WillRepeatedly(Return(m_mbm_max.at(m_mbm_max.size()-1)));
 
-TEST_F(UncoreActivityPerformanceModelTest, update_and_sample_uncore_recommendation)
-{
-    EXPECT_CALL(*m_platform_io, write_control("MSR::PQR_ASSOC:RMID", _, _, _)).Times(1);
-    EXPECT_CALL(*m_platform_io, write_control("MSR::QM_EVTSEL:RMID", _, _, _)).Times(1);
-    EXPECT_CALL(*m_platform_io, write_control("MSR::QM_EVTSEL:EVENT_ID", _, _, _)).Times(1);
+    EXPECT_CALL(*m_platform_io, sample(CPU_UNCORE_FREQUENCY_IDX))
+                .WillRepeatedly(Return(m_cpu_uncore_freq_max));
 
-    // All Controls
-    std::set<std::string> signal_set = {"CPU_FREQUENCY_MIN_AVAIL", "CPU_FREQUENCY_MAX_AVAIL",
-                                        "CPU_FREQUENCY_STICKER", "CPU_FREQUENCY_STEP",
-                                        "MSR::CPU_SCALABILITY_RATIO",
-                                        "CPU_UNCORE_FREQUENCY_MIN_CONTROL", "CPU_UNCORE_FREQUENCY_MAX_CONTROL",
-                                        "CPU_UNCORE_FREQUENCY_STATUS", "MSR::QM_CTR_SCALED_RATE",
-                                        "GPU_FREQUENCY_MIN_AVAIL", "GPU_FREQUENCY_MAX_AVAIL",
-                                        "GPU_CORE_ACTIVITY"
-                                       };
-    EXPECT_CALL(*m_platform_io, signal_names()).WillRepeatedly(Return(signal_set));
-    m_perf->init();
-
-    // Size should be 0 by default
-    std::vector<double> rec = m_perf->sample_recommendation("CPU_FREQUENCY_MAX_CONTROL");
-    EXPECT_EQ(rec.size(), 0);
-    rec = m_perf->sample_recommendation("CPU_UNCORE_FREQUENCY_MIN_CONTROL");
-    EXPECT_EQ(rec.size(), 0);
-    rec = m_perf->sample_recommendation("CPU_UNCORE_FREQUENCY_MAX_CONTROL");
-    EXPECT_EQ(rec.size(), 0);
-    rec = m_perf->sample_recommendation("GPU_CORE_FREQUENCY_MIN_CONTROL");
-    EXPECT_EQ(rec.size(), 0);
-    rec = m_perf->sample_recommendation("GPU_CORE_FREQUENCY_MAX_CONTROL");
-    EXPECT_EQ(rec.size(), 0);
-
-
-//    EXPECT_CALL(*m_platform_io, sample(QM_CTR_SCALED_RATE_IDX))
-//                .WillRepeatedly(Return(m_mbm_max.at(m_mbm_max.size() / 2)));
-//    EXPECT_CALL(*m_platform_io, sample(CPU_UNCORE_FREQUENCY_IDX))
-//                .WillRepeatedly(Return(m_cpu_uncore_freq_max - 0.05e9));
-
-    m_perf->update_recommendation(0.5);
-    rec = m_perf->sample_recommendation("CPU_FREQUENCY_MAX_CONTROL");
-    EXPECT_EQ(rec.size(), M_NUM_CORE);
+    m_perf->update_recommendation();
 
     rec = m_perf->sample_recommendation("CPU_UNCORE_FREQUENCY_MIN_CONTROL");
     EXPECT_EQ(rec.size(), M_NUM_PACKAGE);
+    for (auto r : rec) {
+        EXPECT_EQ(r, expected_freq);
+    }
 
     rec = m_perf->sample_recommendation("CPU_UNCORE_FREQUENCY_MAX_CONTROL");
     EXPECT_EQ(rec.size(), M_NUM_PACKAGE);
+    for (auto r : rec) {
+        EXPECT_EQ(r, expected_freq);
+    }
 
     rec = m_perf->sample_recommendation("GPU_CORE_FREQUENCY_MIN_CONTROL");
-    EXPECT_EQ(rec.size(), M_NUM_GPU);
-
+    EXPECT_EQ(rec.size(), 0);
     rec = m_perf->sample_recommendation("GPU_CORE_FREQUENCY_MAX_CONTROL");
-    EXPECT_EQ(rec.size(), M_NUM_GPU);
-
-    //m_perf->update_recommendation(0.2);
-    //m_perf->update_recommendation(0.8);
+    EXPECT_EQ(rec.size(), 0);
 }
 
-TEST_F(UncoreActivityPerformanceModelTest, update_and_sample_gpu_recommendation)
-{
-    // All Controls
-    std::set<std::string> signal_set = {"GPU_FREQUENCY_MIN_AVAIL", "GPU_FREQUENCY_MAX_AVAIL",
-                                        "GPU_CORE_ACTIVITY"
-                                       };
-    EXPECT_CALL(*m_platform_io, signal_names()).WillRepeatedly(Return(signal_set));
-
-    m_perf->init();
-
-    // Size should be 0 by default
-    std::vector<double> rec = m_perf->sample_recommendation("CPU_FREQUENCY_MAX_CONTROL");
-    EXPECT_EQ(rec.size(), 0);
-    rec = m_perf->sample_recommendation("CPU_UNCORE_FREQUENCY_MIN_CONTROL");
-    EXPECT_EQ(rec.size(), 0);
-    rec = m_perf->sample_recommendation("CPU_UNCORE_FREQUENCY_MAX_CONTROL");
-    EXPECT_EQ(rec.size(), 0);
-    rec = m_perf->sample_recommendation("GPU_CORE_FREQUENCY_MIN_CONTROL");
-    EXPECT_EQ(rec.size(), 0);
-    rec = m_perf->sample_recommendation("GPU_CORE_FREQUENCY_MAX_CONTROL");
-    EXPECT_EQ(rec.size(), 0);
-
-    double mock_active = 0.5;
-    EXPECT_CALL(*m_platform_io, sample(GPU_ACTIVITY_IDX))
-                .WillRepeatedly(Return(mock_active));
-
-    double f_e = (m_gpu_freq_min + m_gpu_freq_max) / 2;
-    double expected_freq = f_e + mock_active *
-                                (m_gpu_freq_max - f_e);
-
-    m_perf->update_recommendation(0.5);
-    rec = m_perf->sample_recommendation("CPU_FREQUENCY_MAX_CONTROL");
-    EXPECT_EQ(rec.size(), 0);
-    rec = m_perf->sample_recommendation("CPU_UNCORE_FREQUENCY_MIN_CONTROL");
-    EXPECT_EQ(rec.size(), 0);
-    rec = m_perf->sample_recommendation("CPU_UNCORE_FREQUENCY_MAX_CONTROL");
-    EXPECT_EQ(rec.size(), 0);
-
-    rec = m_perf->sample_recommendation("GPU_CORE_FREQUENCY_MIN_CONTROL");
-    EXPECT_EQ(rec.size(), M_NUM_GPU);
-    rec = m_perf->sample_recommendation("GPU_CORE_FREQUENCY_MAX_CONTROL");
-    EXPECT_EQ(rec.size(), M_NUM_GPU);
-
-    for (auto r : rec) {
-        EXPECT_EQ(r, expected_freq);
-    }
-
-    mock_active = 0.2;
-    EXPECT_CALL(*m_platform_io, sample(GPU_ACTIVITY_IDX))
-                .WillRepeatedly(Return(mock_active));
-
-    f_e = (m_gpu_freq_min + m_gpu_freq_max) / 2;
-    expected_freq = f_e + mock_active *
-                         (m_gpu_freq_max - f_e);
-
-    m_perf->update_recommendation(0.5);
-    rec = m_perf->sample_recommendation("CPU_FREQUENCY_MAX_CONTROL");
-    EXPECT_EQ(rec.size(), 0);
-    rec = m_perf->sample_recommendation("CPU_UNCORE_FREQUENCY_MIN_CONTROL");
-    EXPECT_EQ(rec.size(), 0);
-    rec = m_perf->sample_recommendation("CPU_UNCORE_FREQUENCY_MAX_CONTROL");
-    EXPECT_EQ(rec.size(), 0);
-
-    rec = m_perf->sample_recommendation("GPU_CORE_FREQUENCY_MIN_CONTROL");
-    EXPECT_EQ(rec.size(), M_NUM_GPU);
-    rec = m_perf->sample_recommendation("GPU_CORE_FREQUENCY_MAX_CONTROL");
-    EXPECT_EQ(rec.size(), M_NUM_GPU);
-
-    for (auto r : rec) {
-        EXPECT_EQ(r, expected_freq);
-    }
-
-    mock_active = 0.8;
-    EXPECT_CALL(*m_platform_io, sample(GPU_ACTIVITY_IDX))
-                .WillRepeatedly(Return(mock_active));
-
-    f_e = (m_gpu_freq_min + m_gpu_freq_max) / 2;
-    expected_freq = f_e + mock_active *
-                         (m_gpu_freq_max - f_e);
-
-    m_perf->update_recommendation(0.5);
-    rec = m_perf->sample_recommendation("CPU_FREQUENCY_MAX_CONTROL");
-    EXPECT_EQ(rec.size(), 0);
-    rec = m_perf->sample_recommendation("CPU_UNCORE_FREQUENCY_MIN_CONTROL");
-    EXPECT_EQ(rec.size(), 0);
-    rec = m_perf->sample_recommendation("CPU_UNCORE_FREQUENCY_MAX_CONTROL");
-    EXPECT_EQ(rec.size(), 0);
-
-    rec = m_perf->sample_recommendation("GPU_CORE_FREQUENCY_MIN_CONTROL");
-    EXPECT_EQ(rec.size(), M_NUM_GPU);
-    rec = m_perf->sample_recommendation("GPU_CORE_FREQUENCY_MAX_CONTROL");
-    EXPECT_EQ(rec.size(), M_NUM_GPU);
-
-    for (auto r : rec) {
-        EXPECT_EQ(r, expected_freq);
-    }
-}
 
 TEST_F(UncoreActivityPerformanceModelTest, update_and_sample_phi_low)
 {

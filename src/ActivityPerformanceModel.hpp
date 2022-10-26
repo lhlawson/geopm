@@ -31,14 +31,18 @@ namespace geopm
             virtual std::map<std::string, int> controls_recommended() = 0;
 
             /// @brief Queries all signals of interest and updates the recommendations for controls
-            /// @returns map of control idx and recommended values
-            //virtual void update_recommendation(double phi) = 0;
-            virtual void update_recommendation(const std::vector<double>& in_policy) = 0;
+            virtual void update_recommendation() = 0;
 
             /// @brief Provides recommendations for control provided
             /// @returns recommended value for specified control
             virtual std::vector<double> sample_recommendation(std::string control_name) const = 0;
+
+            /// @brief Validates the policy provided to the performance model.
+            ///        Policy sender can request default value with 'NaN'.
             virtual void validate_policy(std::vector<double> &in_policy) const = 0;
+
+            /// @brief
+            virtual void set_policy(std::vector<double> &in_policy) = 0;
 
     };
 

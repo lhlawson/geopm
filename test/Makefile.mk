@@ -312,6 +312,10 @@ if ENABLE_BETA
                    test/gtest_links/CPUActivityPerformanceModelTest.control_recommendation \
                    test/gtest_links/CPUActivityPerformanceModelTest.update_and_sample_recommendation \
                    test/gtest_links/CPUActivityPerformanceModelTest.update_sample_check_recommendation \
+                   test/gtest_links/UncoreActivityPerformanceModelTest.valid \
+                   test/gtest_links/UncoreActivityPerformanceModelTest.control_recommendation \
+                   test/gtest_links/UncoreActivityPerformanceModelTest.update_and_sample_recommendation \
+                   test/gtest_links/UncoreActivityPerformanceModelTest.update_sample_check_recommendation \
                    test/gtest_links/DaemonTest.get_default_policy \
                    test/gtest_links/DaemonTest.get_profile_policy \
                    test/gtest_links/DaemonTest.get_default_policy \
@@ -438,12 +442,12 @@ test_geopm_test_SOURCES = test/AccumulatorTest.cpp \
                           # end
 
 beta_test_sources = test/CPUActivityPerformanceModelTest.cpp \
+                    test/UncoreActivityPerformanceModelTest.cpp \
                     test/CPUActivityAgentTest.cpp \
                     test/DaemonTest.cpp \
                     test/MockPolicyStore.hpp \
                     test/PolicyStoreImpTest.cpp \
                     # end
-                    #test/UncoreActivityPerformanceModelTest.cpp
 
 if ENABLE_BETA
     test_geopm_test_SOURCES += $(beta_test_sources)

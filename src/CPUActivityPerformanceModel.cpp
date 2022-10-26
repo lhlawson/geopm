@@ -18,7 +18,6 @@
 
 namespace geopm
 {
-    //TODO: require domain as part of constructor
     ActivityPerformanceModel &cpu_activity_perf_model()
     {
         static CPUActivityPerformanceModelImp instance;
@@ -118,14 +117,14 @@ namespace geopm
         return result;
     }
 
-    void CPUActivityPerformanceModelImp::update_recommendation(const std::vector<double>& in_policy) {
+    void CPUActivityPerformanceModelImp::update_recommendation() {
         m_recommendation["CPU_FREQUENCY_MAX_CONTROL"] = {};
         if (m_supported_controls.count("CPU_FREQUENCY_MAX_CONTROL") != 0) {
             // Generate per core frequency recommendation
             for (int domain_idx = 0; domain_idx < M_NUM_CORE; ++domain_idx) {
                 m_core_scal.at(domain_idx).value = m_platform_io.sample(m_core_scal.at(domain_idx).batch_idx);
-                double freq_rec = frequency_fit(in_policy[M_POLICY_FREQ_EFFICIENT],
-                                                in_policy[M_POLICY_FREQ_MAX],
+                double freq_rec = frequency_fit(m_freq_efficient,
+                                                m_freq_max,
                                                 m_core_scal.at(domain_idx).value);
 
                 m_recommendation["CPU_FREQUENCY_MAX_CONTROL"].push_back(freq_rec);
@@ -216,6 +215,18 @@ namespace geopm
         //Update Policy
         in_policy[M_POLICY_FREQ_MAX] = f_core_max;
         in_policy[M_POLICY_FREQ_EFFICIENT] = f_core_efficient;
+    }
+
+    void CPUActivityPerformanceModelImp::set_policy(std::vector<double> &in_policy)
+    {
+        GEOPM_DEBUG_ASSERT(in_policy.size() == M_NUM_POLICY,
+                           "CPUActivityPerfModel::" + std::string(__func__) +
+                           "(): policy vector not correctly sized.  Expected  " +
+                           std::to_string(M_NUM_POLICY) + ", actual: " +
+                           std::to_string(in_policy.size()));
+
+        m_freq_max = in_policy[M_POLICY_FREQ_MAX];
+        m_freq_efficient = in_policy[M_POLICY_FREQ_EFFICIENT];
     }
 
     double CPUActivityPerformanceModelImp::frequency_fit(double f_e, double f_max, double scalability)

@@ -475,8 +475,6 @@ beta_source_files = src/CPUActivityAgent.cpp \
                     src/PolicyStoreImp.cpp \
                     src/PolicyStoreImp.hpp \
                     #end
-                    #src/ActivityPerformanceModel.cpp
-                    #src/ActivityPerformanceModelImp.hpp
 
 if ENABLE_BETA
     libgeopmpolicy_la_SOURCES += $(beta_source_files)

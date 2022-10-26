@@ -25,10 +25,11 @@ namespace geopm
             void init(void) override;
             bool algorithm_valid(void) override;
             std::map<std::string, int> controls_recommended() override;
-            void update_recommendation(const std::vector<double>& in_policy) override;
+            void update_recommendation() override;
             std::vector<double> sample_recommendation(std::string control_name) const override;
             std::vector<std::string> policy_names(void) const;
             void validate_policy(std::vector<double> &in_policy) const;
+            void set_policy(std::vector<double> &in_policy);
 
         private:
             PlatformIO &m_platform_io;

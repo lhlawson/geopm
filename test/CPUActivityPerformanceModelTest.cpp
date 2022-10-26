@@ -176,10 +176,6 @@ TEST_F(CPUActivityPerformanceModelTest, control_recommendation)
     m_perf->init();
 
     std::map<std::string, int> expected = {{"CPU_FREQUENCY_MAX_CONTROL", GEOPM_DOMAIN_CORE},
-                                           {"CPU_UNCORE_FREQUENCY_MIN_CONTROL", GEOPM_DOMAIN_PACKAGE},
-                                           {"CPU_UNCORE_FREQUENCY_MAX_CONTROL", GEOPM_DOMAIN_PACKAGE},
-                                           {"GPU_CORE_FREQUENCY_MIN_CONTROL", GEOPM_DOMAIN_GPU},
-                                           {"GPU_CORE_FREQUENCY_MAX_CONTROL", GEOPM_DOMAIN_GPU}
                                           };
 
     std::map<std::string, int> actual = m_perf->controls_recommended();
@@ -227,7 +223,8 @@ TEST_F(CPUActivityPerformanceModelTest, update_and_sample_recommendation)
     policy = m_default_policy;
     m_perf->validate_policy(policy);
     EXPECT_EQ(0.5, policy[PHI]);
-    m_perf->update_recommendation(policy);
+    m_perf->set_policy(policy);
+    m_perf->update_recommendation();
 
     rec = m_perf->sample_recommendation("CPU_FREQUENCY_MAX_CONTROL");
     EXPECT_EQ(rec.size(), M_NUM_CORE);
@@ -262,7 +259,8 @@ TEST_F(CPUActivityPerformanceModelTest, update_sample_check_recommendation)
     policy = m_default_policy;
     m_perf->validate_policy(policy);
     EXPECT_EQ(0.5, policy[PHI]);
-    m_perf->update_recommendation(policy);
+    m_perf->set_policy(policy);
+    m_perf->update_recommendation();
 
     rec = m_perf->sample_recommendation("CPU_FREQUENCY_MAX_CONTROL");
     EXPECT_EQ(rec.size(), M_NUM_CORE);
@@ -285,7 +283,8 @@ TEST_F(CPUActivityPerformanceModelTest, update_sample_check_recommendation)
     policy = m_default_policy;
     m_perf->validate_policy(policy);
     EXPECT_EQ(0.5, policy[PHI]);
-    m_perf->update_recommendation(policy);
+    m_perf->set_policy(policy);
+    m_perf->update_recommendation();
 
     rec = m_perf->sample_recommendation("CPU_FREQUENCY_MAX_CONTROL");
     EXPECT_EQ(rec.size(), M_NUM_CORE);
@@ -305,7 +304,8 @@ TEST_F(CPUActivityPerformanceModelTest, update_sample_check_recommendation)
     policy = m_default_policy;
     m_perf->validate_policy(policy);
     EXPECT_EQ(0.5, policy[PHI]);
-    m_perf->update_recommendation(policy);
+    m_perf->set_policy(policy);
+    m_perf->update_recommendation();
 
     rec = m_perf->sample_recommendation("CPU_FREQUENCY_MAX_CONTROL");
     EXPECT_EQ(rec.size(), M_NUM_CORE);
