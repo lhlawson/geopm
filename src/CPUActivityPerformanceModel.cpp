@@ -138,11 +138,11 @@ namespace geopm
     }
 
     // Describes expected policies to be provided by the resource manager or user
-    std::vector<std::string> CPUActivityPerformanceModelImp::policy_names(void) const
-    {
-        std::vector<std::string> names{"PHI", "FREQ_MAX", "FREQ_EFFICIENT"};
-        return names;
-    }
+//    std::vector<std::string> CPUActivityPerformanceModelImp::policy_names(void) const
+//    {
+//        std::vector<std::string> names{"PHI", "FREQ_MAX", "FREQ_EFFICIENT"};
+//        return names;
+//    }
 
     void CPUActivityPerformanceModelImp::validate_policy(std::vector<double> &in_policy) const
     {

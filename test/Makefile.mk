@@ -386,6 +386,7 @@ test_geopm_test_SOURCES = test/AccumulatorTest.cpp \
                           test/FrequencyGovernorTest.cpp \
                           test/FrequencyMapAgentTest.cpp \
                           test/MockAgent.hpp \
+                          test/MockActivityPerformanceModel.hpp \
                           test/MockApplicationIO.hpp \
                           test/MockApplicationRecordLog.hpp \
                           test/MockApplicationSampler.cpp \

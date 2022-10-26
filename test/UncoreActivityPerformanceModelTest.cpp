@@ -116,7 +116,7 @@ void UncoreActivityPerformanceModelTest::SetUp()
 
     m_perf = geopm::make_unique<UncoreActivityPerformanceModelImp>(*m_platform_io, *m_platform_topo);
 
-    m_num_policy = m_perf->policy_names().size();
+//    m_num_policy = m_perf->policy_names().size();
 
     m_mbm_max = 104748888888.88889;
     m_default_policy = {NAN, m_cpu_uncore_freq_max, m_cpu_uncore_freq_min, m_mbm_max};

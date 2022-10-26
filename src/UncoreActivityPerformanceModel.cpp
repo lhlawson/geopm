@@ -7,7 +7,6 @@
 
 #include <cmath>
 #include <unistd.h>
-#include <iostream>
 
 #include "PlatformIOProf.hpp"
 #include "geopm/Exception.hpp"
@@ -155,11 +154,11 @@ namespace geopm
     }
 
     // Describes expected policies to be provided by the resource manager or user
-    std::vector<std::string> UncoreActivityPerformanceModelImp::policy_names(void) const
-    {
-        std::vector<std::string> names{"PHI", "FREQ_MAX", "FREQ_EFFICIENT", "MAX_MEM_BW"};
-        return names;
-    }
+//    std::vector<std::string> UncoreActivityPerformanceModelImp::policy_names(void) const
+//    {
+//        std::vector<std::string> names{"PHI", "FREQ_MAX", "FREQ_EFFICIENT", "MAX_MEM_BW"};
+//        return names;
+//    }
 
     void UncoreActivityPerformanceModelImp::validate_policy(std::vector<double> &in_policy) const
     {

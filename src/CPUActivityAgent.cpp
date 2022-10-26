@@ -27,15 +27,19 @@
 namespace geopm
 {
     CPUActivityAgent::CPUActivityAgent()
-        : CPUActivityAgent(platform_io(), platform_topo())
+        : CPUActivityAgent(platform_io(), platform_topo(),
+                           cpu_activity_perf_model(),
+                           uncore_activity_perf_model())
     {
     }
 
-    CPUActivityAgent::CPUActivityAgent(PlatformIO &plat_io, const PlatformTopo &topo)
+    CPUActivityAgent::CPUActivityAgent(PlatformIO &plat_io, const PlatformTopo &topo,
+                                       ActivityPerformanceModel &cpu_perf_model,
+                                       ActivityPerformanceModel &uncore_perf_model)
         : m_platform_io(plat_io)
         , m_platform_topo(topo)
-        , m_cpu_perf_model(cpu_activity_perf_model())
-        , m_uncore_perf_model(uncore_activity_perf_model())
+        , m_cpu_perf_model(cpu_perf_model)
+        , m_uncore_perf_model(uncore_perf_model)
         , m_last_wait{{0, 0}}
         , M_WAIT_SEC(0.010) // 10ms wait default
         , M_POLICY_PHI_DEFAULT(0.5)
@@ -45,8 +49,6 @@ namespace geopm
         , m_do_send_policy(true)
         , m_core_frequency_requests(0)
         , m_uncore_frequency_requests(0)
-        , m_core_frequency_clipped(0)
-        , m_uncore_frequency_clipped(0)
         , m_resolved_f_uncore_efficient(0)
         , m_resolved_f_uncore_max(0)
         , m_resolved_f_core_efficient(0)
@@ -188,6 +190,9 @@ namespace geopm
                                            in_policy[M_POLICY_CPU_FREQ_MAX],
                                            in_policy[M_POLICY_CPU_FREQ_EFFICIENT]};
 
+        m_resolved_f_core_max = in_policy[M_POLICY_CPU_FREQ_MAX];
+        m_resolved_f_core_efficient = in_policy[M_POLICY_CPU_FREQ_EFFICIENT];
+
         m_cpu_perf_model.set_policy(core_policy);
         m_cpu_perf_model.update_recommendation();
 
@@ -216,6 +221,10 @@ namespace geopm
                                              in_policy[M_POLICY_UNCORE_FREQ_MAX],
                                              in_policy[M_POLICY_UNCORE_FREQ_EFFICIENT],
                                              in_policy[M_POLICY_MAX_MEM_BW]};
+
+        m_resolved_f_uncore_max = in_policy[M_POLICY_UNCORE_FREQ_MAX];
+        m_resolved_f_uncore_efficient = in_policy[M_POLICY_UNCORE_FREQ_EFFICIENT];
+
         m_uncore_perf_model.set_policy(uncore_policy);
         m_uncore_perf_model.update_recommendation();
 
@@ -292,9 +301,7 @@ namespace geopm
         std::vector<std::pair<std::string, std::string> > result;
 
         result.push_back({"Core Frequency Requests", std::to_string(m_core_frequency_requests)});
-        result.push_back({"Core Clipped Frequency Requests", std::to_string(m_core_frequency_clipped)});
         result.push_back({"Uncore Frequency Requests", std::to_string(m_uncore_frequency_requests)});
-        result.push_back({"Uncore Clipped Frequency Requests", std::to_string(m_uncore_frequency_clipped)});
         result.push_back({"Resolved Maximum Core Frequency", std::to_string(m_resolved_f_core_max)});
         result.push_back({"Resolved Efficient Core Frequency", std::to_string(m_resolved_f_core_efficient)});
         result.push_back({"Resolved Core Frequency Range", std::to_string(m_resolved_f_core_max - m_resolved_f_core_efficient)});

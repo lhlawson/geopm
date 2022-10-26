@@ -22,7 +22,9 @@ namespace geopm
     {
         public:
             CPUActivityAgent();
-            CPUActivityAgent(PlatformIO &plat_io, const PlatformTopo &topo);
+            CPUActivityAgent(PlatformIO &plat_io, const PlatformTopo &topo,
+                             ActivityPerformanceModel &cpu_perf_model,
+                             ActivityPerformanceModel &uncore_perf_model);
             virtual ~CPUActivityAgent() = default;
             void init(int level, const std::vector<int> &fan_in, bool is_level_root) override;
             void validate_policy(std::vector<double> &in_policy) const override;
@@ -60,8 +62,6 @@ namespace geopm
             bool m_do_send_policy;
             double m_core_frequency_requests;
             double m_uncore_frequency_requests;
-            double m_core_frequency_clipped;
-            double m_uncore_frequency_clipped;
             double m_resolved_f_uncore_efficient;
             double m_resolved_f_uncore_max;
             double m_resolved_f_core_efficient;

@@ -6,8 +6,6 @@
 #ifndef ACTIVITYPERFORMANCEMODEL_HPP_INCLUDE
 #define ACTIVITYPERFORMANCEMODEL_HPP_INCLUDE
 
-#include <memory>
-
 namespace geopm
 {
     class PlatformTopo;
@@ -43,10 +41,8 @@ namespace geopm
 
             /// @brief
             virtual void set_policy(std::vector<double> &in_policy) = 0;
-
     };
 
-    //ActivityPerformanceModel &activity_perf_model(int perf_domain);
     ActivityPerformanceModel &cpu_activity_perf_model();
     ActivityPerformanceModel &uncore_activity_perf_model();
 }
