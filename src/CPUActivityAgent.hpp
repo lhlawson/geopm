@@ -92,12 +92,9 @@ namespace geopm
                 M_POLICY_CPU_FREQ_EFFICIENT,
                 M_POLICY_UNCORE_FREQ_MAX,
                 M_POLICY_UNCORE_FREQ_EFFICIENT,
+                M_POLICY_MAX_MEM_BW,
                 M_POLICY_CPU_PHI,
-                M_POLICY_FIRST_UNCORE_FREQ,
-                M_POLICY_FIRST_MAX_MEM_BW,
-                // The remainder of policy values can be additional pairs of
-                // (uncore freq, max memory bandwidth)
-                M_NUM_POLICY = 63,
+                M_NUM_POLICY,
             };
 
             // Sample indices; must match sample_names()
@@ -108,7 +105,7 @@ namespace geopm
             std::map<std::string, double> m_policy_available;
             // Maps uncore frequency -> maximum memory bandwidth achieved by
             // that frequency (determined by system characterization)
-            std::map<double, double> m_qm_max_rate;
+            double m_qm_max_rate;
 
             std::vector<signal> m_core_scal;
             std::vector<control> m_core_freq_control;

@@ -54,11 +54,8 @@ class CPUActivityAgentTest : public ::testing::Test
             CPU_FREQ_EFFICIENT = 1,
             CPU_UNCORE_FREQ_MAX = 2,
             CPU_UNCORE_FREQ_EFFICIENT = 3,
-            PHI = 4,
-            UNCORE_FREQ_0 = 5,
-            UNCORE_MEM_BW_0 = 6,
-            UNCORE_FREQ_1 = 7,
-            UNCORE_MEM_BW_1 = 8,
+            UNCORE_MEM_BW_0 = 4,
+            PHI = 5,
         };
 
         void SetUp();
@@ -76,7 +73,6 @@ class CPUActivityAgentTest : public ::testing::Test
         double m_cpu_freq_max;
         double m_cpu_uncore_freq_min;
         double m_cpu_uncore_freq_max;
-        std::vector<double> m_cpu_uncore_freqs;
         std::vector<double> m_mbm_max;
         std::unique_ptr<MockPlatformIO> m_platform_io;
         std::unique_ptr<MockPlatformTopo> m_platform_topo;
@@ -180,26 +176,7 @@ void CPUActivityAgentTest::SetUp()
     m_num_policy = m_agent->policy_names().size();
 
     m_default_policy = {m_cpu_freq_max, m_cpu_freq_min, m_cpu_uncore_freq_max,
-                        m_cpu_uncore_freq_min, NAN};
-
-    m_cpu_uncore_freqs = {1.2e9, 1.3e9, 1.4e9, 1.5e9, 1.6e9, 1.7e9, 1.8e9,
-                      1.9e9, 2.0e9, 2.1e9, 2.2e9, 2.3e9, 2.4e9};
-    m_mbm_max = {45414967307.69231, 64326515384.61539, 72956528846.15384,
-                 77349315384.61539, 82345998076.92308, 87738286538.46153,
-                 91966364814.81482, 96728174074.07408, 100648379629.62962,
-                 102409246296.2963, 103624103703.7037, 104268944444.44444,
-                 104748888888.88889};
-    ASSERT_EQ(m_cpu_uncore_freqs.size(), m_mbm_max.size());
-    ASSERT_EQ(m_mbm_max.size(), M_NUM_UNCORE_MBM_READINGS);
-
-    for (size_t i = 0; i < M_NUM_UNCORE_MBM_READINGS; ++i) {
-        m_default_policy.push_back(m_cpu_uncore_freqs[i]);
-        m_default_policy.push_back(m_mbm_max[i]);
-    }
-
-    for (size_t i = m_default_policy.size(); i < m_num_policy; ++i) {
-        m_default_policy.push_back(NAN);
-    }
+                        m_cpu_uncore_freq_min, 104748888888.88889, NAN};
 
     // leaf agent
     m_agent->init(0, {}, false);
@@ -298,25 +275,6 @@ TEST_F(CPUActivityAgentTest, validate_policy)
     policy[PHI] = 1.1;
     GEOPM_EXPECT_THROW_MESSAGE(m_agent->validate_policy(policy), GEOPM_ERROR_INVALID,
                                "POLICY_CPU_PHI value out of range");
-
-    // cannot have same uncore freq with mbm values
-    policy = policy_nan;
-    policy[UNCORE_FREQ_0] = 123;
-    policy[UNCORE_FREQ_1] = 123;
-    policy[UNCORE_MEM_BW_0] = 456;
-    policy[UNCORE_MEM_BW_1] = 789;
-    EXPECT_CALL(*m_gov, validate_policy(m_cpu_freq_min, m_cpu_freq_max)).Times(1);
-    EXPECT_CALL(*m_gov, set_frequency_bounds(m_cpu_freq_min, m_cpu_freq_max)).Times(1);
-    GEOPM_EXPECT_THROW_MESSAGE(m_agent->validate_policy(policy), GEOPM_ERROR_INVALID,
-                               "policy has multiple entries for CPU_UNCORE_FREQUENCY 123");
-
-    // mapped uncore freq cannot have NAN mbm values
-    policy = policy_nan;
-    policy[UNCORE_FREQ_0] = 123;
-    EXPECT_CALL(*m_gov, validate_policy(m_cpu_freq_min, m_cpu_freq_max)).Times(1);
-    EXPECT_CALL(*m_gov, set_frequency_bounds(m_cpu_freq_min, m_cpu_freq_max)).Times(1);
-    GEOPM_EXPECT_THROW_MESSAGE(m_agent->validate_policy(policy), GEOPM_ERROR_INVALID,
-                               "mapped CPU_UNCORE_FREQUENCY with no max memory bandwidth");
 
     // cannot have mbm values without uncore freq
     policy = policy_nan;
@@ -617,5 +575,5 @@ TEST_F(CPUActivityAgentTest, adjust_platform_nan)
     //Adjust
     //Check frequency
     GEOPM_EXPECT_THROW_MESSAGE(m_agent->adjust_platform(policy), GEOPM_ERROR_INVALID,
-                               "CPUActivityAgent policy did not contain memory bandwidth characterization");
+                               "CPUActivityAgent policy did not contain maximum memory bandwidth.");
 }
