@@ -10,6 +10,7 @@
 #include <fstream>
 #include <map>
 #include <memory>
+#include <vector>
 
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
@@ -36,14 +37,12 @@ using ::testing::AtLeast;
 using ::testing::DoubleNear;
 using geopm::CPUActivityAgent;
 using geopm::PlatformTopo;
+using testing::SetArgReferee;
 
 class CPUActivityAgentTest : public ::testing::Test
 {
     protected:
         enum mock_pio_idx_e {
-            QM_CTR_SCALED_RATE_IDX,
-            CPU_SCALABILITY_IDX,
-            CPU_UNCORE_FREQUENCY_IDX,
             CPU_FREQUENCY_CONTROL_IDX,
             CPU_UNCORE_MIN_CONTROL_IDX,
             CPU_UNCORE_MAX_CONTROL_IDX
@@ -54,19 +53,14 @@ class CPUActivityAgentTest : public ::testing::Test
             CPU_UNCORE_FREQ_MAX = 2,
             CPU_UNCORE_FREQ_EFFICIENT = 3,
             PHI = 4,
-            UNCORE_FREQ_0 = 5,
-            UNCORE_MEM_BW_0 = 6,
-            UNCORE_FREQ_1 = 7,
-            UNCORE_MEM_BW_1 = 8,
+            UNCORE_MEM_BW = 5,
         };
 
         void SetUp();
         void TearDown();
         static const int M_NUM_CPU;
         static const int M_NUM_CORE;
-        static const int M_NUM_BOARD;
         static const int M_NUM_PACKAGE;
-        static const size_t M_NUM_UNCORE_MBM_READINGS;
         std::unique_ptr<CPUActivityAgent> m_agent;
         std::vector<double> m_default_policy;
         size_t m_num_policy;
@@ -74,8 +68,7 @@ class CPUActivityAgentTest : public ::testing::Test
         double m_cpu_freq_max;
         double m_cpu_uncore_freq_min;
         double m_cpu_uncore_freq_max;
-        std::vector<double> m_cpu_uncore_freqs;
-        std::vector<double> m_mbm_max;
+        double m_mbm_max;
         std::unique_ptr<MockPlatformIO> m_platform_io;
         std::unique_ptr<MockPlatformTopo> m_platform_topo;
         std::unique_ptr<MockActivityPerformanceModel> m_cpu_model;
@@ -84,9 +77,7 @@ class CPUActivityAgentTest : public ::testing::Test
 
 const int CPUActivityAgentTest::M_NUM_CPU = 1;
 const int CPUActivityAgentTest::M_NUM_CORE = 1;
-const int CPUActivityAgentTest::M_NUM_BOARD = 1;
 const int CPUActivityAgentTest::M_NUM_PACKAGE = 1;
-const size_t CPUActivityAgentTest::M_NUM_UNCORE_MBM_READINGS = 13;
 
 void CPUActivityAgentTest::SetUp()
 {
@@ -97,8 +88,8 @@ void CPUActivityAgentTest::SetUp()
 
     ON_CALL(*m_platform_topo, num_domain(GEOPM_DOMAIN_CORE))
         .WillByDefault(Return(M_NUM_CORE));
-
-    EXPECT_CALL(*m_platform_topo, num_domain(GEOPM_DOMAIN_CORE)).Times(1);
+    ON_CALL(*m_platform_topo, num_domain(GEOPM_DOMAIN_PACKAGE))
+        .WillByDefault(Return(M_NUM_PACKAGE));
 
     // Controls
     ON_CALL(*m_platform_io, push_control("CPU_FREQUENCY_MAX_CONTROL", _, _))
@@ -110,6 +101,20 @@ void CPUActivityAgentTest::SetUp()
     ON_CALL(*m_platform_io, agg_function(_))
         .WillByDefault(Return(geopm::Agg::average));
 
+    std::map<std::string, int> cpu_ctl_map = {{"CPU_FREQUENCY_MAX_CONTROL", GEOPM_DOMAIN_CORE}};
+    ON_CALL(*m_cpu_model, controls_recommended())
+        .WillByDefault(Return(cpu_ctl_map));
+    ON_CALL(*m_cpu_model, algorithm_valid())
+        .WillByDefault(Return(true));
+
+    std::map<std::string, int> uncore_ctl_map = {{"CPU_UNCORE_FREQUENCY_MIN_CONTROL", GEOPM_DOMAIN_PACKAGE},
+                                                 {"CPU_UNCORE_FREQUENCY_MAX_CONTROL", GEOPM_DOMAIN_PACKAGE}};
+    ON_CALL(*m_uncore_model, controls_recommended())
+        .WillByDefault(Return(uncore_ctl_map));
+    ON_CALL(*m_uncore_model, algorithm_valid())
+        .WillByDefault(Return(true));
+
+
     EXPECT_CALL(*m_platform_io, push_control("CPU_FREQUENCY_MAX_CONTROL", _, _)).Times(1);
     EXPECT_CALL(*m_platform_io, push_control("CPU_UNCORE_FREQUENCY_MIN_CONTROL", _, _)).Times(1);
     EXPECT_CALL(*m_platform_io, push_control("CPU_UNCORE_FREQUENCY_MAX_CONTROL", _, _)).Times(1);
@@ -119,51 +124,13 @@ void CPUActivityAgentTest::SetUp()
     m_cpu_uncore_freq_min = 1200000000.0;
     m_cpu_uncore_freq_max = 2400000000.0;
 
-    ON_CALL(*m_platform_io, control_domain_type("CPU_FREQUENCY_MAX_CONTROL"))
-            .WillByDefault(Return(GEOPM_DOMAIN_CPU));
-
-    ON_CALL(*m_platform_io, read_signal("CPU_FREQUENCY_MIN_AVAIL", GEOPM_DOMAIN_BOARD, 0))
-            .WillByDefault(Return(m_cpu_freq_min));
-    ON_CALL(*m_platform_io, read_signal("CPU_FREQUENCY_MAX_AVAIL", GEOPM_DOMAIN_BOARD, 0))
-            .WillByDefault(Return(m_cpu_freq_max));
-
-    ON_CALL(*m_platform_io, read_signal("CPU_UNCORE_FREQUENCY_MIN_CONTROL", GEOPM_DOMAIN_BOARD, 0))
-            .WillByDefault(Return(m_cpu_uncore_freq_min));
-    ON_CALL(*m_platform_io, read_signal("CPU_UNCORE_FREQUENCY_MAX_CONTROL", GEOPM_DOMAIN_BOARD, 0))
-            .WillByDefault(Return(m_cpu_uncore_freq_max));
-
-    ASSERT_LT(m_cpu_freq_min, 2e9);
-    ASSERT_LT(m_cpu_freq_max, 4e9);
-    ASSERT_LT(m_cpu_freq_min, m_cpu_freq_max);
-    ASSERT_LT(m_cpu_uncore_freq_min, 2e9);
-    ASSERT_LT(m_cpu_uncore_freq_max, 3e9);
-    ASSERT_LT(m_cpu_uncore_freq_min, m_cpu_uncore_freq_max);
-
     m_agent = geopm::make_unique<CPUActivityAgent>(*m_platform_io, *m_platform_topo,
                                                    *m_cpu_model, *m_uncore_model);
-//    m_num_policy = m_agent->policy_names().size();
+    m_num_policy = m_agent->policy_names().size();
 
+    m_mbm_max = 104748888888.88889;
     m_default_policy = {m_cpu_freq_max, m_cpu_freq_min, m_cpu_uncore_freq_max,
-                        m_cpu_uncore_freq_min, NAN};
-
-    m_cpu_uncore_freqs = {1.2e9, 1.3e9, 1.4e9, 1.5e9, 1.6e9, 1.7e9, 1.8e9,
-                      1.9e9, 2.0e9, 2.1e9, 2.2e9, 2.3e9, 2.4e9};
-    m_mbm_max = {45414967307.69231, 64326515384.61539, 72956528846.15384,
-                 77349315384.61539, 82345998076.92308, 87738286538.46153,
-                 91966364814.81482, 96728174074.07408, 100648379629.62962,
-                 102409246296.2963, 103624103703.7037, 104268944444.44444,
-                 104748888888.88889};
-    ASSERT_EQ(m_cpu_uncore_freqs.size(), m_mbm_max.size());
-    ASSERT_EQ(m_mbm_max.size(), M_NUM_UNCORE_MBM_READINGS);
-
-    for (size_t i = 0; i < M_NUM_UNCORE_MBM_READINGS; ++i) {
-        m_default_policy.push_back(m_cpu_uncore_freqs[i]);
-        m_default_policy.push_back(m_mbm_max[i]);
-    }
-
-    for (size_t i = m_default_policy.size(); i < m_num_policy; ++i) {
-        m_default_policy.push_back(NAN);
-    }
+                        m_cpu_uncore_freq_min, NAN, m_mbm_max};
 
     // leaf agent
     m_agent->init(0, {}, false);
@@ -185,6 +152,12 @@ TEST_F(CPUActivityAgentTest, validate_policy)
     const std::vector<double> policy_nan(m_num_policy, NAN);
     std::vector<double> policy;
 
+    std::vector<double> valid_cpu = {0.5, m_cpu_freq_max, m_cpu_freq_min};
+    EXPECT_CALL(*m_cpu_model, validate_policy(_)).WillRepeatedly(testing::SetArgReferee<0>(valid_cpu));
+
+    std::vector<double> valid_uncore = {0.5, m_cpu_uncore_freq_max, m_cpu_uncore_freq_min};
+    EXPECT_CALL(*m_uncore_model, validate_policy(_)).WillRepeatedly(testing::SetArgReferee<0>(valid_uncore));
+
     // default policy with 1.2-2.4GHz MBM
     // max rates defined are accepted
     // load default policy
@@ -193,8 +166,10 @@ TEST_F(CPUActivityAgentTest, validate_policy)
     m_agent->validate_policy(policy);
     // validate policy is unmodified except Phi
     ASSERT_EQ(m_default_policy.size(), policy.size());
+
     EXPECT_EQ(m_cpu_freq_max, policy[CPU_FREQ_MAX]);
     EXPECT_EQ(m_cpu_freq_min, policy[CPU_FREQ_EFFICIENT]);
+
     EXPECT_EQ(m_cpu_uncore_freq_max, policy[CPU_UNCORE_FREQ_MAX]);
     EXPECT_EQ(m_cpu_uncore_freq_min, policy[CPU_UNCORE_FREQ_EFFICIENT]);
     // Default value when NAN is passed is 0.5
@@ -206,8 +181,10 @@ TEST_F(CPUActivityAgentTest, validate_policy)
     m_agent->validate_policy(policy);
     // validate policy defaults are applied
     ASSERT_EQ(m_num_policy, policy.size());
+
     EXPECT_EQ(m_cpu_freq_max, policy[CPU_FREQ_MAX]);
     EXPECT_EQ(m_cpu_freq_min, policy[CPU_FREQ_EFFICIENT]);
+
     EXPECT_EQ(m_cpu_uncore_freq_max, policy[CPU_UNCORE_FREQ_MAX]);
     EXPECT_EQ(m_cpu_uncore_freq_min, policy[CPU_UNCORE_FREQ_EFFICIENT]);
     EXPECT_EQ(0.5, policy[PHI]);
@@ -220,341 +197,34 @@ TEST_F(CPUActivityAgentTest, validate_policy)
     policy[CPU_UNCORE_FREQ_EFFICIENT] = m_cpu_uncore_freq_max / 2;
     policy[PHI] = 0.1;
     EXPECT_NO_THROW(m_agent->validate_policy(policy));
-
-    // validate policy is modified as expected
-    // as phi --> 0 FREQ_EFFICIENT --> FREQ_MAX
-    ASSERT_EQ(m_num_policy, policy.size());
-    EXPECT_EQ(m_cpu_freq_max, policy[CPU_FREQ_MAX]);
-    EXPECT_GE(policy[CPU_FREQ_EFFICIENT], m_cpu_freq_max / 2);
-    EXPECT_LE(policy[CPU_FREQ_EFFICIENT], m_cpu_freq_max);
-    EXPECT_EQ(0.1, policy[PHI]);
-
-    //Fe > Fmax --> Error
-    policy = policy_nan;
-    policy[CPU_FREQ_MAX] = NAN;
-    policy[CPU_FREQ_EFFICIENT] = m_cpu_freq_max + 1;
-    policy[PHI] = NAN;
-    GEOPM_EXPECT_THROW_MESSAGE(m_agent->validate_policy(policy), GEOPM_ERROR_INVALID,
-                               "CPU_FREQ_EFFICIENT out of range");
-
-    //Fe < Fmin --> Error
-    policy = policy_nan;
-    policy[CPU_FREQ_MAX] = NAN;
-    policy[CPU_FREQ_EFFICIENT] = m_cpu_freq_min - 1;
-    policy[PHI] = NAN;
-    GEOPM_EXPECT_THROW_MESSAGE(m_agent->validate_policy(policy), GEOPM_ERROR_INVALID,
-                               "CPU_FREQ_EFFICIENT out of range");
-
-    //Fe > Policy Fmax --> Error
-    policy = policy_nan;
-    policy[CPU_FREQ_MAX] = m_cpu_freq_max - 2;
-    policy[CPU_FREQ_EFFICIENT] = m_cpu_freq_max - 1;
-    policy[PHI] = NAN;
-    GEOPM_EXPECT_THROW_MESSAGE(m_agent->validate_policy(policy), GEOPM_ERROR_INVALID,
-                               "CPU_FREQ_EFFICIENT (" +
-                               std::to_string(policy[CPU_FREQ_EFFICIENT]) +
-                               ") value exceeds CPU_FREQ_MAX (" +
-                               std::to_string(policy[CPU_FREQ_MAX]) +
-                               ")");
-
-    // FUe > FUmax --> Error
-    policy = policy_nan;
-    policy[CPU_UNCORE_FREQ_MAX] = NAN;
-    policy[CPU_UNCORE_FREQ_EFFICIENT] = m_cpu_freq_max + 1;
-    policy[PHI] = NAN;
-    GEOPM_EXPECT_THROW_MESSAGE(m_agent->validate_policy(policy), GEOPM_ERROR_INVALID,
-                               "CPU_UNCORE_FREQ_EFFICIENT (" +
-                               std::to_string(policy[CPU_UNCORE_FREQ_EFFICIENT]) +
-                               ") value exceeds CPU_UNCORE_FREQ_MAX (" +
-                               std::to_string(policy[CPU_UNCORE_FREQ_MAX]) +
-                               ")");
-
-    //Policy Fmax > Fmax --> Error
-    policy = policy_nan;
-    policy[CPU_FREQ_MAX] = m_cpu_freq_max + 1;
-    policy[CPU_FREQ_EFFICIENT] = NAN;
-    policy[PHI] = NAN;
-    GEOPM_EXPECT_THROW_MESSAGE(m_agent->validate_policy(policy), GEOPM_ERROR_INVALID,
-                               "CPU_FREQ_MAX out of range");
-
-    //Policy Fmax < Fmin --> Error
-    policy = policy_nan;
-    policy[CPU_FREQ_MAX] = m_cpu_freq_min - 1;
-    policy[CPU_FREQ_EFFICIENT] = NAN;
-    policy[PHI] = NAN;
-    GEOPM_EXPECT_THROW_MESSAGE(m_agent->validate_policy(policy), GEOPM_ERROR_INVALID,
-                               "CPU_FREQ_MAX out of range");
-
-    //Policy Phi < 0 --> Error
-    policy = policy_nan;
-    policy[PHI] = -1;
-    GEOPM_EXPECT_THROW_MESSAGE(m_agent->validate_policy(policy), GEOPM_ERROR_INVALID,
-                               "POLICY_CPU_PHI value out of range");
-
-    //Policy Phi > 1.0 --> Error
-    policy = policy_nan;
-    policy[PHI] = 1.1;
-    GEOPM_EXPECT_THROW_MESSAGE(m_agent->validate_policy(policy), GEOPM_ERROR_INVALID,
-                               "POLICY_CPU_PHI value out of range");
-
-    // cannot have same uncore freq with mbm values
-    policy = policy_nan;
-    policy[UNCORE_FREQ_0] = 123;
-    policy[UNCORE_FREQ_1] = 123;
-    policy[UNCORE_MEM_BW_0] = 456;
-    policy[UNCORE_MEM_BW_1] = 789;
-    GEOPM_EXPECT_THROW_MESSAGE(m_agent->validate_policy(policy), GEOPM_ERROR_INVALID,
-                               "policy has multiple entries for CPU_UNCORE_FREQUENCY 123");
-
-    // mapped uncore freq cannot have NAN mbm values
-    policy = policy_nan;
-    policy[UNCORE_FREQ_0] = 123;
-    GEOPM_EXPECT_THROW_MESSAGE(m_agent->validate_policy(policy), GEOPM_ERROR_INVALID,
-                               "mapped CPU_UNCORE_FREQUENCY with no max memory bandwidth");
-
-    // cannot have mbm values without uncore freq
-    policy = policy_nan;
-    policy[UNCORE_MEM_BW_0] = 456;
-    GEOPM_EXPECT_THROW_MESSAGE(m_agent->validate_policy(policy), GEOPM_ERROR_INVALID,
-                               " policy maps a NaN CPU_UNCORE_FREQUENCY with max memory bandwidth: 456");
-
 }
 
-TEST_F(CPUActivityAgentTest, adjust_platform_high)
+TEST_F(CPUActivityAgentTest, adjust_platform)
 {
     std::vector<double> policy;
     policy = m_default_policy;
-    m_agent->validate_policy(policy);
 
     //Sample
     std::vector<double> tmp;
     double mock_active = 1.0;
-    EXPECT_CALL(*m_platform_io, sample(CPU_SCALABILITY_IDX))
-                .WillRepeatedly(Return(mock_active));
-    EXPECT_CALL(*m_platform_io, sample(QM_CTR_SCALED_RATE_IDX))
-                .WillRepeatedly(Return(m_mbm_max.back()));
-    EXPECT_CALL(*m_platform_io, sample(CPU_UNCORE_FREQUENCY_IDX))
-                .WillRepeatedly(Return(m_cpu_uncore_freq_max));
     m_agent->sample_platform(tmp);
 
-    //Adjust
+    std::vector<double> cpu_freq_req(M_NUM_CORE, m_cpu_freq_max);
+    EXPECT_CALL(*m_cpu_model, sample_recommendation("CPU_FREQUENCY_STATUS_MAX_CONTROL")).WillRepeatedly(Return(cpu_freq_req));
+
+    std::vector<double> uncore_freq_req_min(M_NUM_PACKAGE, m_cpu_uncore_freq_min);
+    EXPECT_CALL(*m_uncore_model, sample_recommendation("CPU_UNCORE_FREQUENCY_MIN_CONTROL")).WillRepeatedly(Return(uncore_freq_req_min));
+    std::vector<double> uncore_freq_req_max(M_NUM_PACKAGE, m_cpu_uncore_freq_max);
+    EXPECT_CALL(*m_uncore_model, sample_recommendation("CPU_UNCORE_FREQUENCY_MAX_CONTROL")).WillRepeatedly(Return(uncore_freq_req_max));
+
     //Check frequency
     EXPECT_CALL(*m_platform_io, adjust(CPU_FREQUENCY_CONTROL_IDX, m_cpu_freq_max)).Times(M_NUM_CORE);
 
-    EXPECT_CALL(*m_platform_io, adjust(CPU_UNCORE_MIN_CONTROL_IDX, m_cpu_uncore_freq_max)).Times(M_NUM_PACKAGE);
-    EXPECT_CALL(*m_platform_io, adjust(CPU_UNCORE_MAX_CONTROL_IDX, m_cpu_uncore_freq_max)).Times(M_NUM_PACKAGE);
-    m_agent->adjust_platform(policy);
-    //Check a frequency decision resulted in write batch being true
-    EXPECT_TRUE(m_agent->do_write_batch());
-}
-
-TEST_F(CPUActivityAgentTest, adjust_platform_lower_bound_check)
-{
-    std::vector<double> policy;
-    policy = m_default_policy;
-    m_agent->validate_policy(policy);
-
-    //Sample
-    std::vector<double> tmp;
-    double mock_active = 0.5;
-    EXPECT_CALL(*m_platform_io, sample(CPU_SCALABILITY_IDX))
-                .WillRepeatedly(Return(mock_active));
-    EXPECT_CALL(*m_platform_io, sample(QM_CTR_SCALED_RATE_IDX))
-                .WillRepeatedly(Return(m_mbm_max.at(m_mbm_max.size() / 2)));
-    EXPECT_CALL(*m_platform_io, sample(CPU_UNCORE_FREQUENCY_IDX))
-                .WillRepeatedly(Return(m_cpu_uncore_freq_max - 0.05e9));
-    m_agent->sample_platform(tmp);
-
-    double expected_core_freq = m_cpu_freq_min + mock_active *
-                                (m_cpu_freq_max - m_cpu_freq_min);
-    double expected_uncore_freq = m_cpu_uncore_freq_min +
-                                  (m_cpu_uncore_freq_max - m_cpu_uncore_freq_min) *
-                                  (m_mbm_max.at(m_mbm_max.size() / 2) /
-                                  m_mbm_max.at(m_mbm_max.size() - 2));
-
-    //Adjust
-    //Check frequency
-    EXPECT_CALL(*m_platform_io, adjust(CPU_FREQUENCY_CONTROL_IDX,
-                                       expected_core_freq)).Times(M_NUM_CORE);
-    EXPECT_CALL(*m_platform_io, adjust(CPU_UNCORE_MIN_CONTROL_IDX,
-                                       expected_uncore_freq)).Times(M_NUM_PACKAGE);
-    EXPECT_CALL(*m_platform_io, adjust(CPU_UNCORE_MAX_CONTROL_IDX,
-                                       expected_uncore_freq)).Times(M_NUM_PACKAGE);
-    m_agent->adjust_platform(policy);
-
-    //Check a frequency decision resulted in write batch being true
-    EXPECT_TRUE(m_agent->do_write_batch());
-}
-
-TEST_F(CPUActivityAgentTest, adjust_platform_medium)
-{
-    std::vector<double> policy;
-    policy = m_default_policy;
-    m_agent->validate_policy(policy);
-
-    //Sample
-    std::vector<double> tmp;
-    double mock_active = 0.5;
-    EXPECT_CALL(*m_platform_io, sample(CPU_SCALABILITY_IDX))
-                .WillRepeatedly(Return(mock_active));
-    EXPECT_CALL(*m_platform_io, sample(QM_CTR_SCALED_RATE_IDX))
-                .WillRepeatedly(Return(m_mbm_max.at(m_mbm_max.size() / 2)));
-    EXPECT_CALL(*m_platform_io, sample(CPU_UNCORE_FREQUENCY_IDX))
-                .WillRepeatedly(Return(m_cpu_uncore_freq_max));
-    m_agent->sample_platform(tmp);
-
-    double expected_core_freq = m_cpu_freq_min + mock_active *
-                                (m_cpu_freq_max - m_cpu_freq_min);
-    double expected_uncore_freq = m_cpu_uncore_freq_min +
-                                  (m_cpu_uncore_freq_max - m_cpu_uncore_freq_min) *
-                                  (m_mbm_max.at(m_mbm_max.size() / 2) /
-                                  m_mbm_max.at(m_mbm_max.size() - 1));
-
-    //Adjust
-    //Check frequency
-    EXPECT_CALL(*m_platform_io, adjust(CPU_FREQUENCY_CONTROL_IDX,
-                                       expected_core_freq)).Times(M_NUM_CORE);
-    EXPECT_CALL(*m_platform_io, adjust(CPU_UNCORE_MIN_CONTROL_IDX,
-                                       expected_uncore_freq)).Times(M_NUM_PACKAGE);
-    EXPECT_CALL(*m_platform_io, adjust(CPU_UNCORE_MAX_CONTROL_IDX,
-                                       expected_uncore_freq)).Times(M_NUM_PACKAGE);
-    m_agent->adjust_platform(policy);
-
-    //Check a frequency decision resulted in write batch being true
-    EXPECT_TRUE(m_agent->do_write_batch());
-}
-
-TEST_F(CPUActivityAgentTest, adjust_platform_low)
-{
-    std::vector<double> policy;
-    policy = m_default_policy;
-    m_agent->validate_policy(policy);
-
-    //Sample
-    std::vector<double> tmp;
-    double mock_active = 0.1;
-    EXPECT_CALL(*m_platform_io, sample(CPU_SCALABILITY_IDX))
-                .WillRepeatedly(Return(mock_active));
-    EXPECT_CALL(*m_platform_io, sample(QM_CTR_SCALED_RATE_IDX))
-                .WillRepeatedly(Return(m_mbm_max.at(2)));
-    EXPECT_CALL(*m_platform_io, sample(CPU_UNCORE_FREQUENCY_IDX))
-                .WillRepeatedly(Return(m_cpu_uncore_freq_max));
-    m_agent->sample_platform(tmp);
-
-    double expected_core_freq = m_cpu_freq_min + mock_active *
-                                (m_cpu_freq_max - m_cpu_freq_min);
-    double expected_uncore_freq = m_cpu_uncore_freq_min +
-                                  (m_cpu_uncore_freq_max - m_cpu_uncore_freq_min) *
-                                  (m_mbm_max.at(2) /
-                                  m_mbm_max.at(m_mbm_max.size() - 1));
-
-    //Adjust
-    //Check frequency
-    EXPECT_CALL(*m_platform_io, adjust(CPU_FREQUENCY_CONTROL_IDX,
-                                       expected_core_freq)).Times(M_NUM_CORE);
-    EXPECT_CALL(*m_platform_io, adjust(CPU_UNCORE_MIN_CONTROL_IDX,
-                                       expected_uncore_freq)).Times(M_NUM_PACKAGE);
-    EXPECT_CALL(*m_platform_io, adjust(CPU_UNCORE_MAX_CONTROL_IDX,
-                                       expected_uncore_freq)).Times(M_NUM_PACKAGE);
-    m_agent->adjust_platform(policy);
-
-    //Check a frequency decision resulted in write batch being true
-    EXPECT_TRUE(m_agent->do_write_batch());
-}
-
-TEST_F(CPUActivityAgentTest, adjust_platform_zero)
-{
-    std::vector<double> policy;
-    policy = m_default_policy;
-    m_agent->validate_policy(policy);
-
-    //Sample
-    std::vector<double> tmp;
-    double mock_active = 0.0;
-    EXPECT_CALL(*m_platform_io, sample(CPU_SCALABILITY_IDX))
-                .WillRepeatedly(Return(mock_active));
-    EXPECT_CALL(*m_platform_io, sample(QM_CTR_SCALED_RATE_IDX))
-                .WillRepeatedly(Return(mock_active));
-    EXPECT_CALL(*m_platform_io, sample(CPU_UNCORE_FREQUENCY_IDX))
-                .WillRepeatedly(Return(m_cpu_uncore_freq_max));
-    m_agent->sample_platform(tmp);
-
-    //Adjust
-    //Check frequency
-    EXPECT_CALL(*m_platform_io, adjust(CPU_FREQUENCY_CONTROL_IDX, m_cpu_freq_min)).Times(M_NUM_CORE);
     EXPECT_CALL(*m_platform_io, adjust(CPU_UNCORE_MIN_CONTROL_IDX, m_cpu_uncore_freq_min)).Times(M_NUM_PACKAGE);
-    EXPECT_CALL(*m_platform_io, adjust(CPU_UNCORE_MAX_CONTROL_IDX, m_cpu_uncore_freq_min)).Times(M_NUM_PACKAGE);
-    m_agent->adjust_platform(policy);
-    //Check a frequency decision resulted in write batch being true
-    EXPECT_TRUE(m_agent->do_write_batch());
-}
-
-TEST_F(CPUActivityAgentTest, adjust_platform_signal_out_of_bounds)
-{
-    std::vector<double> policy;
-    policy = m_default_policy;
-    m_agent->validate_policy(policy);
-
-    //Sample
-    std::vector<double> tmp;
-    double mock_active = 1e99;
-    EXPECT_CALL(*m_platform_io, sample(CPU_SCALABILITY_IDX))
-                .WillRepeatedly(Return(mock_active));
-    EXPECT_CALL(*m_platform_io, sample(QM_CTR_SCALED_RATE_IDX))
-                .WillRepeatedly(Return(mock_active));
-    EXPECT_CALL(*m_platform_io, sample(CPU_UNCORE_FREQUENCY_IDX))
-                .WillRepeatedly(Return(m_cpu_uncore_freq_max));
-    m_agent->sample_platform(tmp);
-
-    //Adjust
-    //Check frequency
-    EXPECT_CALL(*m_platform_io, adjust(CPU_FREQUENCY_CONTROL_IDX, m_cpu_freq_max)).Times(M_NUM_CORE);
-    EXPECT_CALL(*m_platform_io, adjust(CPU_UNCORE_MIN_CONTROL_IDX, m_cpu_uncore_freq_max)).Times(M_NUM_PACKAGE);
     EXPECT_CALL(*m_platform_io, adjust(CPU_UNCORE_MAX_CONTROL_IDX, m_cpu_uncore_freq_max)).Times(M_NUM_PACKAGE);
+
+    //Adjust
     m_agent->adjust_platform(policy);
     //Check a frequency decision resulted in write batch being true
     EXPECT_TRUE(m_agent->do_write_batch());
-
-    //Sample
-    mock_active = -1;
-    EXPECT_CALL(*m_platform_io, sample(CPU_SCALABILITY_IDX))
-                .WillRepeatedly(Return(mock_active));
-    EXPECT_CALL(*m_platform_io, sample(QM_CTR_SCALED_RATE_IDX))
-                .WillRepeatedly(Return(mock_active));
-    EXPECT_CALL(*m_platform_io, sample(CPU_UNCORE_FREQUENCY_IDX))
-                .WillRepeatedly(Return(m_cpu_uncore_freq_max));
-    m_agent->sample_platform(tmp);
-
-    //Adjust
-    //Check frequency
-    EXPECT_CALL(*m_platform_io, adjust(CPU_FREQUENCY_CONTROL_IDX, m_cpu_freq_min)).Times(M_NUM_CORE);
-    EXPECT_CALL(*m_platform_io, adjust(CPU_UNCORE_MIN_CONTROL_IDX, m_cpu_uncore_freq_min)).Times(M_NUM_PACKAGE);
-    EXPECT_CALL(*m_platform_io, adjust(CPU_UNCORE_MAX_CONTROL_IDX, m_cpu_uncore_freq_min)).Times(M_NUM_PACKAGE);
-    m_agent->adjust_platform(policy);
-    //Check a frequency decision resulted in write batch being true
-    EXPECT_TRUE(m_agent->do_write_batch());
-}
-
-TEST_F(CPUActivityAgentTest, adjust_platform_nan)
-{
-    const std::vector<double> policy_nan(m_num_policy, NAN);
-    std::vector<double> policy;
-    policy = policy_nan;
-    m_agent->validate_policy(policy);
-
-    //Sample
-    std::vector<double> tmp;
-    double mock_active = 0.0;
-    EXPECT_CALL(*m_platform_io, sample(CPU_SCALABILITY_IDX))
-                .WillRepeatedly(Return(mock_active));
-    EXPECT_CALL(*m_platform_io, sample(QM_CTR_SCALED_RATE_IDX))
-                .WillRepeatedly(Return(mock_active));
-    EXPECT_CALL(*m_platform_io, sample(CPU_UNCORE_FREQUENCY_IDX))
-                .WillRepeatedly(Return(m_cpu_uncore_freq_max));
-    m_agent->sample_platform(tmp);
-
-    //Adjust
-    //Check frequency
-    GEOPM_EXPECT_THROW_MESSAGE(m_agent->adjust_platform(policy), GEOPM_ERROR_INVALID,
-                               "CPUActivityAgent policy did not contain memory bandwidth characterization");
 }

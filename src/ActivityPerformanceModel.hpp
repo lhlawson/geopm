@@ -40,7 +40,7 @@ namespace geopm
             virtual void validate_policy(std::vector<double> &in_policy) const = 0;
 
             /// @brief
-            virtual void set_policy(std::vector<double> &in_policy) = 0;
+            virtual void apply_policy(std::vector<double> &in_policy) = 0;
     };
 
     ActivityPerformanceModel &cpu_activity_perf_model();

@@ -213,7 +213,7 @@ TEST_F(UncoreActivityPerformanceModelTest, update_and_sample_recommendation)
     policy = m_default_policy;
     m_perf->validate_policy(policy);
     EXPECT_EQ(0.5, policy[PHI]);
-    m_perf->set_policy(policy);
+    m_perf->apply_policy(policy);
     m_perf->update_recommendation();
 
     rec = m_perf->sample_recommendation("CPU_UNCORE_FREQUENCY_MIN_CONTROL");
@@ -255,7 +255,7 @@ TEST_F(UncoreActivityPerformanceModelTest, update_sample_check_recommendation)
     m_perf->validate_policy(policy);
     EXPECT_EQ(0.5, policy[PHI]);
 
-    m_perf->set_policy(policy);
+    m_perf->apply_policy(policy);
 
     EXPECT_CALL(*m_platform_io, sample(QM_CTR_SCALED_RATE_IDX))
                 .WillRepeatedly(Return(bw_measure));
@@ -293,7 +293,7 @@ TEST_F(UncoreActivityPerformanceModelTest, update_sample_check_recommendation)
     m_perf->validate_policy(policy);
     EXPECT_EQ(0.5, policy[PHI]);
 
-    m_perf->set_policy(policy);
+    m_perf->apply_policy(policy);
 
     EXPECT_CALL(*m_platform_io, sample(QM_CTR_SCALED_RATE_IDX))
                 .WillRepeatedly(Return(bw_measure));
@@ -327,7 +327,7 @@ TEST_F(UncoreActivityPerformanceModelTest, update_sample_check_recommendation)
     m_perf->validate_policy(policy);
     EXPECT_EQ(0.5, policy[PHI]);
 
-    m_perf->set_policy(policy);
+    m_perf->apply_policy(policy);
 
     EXPECT_CALL(*m_platform_io, sample(QM_CTR_SCALED_RATE_IDX))
                 .WillRepeatedly(Return(m_mbm_max));

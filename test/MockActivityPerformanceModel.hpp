@@ -18,7 +18,7 @@ class MockActivityPerformanceModel : public geopm::ActivityPerformanceModel
         MOCK_METHOD(void, update_recommendation, (), (override));
         MOCK_METHOD((std::vector<double>), sample_recommendation, (std::string), (const override));
         MOCK_METHOD(void, validate_policy, (std::vector<double> &in_policy), (const override));
-        MOCK_METHOD(void, set_policy, (std::vector<double> &in_policy), (override));
+        MOCK_METHOD(void, apply_policy, (std::vector<double> &in_policy), (override));
 };
 
 #endif

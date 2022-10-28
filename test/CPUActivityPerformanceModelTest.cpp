@@ -223,7 +223,7 @@ TEST_F(CPUActivityPerformanceModelTest, update_and_sample_recommendation)
     policy = m_default_policy;
     m_perf->validate_policy(policy);
     EXPECT_EQ(0.5, policy[PHI]);
-    m_perf->set_policy(policy);
+    m_perf->apply_policy(policy);
     m_perf->update_recommendation();
 
     rec = m_perf->sample_recommendation("CPU_FREQUENCY_MAX_CONTROL");
@@ -259,7 +259,7 @@ TEST_F(CPUActivityPerformanceModelTest, update_sample_check_recommendation)
     policy = m_default_policy;
     m_perf->validate_policy(policy);
     EXPECT_EQ(0.5, policy[PHI]);
-    m_perf->set_policy(policy);
+    m_perf->apply_policy(policy);
     m_perf->update_recommendation();
 
     rec = m_perf->sample_recommendation("CPU_FREQUENCY_MAX_CONTROL");
@@ -283,7 +283,7 @@ TEST_F(CPUActivityPerformanceModelTest, update_sample_check_recommendation)
     policy = m_default_policy;
     m_perf->validate_policy(policy);
     EXPECT_EQ(0.5, policy[PHI]);
-    m_perf->set_policy(policy);
+    m_perf->apply_policy(policy);
     m_perf->update_recommendation();
 
     rec = m_perf->sample_recommendation("CPU_FREQUENCY_MAX_CONTROL");
@@ -304,7 +304,7 @@ TEST_F(CPUActivityPerformanceModelTest, update_sample_check_recommendation)
     policy = m_default_policy;
     m_perf->validate_policy(policy);
     EXPECT_EQ(0.5, policy[PHI]);
-    m_perf->set_policy(policy);
+    m_perf->apply_policy(policy);
     m_perf->update_recommendation();
 
     rec = m_perf->sample_recommendation("CPU_FREQUENCY_MAX_CONTROL");

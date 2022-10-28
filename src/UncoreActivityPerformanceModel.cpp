@@ -173,6 +173,14 @@ namespace geopm
             in_policy[M_POLICY_PHI] = M_POLICY_PHI_DEFAULT;
         }
 
+        if (in_policy[M_POLICY_PHI] < 0.0 ||
+            in_policy[M_POLICY_PHI] > 1.0) {
+            throw Exception("UncoreActivityPerformanceModel::" + std::string(__func__) +
+                            "(): POLICY_PHI value out of range: " +
+                            std::to_string(in_policy[M_POLICY_PHI]) + ".",
+                            GEOPM_ERROR_INVALID, __FILE__, __LINE__);
+        }
+
         if (std::isnan(in_policy[M_POLICY_MAX_MEM_BW]) ||
             in_policy[M_POLICY_MAX_MEM_BW] == 0) {
             throw Exception("UncoreActivityPerformanceModel::" + std::string(__func__) +
@@ -238,7 +246,7 @@ namespace geopm
         in_policy[M_POLICY_FREQ_EFFICIENT] = f_efficient;
     }
 
-    void UncoreActivityPerformanceModelImp::set_policy(std::vector<double> &in_policy)
+    void UncoreActivityPerformanceModelImp::apply_policy(std::vector<double> &in_policy)
     {
         GEOPM_DEBUG_ASSERT(in_policy.size() == M_NUM_POLICY,
                            "CPUActivityPerfModel::" + std::string(__func__) +

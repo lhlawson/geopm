@@ -157,6 +157,14 @@ namespace geopm
             in_policy[M_POLICY_PHI] = M_POLICY_PHI_DEFAULT;
         }
 
+        if (in_policy[M_POLICY_PHI] < 0.0 ||
+            in_policy[M_POLICY_PHI] > 1.0) {
+            throw Exception("CPUActivityPerformanceModel::" + std::string(__func__) +
+                            "(): POLICY_PHI value out of range: " +
+                            std::to_string(in_policy[M_POLICY_PHI]) + ".",
+                            GEOPM_ERROR_INVALID, __FILE__, __LINE__);
+        }
+
         // Check for NAN to set default values for policy
         if (std::isnan(in_policy[M_POLICY_FREQ_MAX])) {
             in_policy[M_POLICY_FREQ_MAX] = m_freq_max;
@@ -217,7 +225,7 @@ namespace geopm
         in_policy[M_POLICY_FREQ_EFFICIENT] = f_core_efficient;
     }
 
-    void CPUActivityPerformanceModelImp::set_policy(std::vector<double> &in_policy)
+    void CPUActivityPerformanceModelImp::apply_policy(std::vector<double> &in_policy)
     {
         GEOPM_DEBUG_ASSERT(in_policy.size() == M_NUM_POLICY,
                            "CPUActivityPerfModel::" + std::string(__func__) +

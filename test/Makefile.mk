@@ -301,13 +301,7 @@ GTEST_TESTS = test/gtest_links/AccumulatorTest.empty \
 if ENABLE_BETA
     GTEST_TESTS += test/gtest_links/CPUActivityAgentTest.name \
                    test/gtest_links/CPUActivityAgentTest.validate_policy \
-                   test/gtest_links/CPUActivityAgentTest.adjust_platform_high \
-                   test/gtest_links/CPUActivityAgentTest.adjust_platform_medium \
-                   test/gtest_links/CPUActivityAgentTest.adjust_platform_low \
-                   test/gtest_links/CPUActivityAgentTest.adjust_platform_zero \
-                   test/gtest_links/CPUActivityAgentTest.adjust_platform_nan \
-                   test/gtest_links/CPUActivityAgentTest.adjust_platform_lower_bound_check \
-                   test/gtest_links/CPUActivityAgentTest.adjust_platform_signal_out_of_bounds \
+                   test/gtest_links/CPUActivityAgentTest.adjust_platform \
                    test/gtest_links/CPUActivityPerformanceModelTest.valid \
                    test/gtest_links/CPUActivityPerformanceModelTest.control_recommendation \
                    test/gtest_links/CPUActivityPerformanceModelTest.update_and_sample_recommendation \

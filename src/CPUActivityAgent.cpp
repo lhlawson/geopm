@@ -109,12 +109,15 @@ namespace geopm
                 }
             }
         }
-
-        if (m_core_freq_max_control.size() == 0 ||
-            m_uncore_freq_min_control.size() == 0 ||
+        if (m_core_freq_max_control.size() == 0 ) {
+                throw Exception("CPUActivityAgent::" + std::string(__func__) +
+                                "(): Performance model did not provide Core recommendations.",
+                                GEOPM_ERROR_INVALID, __FILE__, __LINE__);
+        }
+        if (m_uncore_freq_min_control.size() == 0 ||
             m_uncore_freq_max_control.size() == 0 ) {
                 throw Exception("CPUActivityAgent::" + std::string(__func__) +
-                                "(): Performance model did not provide Core or Uncore recommendations.",
+                                "(): Performance model did not provide Uncore recommendations.",
                                 GEOPM_ERROR_INVALID, __FILE__, __LINE__);
         }
     }
@@ -133,10 +136,9 @@ namespace geopm
                                            in_policy[M_POLICY_CPU_FREQ_EFFICIENT]};
         m_cpu_perf_model.validate_policy(core_policy);
 
-        //Is this needed?
-        in_policy[M_POLICY_CPU_FREQ_MAX] = core_policy[M_POLICY_CPU_FREQ_MAX];
-        in_policy[M_POLICY_CPU_FREQ_EFFICIENT] = core_policy[M_POLICY_CPU_FREQ_EFFICIENT];
-        in_policy[M_POLICY_CPU_PHI] = core_policy[M_POLICY_CPU_PHI];
+        in_policy[M_POLICY_CPU_PHI] = core_policy[0];
+        in_policy[M_POLICY_CPU_FREQ_MAX] = core_policy[1];
+        in_policy[M_POLICY_CPU_FREQ_EFFICIENT] = core_policy[2];
 
         std::vector<double> uncore_policy = {in_policy[M_POLICY_CPU_PHI],
                                              in_policy[M_POLICY_UNCORE_FREQ_MAX],
@@ -146,11 +148,11 @@ namespace geopm
         m_uncore_perf_model.validate_policy(uncore_policy);
 
         //Is this needed?
-        in_policy[M_POLICY_CPU_FREQ_MAX] = uncore_policy[M_POLICY_UNCORE_FREQ_MAX];
-        in_policy[M_POLICY_CPU_FREQ_EFFICIENT] = uncore_policy[M_POLICY_UNCORE_FREQ_EFFICIENT];
-        in_policy[M_POLICY_MAX_MEM_BW] = uncore_policy[M_POLICY_MAX_MEM_BW];
+        in_policy[M_POLICY_CPU_PHI] = uncore_policy[0];
+        in_policy[M_POLICY_UNCORE_FREQ_MAX] = uncore_policy[1];
+        in_policy[M_POLICY_UNCORE_FREQ_EFFICIENT] = uncore_policy[2];
+        in_policy[M_POLICY_MAX_MEM_BW] = uncore_policy[3];
         //TODO: one agent phi --> multiple model phis...need to resolve
-        in_policy[M_POLICY_CPU_PHI] = uncore_policy[M_POLICY_CPU_PHI];
     }
 
     // Distribute incoming policy to children
@@ -193,7 +195,7 @@ namespace geopm
         m_resolved_f_core_max = in_policy[M_POLICY_CPU_FREQ_MAX];
         m_resolved_f_core_efficient = in_policy[M_POLICY_CPU_FREQ_EFFICIENT];
 
-        m_cpu_perf_model.set_policy(core_policy);
+        m_cpu_perf_model.apply_policy(core_policy);
         m_cpu_perf_model.update_recommendation();
 
         std::vector<double> core_freq_request = m_cpu_perf_model.sample_recommendation("CPU_FREQUENCY_STATUS_MAX_CONTROL");
@@ -225,7 +227,7 @@ namespace geopm
         m_resolved_f_uncore_max = in_policy[M_POLICY_UNCORE_FREQ_MAX];
         m_resolved_f_uncore_efficient = in_policy[M_POLICY_UNCORE_FREQ_EFFICIENT];
 
-        m_uncore_perf_model.set_policy(uncore_policy);
+        m_uncore_perf_model.apply_policy(uncore_policy);
         m_uncore_perf_model.update_recommendation();
 
         std::vector<double> uncore_freq_min_request = m_uncore_perf_model.sample_recommendation("CPU_UNCORE_FREQUENCY_MIN_CONTROL");
