@@ -7,6 +7,7 @@
 
 #include <cmath>
 #include <unistd.h>
+#include <iostream>
 
 #include "PlatformIOProf.hpp"
 #include "geopm/Exception.hpp"
@@ -18,11 +19,11 @@
 
 namespace geopm
 {
-    ActivityPerformanceModel &cpu_activity_perf_model()
-    {
-        static CPUActivityPerformanceModelImp instance;
-        return instance;
-    }
+    //ActivityPerformanceModel &cpu_activity_perf_model()
+    //{
+    //    static CPUActivityPerformanceModelImp instance;
+    //    return instance;
+    //}
 
     CPUActivityPerformanceModelImp::CPUActivityPerformanceModelImp()
         : CPUActivityPerformanceModelImp(PlatformIOProf::platform_io(), platform_topo())
@@ -36,6 +37,7 @@ namespace geopm
         , M_POLICY_PHI_DEFAULT(0.5)
         , M_NUM_CORE(m_platform_topo.num_domain(GEOPM_DOMAIN_CORE))
     {
+        std::cout << "YEAH PERF MODEL" << std::endl;
     }
 
     CPUActivityPerformanceModelImp::~CPUActivityPerformanceModelImp()
@@ -47,12 +49,27 @@ namespace geopm
         m_supported_controls = {};
         m_recommendation = {};
 
+        std::cout << "YEAH PERF MODEL - INIT" << std::endl;
         init_platform_core_io();
     }
 
     void CPUActivityPerformanceModelImp::init_platform_core_io(void) {
         // push back signals of interest
         auto all_names = m_platform_io.signal_names();
+
+        if (all_names.count("CPU_FREQUENCY_MIN_AVAIL") != 0) {
+            std::cout << "min avail" << std::endl;
+        }
+        if(    all_names.count("CPU_FREQUENCY_MAX_AVAIL") != 0) {
+            std::cout << "max avail" << std::endl;
+        }
+        if(    all_names.count("CPU_FREQUENCY_STICKER") != 0) {
+            std::cout << "stick avail" << std::endl;
+        }
+        if(    all_names.count("CPU_FREQUENCY_STEP") != 0 ) {
+            std::cout << "step avail" << std::endl;
+        }
+
 
         // Setup Core Algorithm Signals
         if (all_names.count("CPU_FREQUENCY_MIN_AVAIL") != 0 &&

@@ -18,12 +18,12 @@
 
 namespace geopm
 {
-    //TODO: require domain as part of constructor
-    ActivityPerformanceModel &uncore_activity_perf_model()
-    {
-        static UncoreActivityPerformanceModelImp instance;
-        return instance;
-    }
+    ////TODO: require domain as part of constructor
+    //ActivityPerformanceModel &uncore_activity_perf_model()
+    //{
+    //    static UncoreActivityPerformanceModelImp instance;
+    //    return instance;
+    //}
 
     UncoreActivityPerformanceModelImp::UncoreActivityPerformanceModelImp()
         : UncoreActivityPerformanceModelImp(PlatformIOProf::platform_io(), platform_topo())

@@ -21,6 +21,8 @@
 #include "geopm/PluginFactory.hpp"
 #include "geopm_debug.hpp"
 #include "ActivityPerformanceModel.hpp"
+#include "CPUActivityPerformanceModelImp.hpp"
+#include "UncoreActivityPerformanceModelImp.hpp"
 
 #include "PlatformIOProf.hpp"
 
@@ -28,8 +30,8 @@ namespace geopm
 {
     CPUActivityAgent::CPUActivityAgent()
         : CPUActivityAgent(platform_io(), platform_topo(),
-                           cpu_activity_perf_model(),
-                           uncore_activity_perf_model())
+                           perf_model(0),
+                           perf_model(1))
     {
     }
 
@@ -64,6 +66,7 @@ namespace geopm
             init_platform_io();
             m_cpu_perf_model.init();
             m_uncore_perf_model.init();
+
             if (!m_cpu_perf_model.algorithm_valid() &&
                 !m_uncore_perf_model.algorithm_valid()) {
                 throw Exception("CPUActivityAgent::" + std::string(__func__) +
@@ -76,8 +79,15 @@ namespace geopm
     void CPUActivityAgent::init_platform_io(void)
     {
         //TODO: query perf model for controls and domains
+        std::cout << "YEAHAGENT" << std::endl;
         m_core_ctl_domain_map = m_cpu_perf_model.controls_recommended();
+        for(auto s : m_core_ctl_domain_map ) {
+            std::cout << "name: " << s.first << std::endl;
+        }
         m_uncore_ctl_domain_map = m_uncore_perf_model.controls_recommended();
+        for(auto s : m_uncore_ctl_domain_map ) {
+            std::cout << "name: " << s.first << std::endl;
+        }
 
         //TODO: track core and uncore domain
         for (auto sv : m_core_ctl_domain_map) {
