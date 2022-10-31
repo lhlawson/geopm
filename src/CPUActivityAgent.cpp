@@ -30,21 +30,22 @@ namespace geopm
 {
     CPUActivityAgent::CPUActivityAgent()
         : CPUActivityAgent(platform_io(), platform_topo(),
-                           perf_model(0),
-                           perf_model(1))
+                           CPUActivityPerformanceModelImp::make_shared(),
+                           UncoreActivityPerformanceModelImp::make_shared())
+                           //perf_model(0),
+                           //perf_model(1))
     {
     }
 
     CPUActivityAgent::CPUActivityAgent(PlatformIO &plat_io, const PlatformTopo &topo,
-                                       ActivityPerformanceModel &cpu_perf_model,
-                                       ActivityPerformanceModel &uncore_perf_model)
+                                       std::shared_ptr<ActivityPerformanceModel> cpu_perf_model,
+                                       std::shared_ptr<ActivityPerformanceModel> uncore_perf_model)
         : m_platform_io(plat_io)
         , m_platform_topo(topo)
         , m_cpu_perf_model(cpu_perf_model)
         , m_uncore_perf_model(uncore_perf_model)
         , m_last_wait{{0, 0}}
         , M_WAIT_SEC(0.010) // 10ms wait default
-        , M_POLICY_PHI_DEFAULT(0.5)
         , M_NUM_PACKAGE(m_platform_topo.num_domain(GEOPM_DOMAIN_PACKAGE))
         , M_NUM_CORE(m_platform_topo.num_domain(GEOPM_DOMAIN_CORE))
         , m_do_write_batch(false)
@@ -64,11 +65,13 @@ namespace geopm
     {
         if (level == 0) {
             init_platform_io();
-            m_cpu_perf_model.init();
-            m_uncore_perf_model.init();
 
-            if (!m_cpu_perf_model.algorithm_valid() &&
-                !m_uncore_perf_model.algorithm_valid()) {
+//            m_cpu_perf_model->init();
+//            m_uncore_perf_model->init();
+
+            //TODO: query perf model for controls and domains
+            if (!m_cpu_perf_model->algorithm_valid() &&
+                !m_uncore_perf_model->algorithm_valid()) {
                 throw Exception("CPUActivityAgent::" + std::string(__func__) +
                                 "(): Neither performance model is valid",
                                 GEOPM_ERROR_INVALID, __FILE__, __LINE__);
@@ -78,16 +81,8 @@ namespace geopm
 
     void CPUActivityAgent::init_platform_io(void)
     {
-        //TODO: query perf model for controls and domains
-        std::cout << "YEAHAGENT" << std::endl;
-        m_core_ctl_domain_map = m_cpu_perf_model.controls_recommended();
-        for(auto s : m_core_ctl_domain_map ) {
-            std::cout << "name: " << s.first << std::endl;
-        }
-        m_uncore_ctl_domain_map = m_uncore_perf_model.controls_recommended();
-        for(auto s : m_uncore_ctl_domain_map ) {
-            std::cout << "name: " << s.first << std::endl;
-        }
+        m_core_ctl_domain_map = m_cpu_perf_model->controls_recommended();
+        m_uncore_ctl_domain_map = m_uncore_perf_model->controls_recommended();
 
         //TODO: track core and uncore domain
         for (auto sv : m_core_ctl_domain_map) {
@@ -144,7 +139,7 @@ namespace geopm
         std::vector<double> core_policy = {in_policy[M_POLICY_CPU_PHI],
                                            in_policy[M_POLICY_CPU_FREQ_MAX],
                                            in_policy[M_POLICY_CPU_FREQ_EFFICIENT]};
-        m_cpu_perf_model.validate_policy(core_policy);
+        m_cpu_perf_model->validate_policy(core_policy);
 
         in_policy[M_POLICY_CPU_PHI] = core_policy[0];
         in_policy[M_POLICY_CPU_FREQ_MAX] = core_policy[1];
@@ -155,7 +150,7 @@ namespace geopm
                                              in_policy[M_POLICY_UNCORE_FREQ_EFFICIENT],
                                              in_policy[M_POLICY_MAX_MEM_BW]
                                             };
-        m_uncore_perf_model.validate_policy(uncore_policy);
+        m_uncore_perf_model->validate_policy(uncore_policy);
 
         //Is this needed?
         in_policy[M_POLICY_CPU_PHI] = uncore_policy[0];
@@ -205,14 +200,14 @@ namespace geopm
         m_resolved_f_core_max = in_policy[M_POLICY_CPU_FREQ_MAX];
         m_resolved_f_core_efficient = in_policy[M_POLICY_CPU_FREQ_EFFICIENT];
 
-        m_cpu_perf_model.apply_policy(core_policy);
-        m_cpu_perf_model.update_recommendation();
+        m_cpu_perf_model->apply_policy(core_policy);
+        m_cpu_perf_model->update_recommendation();
 
-        std::vector<double> core_freq_request = m_cpu_perf_model.sample_recommendation("CPU_FREQUENCY_STATUS_MAX_CONTROL");
+        std::vector<double> core_freq_request = m_cpu_perf_model->sample_recommendation("CPU_FREQUENCY_MAX_CONTROL");
 
         // Set per core controls
         //TODO: use the core and uncore domain we tracked earlier
-        for (int domain_idx = 0; domain_idx < M_NUM_CORE; ++domain_idx) {
+        for (int domain_idx = 0; domain_idx < core_freq_request.size(); ++domain_idx) {
             if (std::isnan(core_freq_request.at(domain_idx))) {
                 core_freq_request.at(domain_idx) = in_policy[M_POLICY_CPU_FREQ_MAX];
             }
@@ -237,15 +232,17 @@ namespace geopm
         m_resolved_f_uncore_max = in_policy[M_POLICY_UNCORE_FREQ_MAX];
         m_resolved_f_uncore_efficient = in_policy[M_POLICY_UNCORE_FREQ_EFFICIENT];
 
-        m_uncore_perf_model.apply_policy(uncore_policy);
-        m_uncore_perf_model.update_recommendation();
+        m_uncore_perf_model->apply_policy(uncore_policy);
+        m_uncore_perf_model->update_recommendation();
 
-        std::vector<double> uncore_freq_min_request = m_uncore_perf_model.sample_recommendation("CPU_UNCORE_FREQUENCY_MIN_CONTROL");
-        std::vector<double> uncore_freq_max_request = m_uncore_perf_model.sample_recommendation("CPU_UNCORE_FREQUENCY_MAX_CONTROL");
+        std::vector<double> uncore_freq_min_request = m_uncore_perf_model->sample_recommendation("CPU_UNCORE_FREQUENCY_MIN_CONTROL");
 
-        //TODO: use the core and uncore domain we tracked earlier
-                // Set per package controls
-        for (int domain_idx = 0; domain_idx < M_NUM_PACKAGE; ++domain_idx) {
+        std::vector<double> uncore_freq_max_request = m_uncore_perf_model->sample_recommendation("CPU_UNCORE_FREQUENCY_MAX_CONTROL");
+
+        //TODO: check min & max size match
+        // Set per package controls
+
+        for (int domain_idx = 0; domain_idx < uncore_freq_min_request.size(); ++domain_idx) {
             if (std::isnan(uncore_freq_min_request.at(domain_idx))) {
                 uncore_freq_min_request.at(domain_idx) = in_policy[M_POLICY_UNCORE_FREQ_EFFICIENT];
             }

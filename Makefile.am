@@ -463,7 +463,6 @@ libgeopmpolicy_la_SOURCES = src/Accumulator.cpp \
 beta_source_files = src/CPUActivityAgent.cpp \
                     src/CPUActivityAgent.hpp \
                     src/ActivityPerformanceModel.hpp \
-                    src/ActivityPerformanceModel.cpp \
                     src/CPUActivityPerformanceModel.cpp \
                     src/CPUActivityPerformanceModelImp.hpp \
                     src/UncoreActivityPerformanceModel.cpp \

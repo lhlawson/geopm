@@ -42,11 +42,6 @@ namespace geopm
             /// @brief
             virtual void apply_policy(std::vector<double> &in_policy) = 0;
     };
-
-    ActivityPerformanceModel &perf_model(int domain);
-
-    //ActivityPerformanceModel &cpu_activity_perf_model();
-    //ActivityPerformanceModel &uncore_activity_perf_model();
 }
 
 #endif

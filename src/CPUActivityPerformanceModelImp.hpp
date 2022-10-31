@@ -8,6 +8,7 @@
 
 #include <vector>
 #include <map>
+#include <memory>
 
 #include "ActivityPerformanceModel.hpp"
 
@@ -30,6 +31,8 @@ namespace geopm
 //            std::vector<std::string> policy_names(void) const;
             void validate_policy(std::vector<double> &in_policy) const override;
             void apply_policy(std::vector<double> &in_policy) override;
+            static std::unique_ptr<ActivityPerformanceModel> make_unique(void);
+            static std::shared_ptr<ActivityPerformanceModel> make_shared(void);
 
         private:
             PlatformIO &m_platform_io;

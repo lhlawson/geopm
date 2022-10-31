@@ -23,8 +23,8 @@ namespace geopm
         public:
             CPUActivityAgent();
             CPUActivityAgent(PlatformIO &plat_io, const PlatformTopo &topo,
-                             ActivityPerformanceModel &cpu_perf_model,
-                             ActivityPerformanceModel &uncore_perf_model);
+                             std::shared_ptr<ActivityPerformanceModel> cpu_perf_model,
+                             std::shared_ptr<ActivityPerformanceModel> uncore_perf_model);
             virtual ~CPUActivityAgent() = default;
             void init(int level, const std::vector<int> &fan_in, bool is_level_root) override;
             void validate_policy(std::vector<double> &in_policy) const override;
@@ -53,9 +53,10 @@ namespace geopm
         private:
             PlatformIO &m_platform_io;
             const PlatformTopo &m_platform_topo;
+            std::shared_ptr<ActivityPerformanceModel> m_cpu_perf_model;
+            std::shared_ptr<ActivityPerformanceModel> m_uncore_perf_model;
             geopm_time_s m_last_wait;
             double M_WAIT_SEC;
-            const double M_POLICY_PHI_DEFAULT;
             const int M_NUM_PACKAGE;
             const int M_NUM_CORE;
             bool m_do_write_batch;
@@ -66,10 +67,6 @@ namespace geopm
             double m_resolved_f_uncore_max;
             double m_resolved_f_core_efficient;
             double m_resolved_f_core_max;
-            double m_freq_uncore_min;
-            double m_freq_uncore_max;
-            double m_freq_core_min;
-            double m_freq_core_max;
 
             std::map<std::string, int> m_core_ctl_domain_map;
             std::map<std::string, int> m_uncore_ctl_domain_map;
@@ -116,8 +113,6 @@ namespace geopm
             std::vector<control> m_uncore_freq_min_control;
             std::vector<control> m_uncore_freq_max_control;
 
-            ActivityPerformanceModel &m_cpu_perf_model;
-            ActivityPerformanceModel &m_uncore_perf_model;
 
             void init_platform_io(void);
     };

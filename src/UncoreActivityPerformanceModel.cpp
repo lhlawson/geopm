@@ -7,6 +7,7 @@
 
 #include <cmath>
 #include <unistd.h>
+#include <iostream>
 
 #include "PlatformIOProf.hpp"
 #include "geopm/Exception.hpp"
@@ -15,15 +16,19 @@
 #include "geopm/PlatformIO.hpp"
 #include "geopm/PlatformTopo.hpp"
 #include "config.h"
+#include "geopm/Helper.hpp"
 
 namespace geopm
 {
-    ////TODO: require domain as part of constructor
-    //ActivityPerformanceModel &uncore_activity_perf_model()
-    //{
-    //    static UncoreActivityPerformanceModelImp instance;
-    //    return instance;
-    //}
+    std::unique_ptr<ActivityPerformanceModel> UncoreActivityPerformanceModelImp::make_unique(void)
+    {
+        return geopm::make_unique<UncoreActivityPerformanceModelImp>();
+    }
+
+    std::shared_ptr<ActivityPerformanceModel> UncoreActivityPerformanceModelImp::make_shared(void)
+    {
+        return std::make_shared<UncoreActivityPerformanceModelImp>();
+    }
 
     UncoreActivityPerformanceModelImp::UncoreActivityPerformanceModelImp()
         : UncoreActivityPerformanceModelImp(PlatformIOProf::platform_io(), platform_topo())
@@ -37,6 +42,7 @@ namespace geopm
         , M_POLICY_PHI_DEFAULT(0.5)
         , M_NUM_PACKAGE(m_platform_topo.num_domain(GEOPM_DOMAIN_PACKAGE))
     {
+        init();
     }
 
     UncoreActivityPerformanceModelImp::~UncoreActivityPerformanceModelImp()
