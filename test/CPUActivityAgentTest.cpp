@@ -71,8 +71,8 @@ class CPUActivityAgentTest : public ::testing::Test
         double m_mbm_max;
         std::unique_ptr<MockPlatformIO> m_platform_io;
         std::unique_ptr<MockPlatformTopo> m_platform_topo;
-        std::unique_ptr<MockActivityPerformanceModel> m_cpu_model;
-        std::unique_ptr<MockActivityPerformanceModel> m_uncore_model;
+        std::shared_ptr<MockActivityPerformanceModel> m_cpu_model;
+        std::shared_ptr<MockActivityPerformanceModel> m_uncore_model;
 };
 
 const int CPUActivityAgentTest::M_NUM_CPU = 1;
@@ -83,8 +83,8 @@ void CPUActivityAgentTest::SetUp()
 {
     m_platform_io = geopm::make_unique<MockPlatformIO>();
     m_platform_topo = geopm::make_unique<MockPlatformTopo>();
-    m_cpu_model = geopm::make_unique<MockActivityPerformanceModel>();
-    m_uncore_model = geopm::make_unique<MockActivityPerformanceModel>();
+    m_cpu_model = std::make_shared<MockActivityPerformanceModel>();
+    m_uncore_model = std::make_shared<MockActivityPerformanceModel>();
 
     ON_CALL(*m_platform_topo, num_domain(GEOPM_DOMAIN_CORE))
         .WillByDefault(Return(M_NUM_CORE));
@@ -125,7 +125,7 @@ void CPUActivityAgentTest::SetUp()
     m_cpu_uncore_freq_max = 2400000000.0;
 
     m_agent = geopm::make_unique<CPUActivityAgent>(*m_platform_io, *m_platform_topo,
-                                                   *m_cpu_model, *m_uncore_model);
+                                                   m_cpu_model, m_uncore_model);
     m_num_policy = m_agent->policy_names().size();
 
     m_mbm_max = 104748888888.88889;

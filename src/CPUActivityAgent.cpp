@@ -20,6 +20,7 @@
 #include "geopm/PlatformTopo.hpp"
 #include "geopm/PluginFactory.hpp"
 #include "geopm_debug.hpp"
+
 #include "ActivityPerformanceModel.hpp"
 #include "CPUActivityPerformanceModelImp.hpp"
 #include "UncoreActivityPerformanceModelImp.hpp"
@@ -32,8 +33,6 @@ namespace geopm
         : CPUActivityAgent(platform_io(), platform_topo(),
                            CPUActivityPerformanceModelImp::make_shared(),
                            UncoreActivityPerformanceModelImp::make_shared())
-                           //perf_model(0),
-                           //perf_model(1))
     {
     }
 
