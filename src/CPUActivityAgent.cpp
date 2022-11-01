@@ -65,10 +65,9 @@ namespace geopm
         if (level == 0) {
             init_platform_io();
 
-//            m_cpu_perf_model->init();
-//            m_uncore_perf_model->init();
+            m_cpu_perf_model->init();
+            m_uncore_perf_model->init();
 
-            //TODO: query perf model for controls and domains
             if (!m_cpu_perf_model->algorithm_valid() &&
                 !m_uncore_perf_model->algorithm_valid()) {
                 throw Exception("CPUActivityAgent::" + std::string(__func__) +
@@ -83,7 +82,6 @@ namespace geopm
         m_core_ctl_domain_map = m_cpu_perf_model->controls_recommended();
         m_uncore_ctl_domain_map = m_uncore_perf_model->controls_recommended();
 
-        //TODO: track core and uncore domain
         for (auto sv : m_core_ctl_domain_map) {
             if (sv.first == "CPU_FREQUENCY_MAX_CONTROL" ) {
                 for (int domain_idx = 0; domain_idx < m_platform_topo.num_domain(sv.second);
@@ -156,7 +154,8 @@ namespace geopm
         in_policy[M_POLICY_UNCORE_FREQ_MAX] = uncore_policy[1];
         in_policy[M_POLICY_UNCORE_FREQ_EFFICIENT] = uncore_policy[2];
         in_policy[M_POLICY_MAX_MEM_BW] = uncore_policy[3];
-        //TODO: one agent phi --> multiple model phis...need to resolve
+        //TODO: one agent phi --> multiple model phis.  Which value doe
+        //      we return in case of mismatch?
     }
 
     // Distribute incoming policy to children
@@ -205,7 +204,6 @@ namespace geopm
         std::vector<double> core_freq_request = m_cpu_perf_model->sample_recommendation("CPU_FREQUENCY_MAX_CONTROL");
 
         // Set per core controls
-        //TODO: use the core and uncore domain we tracked earlier
         for (int domain_idx = 0; domain_idx < core_freq_request.size(); ++domain_idx) {
             if (std::isnan(core_freq_request.at(domain_idx))) {
                 core_freq_request.at(domain_idx) = in_policy[M_POLICY_CPU_FREQ_MAX];
@@ -238,30 +236,41 @@ namespace geopm
 
         std::vector<double> uncore_freq_max_request = m_uncore_perf_model->sample_recommendation("CPU_UNCORE_FREQUENCY_MAX_CONTROL");
 
-        //TODO: check min & max size match
-        // Set per package controls
-
+        // Set per package min
         for (int domain_idx = 0; domain_idx < uncore_freq_min_request.size(); ++domain_idx) {
             if (std::isnan(uncore_freq_min_request.at(domain_idx))) {
                 uncore_freq_min_request.at(domain_idx) = in_policy[M_POLICY_UNCORE_FREQ_EFFICIENT];
             }
-            if (std::isnan(uncore_freq_max_request.at(domain_idx))) {
-                uncore_freq_max_request.at(domain_idx) = in_policy[M_POLICY_UNCORE_FREQ_MAX];
-            }
 
             if (uncore_freq_min_request.at(domain_idx) !=
-                m_uncore_freq_min_control.at(domain_idx).last_setting ||
-                uncore_freq_max_request.at(domain_idx) !=
-                m_uncore_freq_max_control.at(domain_idx).last_setting) {
+                m_uncore_freq_min_control.at(domain_idx).last_setting) {
+
                 // Adjust
                 m_platform_io.adjust(m_uncore_freq_min_control.at(domain_idx).batch_idx,
                                     uncore_freq_min_request.at(domain_idx));
 
+                // Save the value for future comparison
+                m_uncore_freq_min_control.at(domain_idx).last_setting = uncore_freq_min_request.at(domain_idx);
+                ++m_uncore_frequency_requests;
+
+                m_do_write_batch = true;
+            }
+        }
+
+        // Set per package max
+        for (int domain_idx = 0; domain_idx < uncore_freq_max_request.size(); ++domain_idx) {
+            if (std::isnan(uncore_freq_max_request.at(domain_idx))) {
+                uncore_freq_max_request.at(domain_idx) = in_policy[M_POLICY_UNCORE_FREQ_MAX];
+            }
+
+            if (uncore_freq_max_request.at(domain_idx) !=
+                m_uncore_freq_max_control.at(domain_idx).last_setting) {
+
+                // Adjust
                 m_platform_io.adjust(m_uncore_freq_max_control.at(domain_idx).batch_idx,
                                     uncore_freq_max_request.at(domain_idx));
 
                 // Save the value for future comparison
-                m_uncore_freq_min_control.at(domain_idx).last_setting = uncore_freq_min_request.at(domain_idx);
                 m_uncore_freq_max_control.at(domain_idx).last_setting = uncore_freq_max_request.at(domain_idx);
                 ++m_uncore_frequency_requests;
 

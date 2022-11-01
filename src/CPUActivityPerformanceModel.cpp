@@ -41,7 +41,6 @@ namespace geopm
         , M_POLICY_PHI_DEFAULT(0.5)
         , M_NUM_CORE(m_platform_topo.num_domain(GEOPM_DOMAIN_CORE))
     {
-        init();
     }
 
     CPUActivityPerformanceModelImp::~CPUActivityPerformanceModelImp()

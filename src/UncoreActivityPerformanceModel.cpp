@@ -42,7 +42,6 @@ namespace geopm
         , M_POLICY_PHI_DEFAULT(0.5)
         , M_NUM_PACKAGE(m_platform_topo.num_domain(GEOPM_DOMAIN_PACKAGE))
     {
-        init();
     }
 
     UncoreActivityPerformanceModelImp::~UncoreActivityPerformanceModelImp()

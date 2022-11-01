@@ -210,7 +210,7 @@ TEST_F(CPUActivityAgentTest, adjust_platform)
     m_agent->sample_platform(tmp);
 
     std::vector<double> cpu_freq_req(M_NUM_CORE, m_cpu_freq_max);
-    EXPECT_CALL(*m_cpu_model, sample_recommendation("CPU_FREQUENCY_STATUS_MAX_CONTROL")).WillRepeatedly(Return(cpu_freq_req));
+    EXPECT_CALL(*m_cpu_model, sample_recommendation("CPU_FREQUENCY_MAX_CONTROL")).WillRepeatedly(Return(cpu_freq_req));
 
     std::vector<double> uncore_freq_req_min(M_NUM_PACKAGE, m_cpu_uncore_freq_min);
     EXPECT_CALL(*m_uncore_model, sample_recommendation("CPU_UNCORE_FREQUENCY_MIN_CONTROL")).WillRepeatedly(Return(uncore_freq_req_min));
