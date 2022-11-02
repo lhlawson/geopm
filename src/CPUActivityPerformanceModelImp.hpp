@@ -42,7 +42,9 @@ namespace geopm
             const int M_NUM_CORE;
             double m_freq_min;
             double m_freq_max;
+            double m_resolved_freq_max;
             double m_freq_efficient;
+            double m_resolved_freq_efficient;
             double m_freq_sticker;
             double m_freq_step;
 

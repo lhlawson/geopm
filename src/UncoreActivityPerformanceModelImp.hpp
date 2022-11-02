@@ -42,7 +42,9 @@ namespace geopm
             const int M_NUM_PACKAGE;
             double m_freq_min;
             double m_freq_max;
+            double m_resolved_freq_max;
             double m_freq_efficient;
+            double m_resolved_freq_efficient;
             double m_max_mem_bw;
 
             // Policy indices; must match policy_names()

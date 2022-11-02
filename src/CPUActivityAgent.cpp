@@ -63,10 +63,10 @@ namespace geopm
     void CPUActivityAgent::init(int level, const std::vector<int> &fan_in, bool is_level_root)
     {
         if (level == 0) {
-            init_platform_io();
-
             m_cpu_perf_model->init();
             m_uncore_perf_model->init();
+
+            init_platform_io();
 
             if (!m_cpu_perf_model->algorithm_valid() &&
                 !m_uncore_perf_model->algorithm_valid()) {

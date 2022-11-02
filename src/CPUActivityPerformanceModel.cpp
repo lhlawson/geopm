@@ -128,8 +128,8 @@ namespace geopm
             // Generate per core frequency recommendation
             for (int domain_idx = 0; domain_idx < M_NUM_CORE; ++domain_idx) {
                 m_core_scal.at(domain_idx).value = m_platform_io.sample(m_core_scal.at(domain_idx).batch_idx);
-                double freq_rec = frequency_fit(m_freq_efficient,
-                                                m_freq_max,
+                double freq_rec = frequency_fit(m_resolved_freq_efficient,
+                                                m_resolved_freq_max,
                                                 m_core_scal.at(domain_idx).value);
 
                 m_recommendation["CPU_FREQUENCY_MAX_CONTROL"].push_back(freq_rec);
@@ -180,8 +180,24 @@ namespace geopm
             throw Exception("CPUActivityPerformanceModel::" + std::string(__func__) +
                             "():FREQ_MAX out of range: " +
                             std::to_string(in_policy[M_POLICY_FREQ_MAX]) +
-                            ".", GEOPM_ERROR_INVALID, __FILE__, __LINE__);
+                            ". Acceptable range is " + std::to_string(m_freq_min) + " to " +
+                            std::to_string(m_freq_max) + ".",
+                            GEOPM_ERROR_INVALID, __FILE__, __LINE__);
         }
+
+
+        //if (in_policy[M_POLICY_FREQ_MAX] < m_freq_min) {
+        //    throw Exception("UncoreActivityPerformanceModel::" + std::string(__func__) +
+        //                    "():FREQ_MAX out of range: " +
+        //                    std::to_string(in_policy[M_POLICY_FREQ_MAX]) +
+        //                    ". Acceptable range is " + std::to_string(m_freq_min) + " to " +
+        //                    std::to_string(m_freq_max) + ".",
+        //                    GEOPM_ERROR_INVALID, __FILE__, __LINE__);
+        //}
+
+        //if (in_policy[M_POLICY_FREQ_MAX] > m_freq_max) {
+        //    in_policy[M_POLICY_FREQ_MAX] = m_freq_max;
+        //}
 
         // Check for NAN to set default values for policy
         if (!std::isnan(in_policy[M_POLICY_FREQ_EFFICIENT])) {
@@ -189,7 +205,7 @@ namespace geopm
         }
 
         if (in_policy[M_POLICY_FREQ_EFFICIENT] > m_freq_max ||
-            in_policy[M_POLICY_FREQ_EFFICIENT] < m_freq_min ) {
+            in_policy[M_POLICY_FREQ_EFFICIENT] < m_freq_min) {
             throw Exception("CPUActivityPerformanceModel::" + std::string(__func__) +
                             "():FREQ_EFFICIENT out of range: " +
                             std::to_string(in_policy[M_POLICY_FREQ_EFFICIENT]) +
@@ -238,8 +254,8 @@ namespace geopm
                            std::to_string(M_NUM_POLICY) + ", actual: " +
                            std::to_string(in_policy.size()));
 
-        m_freq_max = in_policy[M_POLICY_FREQ_MAX];
-        m_freq_efficient = in_policy[M_POLICY_FREQ_EFFICIENT];
+        m_resolved_freq_max = in_policy[M_POLICY_FREQ_MAX];
+        m_resolved_freq_efficient = in_policy[M_POLICY_FREQ_EFFICIENT];
     }
 
     double CPUActivityPerformanceModelImp::frequency_fit(double f_e, double f_max, double scalability)

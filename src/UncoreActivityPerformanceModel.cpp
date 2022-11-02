@@ -142,8 +142,8 @@ namespace geopm
 
                 double uncore_scalability = m_qm_rate.at(domain_idx).value / m_max_mem_bw;
 
-                double freq_rec = frequency_fit(m_freq_efficient,
-                                                m_freq_max,
+                double freq_rec = frequency_fit(m_resolved_freq_efficient,
+                                                m_resolved_freq_max,
                                                 uncore_scalability);
 
                 m_recommendation["CPU_UNCORE_FREQUENCY_MIN_CONTROL"].push_back(freq_rec);
@@ -203,7 +203,9 @@ namespace geopm
             throw Exception("UncoreActivityPerformanceModel::" + std::string(__func__) +
                             "():FREQ_MAX out of range: " +
                             std::to_string(in_policy[M_POLICY_FREQ_MAX]) +
-                            ".", GEOPM_ERROR_INVALID, __FILE__, __LINE__);
+                            ". Acceptable range is " + std::to_string(m_freq_min) + " to " +
+                            std::to_string(m_freq_max) + ".",
+                            GEOPM_ERROR_INVALID, __FILE__, __LINE__);
         }
 
         // Check for NAN to set default values for policy
@@ -259,8 +261,8 @@ namespace geopm
                            std::to_string(M_NUM_POLICY) + ", actual: " +
                            std::to_string(in_policy.size()));
 
-        m_freq_max = in_policy[M_POLICY_FREQ_MAX];
-        m_freq_efficient = in_policy[M_POLICY_FREQ_EFFICIENT];
+        m_resolved_freq_max = in_policy[M_POLICY_FREQ_MAX];
+        m_resolved_freq_efficient = in_policy[M_POLICY_FREQ_EFFICIENT];
         m_max_mem_bw = in_policy[M_POLICY_MAX_MEM_BW];
     }
 
