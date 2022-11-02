@@ -36,15 +36,7 @@ class CPUActivityPerformanceModelTest : public ::testing::Test
 {
     protected:
         enum mock_pio_idx_e {
-            QM_CTR_SCALED_RATE_IDX,
-            CPU_SCALABILITY_IDX,
-            CPU_UNCORE_FREQUENCY_IDX,
-            CPU_FREQUENCY_CONTROL_IDX,
-            CPU_UNCORE_MIN_CONTROL_IDX,
-            CPU_UNCORE_MAX_CONTROL_IDX,
-            GPU_CORE_MIN_CONTROL_IDX,
-            GPU_CORE_MAX_CONTROL_IDX,
-            GPU_ACTIVITY_IDX
+            CPU_SCALABILITY_IDX
         };
 
         enum policy_idx_e {
@@ -55,12 +47,7 @@ class CPUActivityPerformanceModelTest : public ::testing::Test
 
         void SetUp();
         void TearDown();
-        static const int M_NUM_CPU;
         static const int M_NUM_CORE;
-        static const int M_NUM_BOARD;
-        static const int M_NUM_PACKAGE;
-        static const int M_NUM_GPU;
-        static const size_t M_NUM_UNCORE_MBM_READINGS;
         std::unique_ptr<CPUActivityPerformanceModelImp> m_perf;
         std::vector<double> m_default_policy;
         size_t m_num_policy;
@@ -68,30 +55,17 @@ class CPUActivityPerformanceModelTest : public ::testing::Test
         double m_cpu_freq_sticker;
         double m_cpu_freq_step;
         double m_cpu_freq_max;
-        double m_cpu_uncore_freq_min;
-        double m_cpu_uncore_freq_max;
-        double m_gpu_freq_min;
-        double m_gpu_freq_max;
-        std::vector<double> m_cpu_uncore_freqs;
-        std::vector<double> m_mbm_max;
         std::unique_ptr<MockPlatformIO> m_platform_io;
         std::unique_ptr<MockPlatformTopo> m_platform_topo;
 };
 
-const int CPUActivityPerformanceModelTest::M_NUM_CPU = 1;
 const int CPUActivityPerformanceModelTest::M_NUM_CORE = 1;
-const int CPUActivityPerformanceModelTest::M_NUM_BOARD = 1;
-const int CPUActivityPerformanceModelTest::M_NUM_PACKAGE = 1;
-const int CPUActivityPerformanceModelTest::M_NUM_GPU = 1;
-const size_t CPUActivityPerformanceModelTest::M_NUM_UNCORE_MBM_READINGS = 13;
 
 void CPUActivityPerformanceModelTest::SetUp()
 {
 
     m_platform_io = geopm::make_unique<MockPlatformIO>();
     m_platform_topo = geopm::make_unique<MockPlatformTopo>();
-    //m_platform_io = geopm::make_unique<StrictMock<MockPlatformIO> >();
-    //m_platform_topo = geopm::make_unique<StrictMock<MockPlatformTopo> >();
 
     ON_CALL(*m_platform_topo, num_domain(GEOPM_DOMAIN_CORE))
         .WillByDefault(Return(M_NUM_CORE));
@@ -100,10 +74,6 @@ void CPUActivityPerformanceModelTest::SetUp()
     m_cpu_freq_sticker = 2100000000.0;
     m_cpu_freq_step = 100000000.0;
     m_cpu_freq_max = 3700000000.0;
-    m_cpu_uncore_freq_min = 1200000000.0;
-    m_cpu_uncore_freq_max = 2400000000.0;
-    m_gpu_freq_min =  400000000.0;
-    m_gpu_freq_max = 1600000000.0;
 
     ON_CALL(*m_platform_io, read_signal("CPU_FREQUENCY_MIN_AVAIL", GEOPM_DOMAIN_BOARD, 0))
             .WillByDefault(Return(m_cpu_freq_min));
@@ -115,27 +85,11 @@ void CPUActivityPerformanceModelTest::SetUp()
     ON_CALL(*m_platform_io, read_signal("CPU_FREQUENCY_STEP", GEOPM_DOMAIN_BOARD, 0))
             .WillByDefault(Return(m_cpu_freq_step));
 
-    ON_CALL(*m_platform_io, read_signal("CPU_UNCORE_FREQUENCY_MIN_CONTROL", GEOPM_DOMAIN_BOARD, 0))
-            .WillByDefault(Return(m_cpu_uncore_freq_min));
-    ON_CALL(*m_platform_io, read_signal("CPU_UNCORE_FREQUENCY_MAX_CONTROL", GEOPM_DOMAIN_BOARD, 0))
-            .WillByDefault(Return(m_cpu_uncore_freq_max));
-
-    ON_CALL(*m_platform_io, read_signal("GPU_FREQUENCY_MIN_AVAIL", GEOPM_DOMAIN_BOARD, 0))
-            .WillByDefault(Return(m_gpu_freq_min));
-    ON_CALL(*m_platform_io, read_signal("GPU_FREQUENCY_MAX_AVAIL", GEOPM_DOMAIN_BOARD, 0))
-            .WillByDefault(Return(m_gpu_freq_max));
-
     EXPECT_CALL(*m_platform_topo, num_domain(GEOPM_DOMAIN_CORE)).Times(1);
 
     // Signals
-    ON_CALL(*m_platform_io, push_signal("MSR::QM_CTR_SCALED_RATE", _, _))
-        .WillByDefault(Return(QM_CTR_SCALED_RATE_IDX));
     ON_CALL(*m_platform_io, push_signal("MSR::CPU_SCALABILITY_RATIO", _, _))
         .WillByDefault(Return(CPU_SCALABILITY_IDX));
-    ON_CALL(*m_platform_io, push_signal("CPU_UNCORE_FREQUENCY_STATUS", _, _))
-        .WillByDefault(Return(CPU_UNCORE_FREQUENCY_IDX));
-    ON_CALL(*m_platform_io, push_signal("GPU_CORE_ACTIVITY", _, _))
-        .WillByDefault(Return(GPU_ACTIVITY_IDX));
     ON_CALL(*m_platform_io, agg_function(_))
         .WillByDefault(Return(geopm::Agg::average));
 
@@ -184,7 +138,8 @@ TEST_F(CPUActivityPerformanceModelTest, control_recommendation)
         EXPECT_EQ(expected.at(itr.first), itr.second);
     }
 
-    // CPU + GPU only
+    // Additional signals provided to confirm the recommender
+    // only provides back CPU controls
     signal_set = {"CPU_FREQUENCY_MIN_AVAIL", "CPU_FREQUENCY_MAX_AVAIL",
                   "CPU_FREQUENCY_STICKER", "CPU_FREQUENCY_STEP",
                   "MSR::CPU_SCALABILITY_RATIO",
@@ -192,6 +147,7 @@ TEST_F(CPUActivityPerformanceModelTest, control_recommendation)
                   "GPU_FREQUENCY_MIN_AVAIL", "GPU_FREQUENCY_MAX_AVAIL",
                   "GPU_CORE_ACTIVITY"
                  };
+
     EXPECT_CALL(*m_platform_io, signal_names()).WillRepeatedly(Return(signal_set));
     m_perf->init();
 
@@ -257,6 +213,8 @@ TEST_F(CPUActivityPerformanceModelTest, update_sample_check_recommendation)
 
     std::vector<double> policy;
     policy = m_default_policy;
+    policy[CPU_FREQ_EFFICIENT] = f_e;
+
     m_perf->validate_policy(policy);
     EXPECT_EQ(0.5, policy[PHI]);
     m_perf->apply_policy(policy);
@@ -269,6 +227,7 @@ TEST_F(CPUActivityPerformanceModelTest, update_sample_check_recommendation)
         EXPECT_EQ(r, expected_core_freq);
     }
 
+    // Confirm not provided
     rec = m_perf->sample_recommendation("GPU_CORE_FREQUENCY_MIN_CONTROL");
     EXPECT_EQ(rec.size(), 0);
 
@@ -281,6 +240,8 @@ TEST_F(CPUActivityPerformanceModelTest, update_sample_check_recommendation)
                          (m_cpu_freq_max - f_e);
 
     policy = m_default_policy;
+    policy[CPU_FREQ_EFFICIENT] = f_e;
+
     m_perf->validate_policy(policy);
     EXPECT_EQ(0.5, policy[PHI]);
     m_perf->apply_policy(policy);
@@ -302,6 +263,8 @@ TEST_F(CPUActivityPerformanceModelTest, update_sample_check_recommendation)
                          (m_cpu_freq_max - f_e);
 
     policy = m_default_policy;
+    policy[CPU_FREQ_EFFICIENT] = f_e;
+
     m_perf->validate_policy(policy);
     EXPECT_EQ(0.5, policy[PHI]);
     m_perf->apply_policy(policy);

@@ -51,52 +51,29 @@ class UncoreActivityPerformanceModelTest : public ::testing::Test
 
         void SetUp();
         void TearDown();
-        static const int M_NUM_CPU;
-        static const int M_NUM_CORE;
-        static const int M_NUM_BOARD;
         static const int M_NUM_PACKAGE;
-        static const int M_NUM_GPU;
         std::unique_ptr<UncoreActivityPerformanceModelImp> m_perf;
         std::vector<double> m_default_policy;
-        size_t m_num_policy;
-        double m_cpu_freq_min;
-        double m_cpu_freq_sticker;
-        double m_cpu_freq_step;
-        double m_cpu_freq_max;
         double m_cpu_uncore_freq_min;
         double m_cpu_uncore_freq_max;
-        double m_gpu_freq_min;
-        double m_gpu_freq_max;
         double m_mbm_max;
         std::unique_ptr<MockPlatformIO> m_platform_io;
         std::unique_ptr<MockPlatformTopo> m_platform_topo;
 };
 
-const int UncoreActivityPerformanceModelTest::M_NUM_CPU = 1;
-const int UncoreActivityPerformanceModelTest::M_NUM_CORE = 1;
-const int UncoreActivityPerformanceModelTest::M_NUM_BOARD = 1;
 const int UncoreActivityPerformanceModelTest::M_NUM_PACKAGE = 1;
-const int UncoreActivityPerformanceModelTest::M_NUM_GPU = 1;
 
 void UncoreActivityPerformanceModelTest::SetUp()
 {
 
     m_platform_io = geopm::make_unique<MockPlatformIO>();
     m_platform_topo = geopm::make_unique<MockPlatformTopo>();
-    //m_platform_io = geopm::make_unique<StrictMock<MockPlatformIO> >();
-    //m_platform_topo = geopm::make_unique<StrictMock<MockPlatformTopo> >();
 
     ON_CALL(*m_platform_topo, num_domain(GEOPM_DOMAIN_PACKAGE))
         .WillByDefault(Return(M_NUM_PACKAGE));
 
-    m_cpu_freq_min = 1000000000.0;
-    m_cpu_freq_sticker = 2100000000.0;
-    m_cpu_freq_step = 100000000.0;
-    m_cpu_freq_max = 3700000000.0;
     m_cpu_uncore_freq_min = 1200000000.0;
     m_cpu_uncore_freq_max = 2400000000.0;
-    m_gpu_freq_min =  400000000.0;
-    m_gpu_freq_max = 1600000000.0;
 
     ON_CALL(*m_platform_io, read_signal("CPU_UNCORE_FREQUENCY_MIN_CONTROL", GEOPM_DOMAIN_BOARD, 0))
             .WillByDefault(Return(m_cpu_uncore_freq_min));
@@ -115,8 +92,6 @@ void UncoreActivityPerformanceModelTest::SetUp()
 
 
     m_perf = geopm::make_unique<UncoreActivityPerformanceModelImp>(*m_platform_io, *m_platform_topo);
-
-//    m_num_policy = m_perf->policy_names().size();
 
     m_mbm_max = 104748888888.88889;
     m_default_policy = {NAN, m_cpu_uncore_freq_max, m_cpu_uncore_freq_min, m_mbm_max};

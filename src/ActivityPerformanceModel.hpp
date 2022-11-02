@@ -39,7 +39,7 @@ namespace geopm
             ///        Policy sender can request default value with 'NaN'.
             virtual void validate_policy(std::vector<double> &in_policy) const = 0;
 
-            /// @brief
+            /// @brief Applies the policy provided to the performance model.
             virtual void apply_policy(std::vector<double> &in_policy) = 0;
     };
 }
