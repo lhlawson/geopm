@@ -209,7 +209,7 @@ namespace geopm
         }
 
         // Check for NAN to set default values for policy
-        if (!std::isnan(in_policy[M_POLICY_FREQ_EFFICIENT])) {
+        if (std::isnan(in_policy[M_POLICY_FREQ_EFFICIENT])) {
             in_policy[M_POLICY_FREQ_EFFICIENT] = m_freq_min;
         }
 

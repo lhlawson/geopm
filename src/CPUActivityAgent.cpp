@@ -149,7 +149,6 @@ namespace geopm
                                             };
         m_uncore_perf_model->validate_policy(uncore_policy);
 
-        //Is this needed?
         in_policy[M_POLICY_CPU_PHI] = uncore_policy[0];
         in_policy[M_POLICY_UNCORE_FREQ_MAX] = uncore_policy[1];
         in_policy[M_POLICY_UNCORE_FREQ_EFFICIENT] = uncore_policy[2];
@@ -233,9 +232,6 @@ namespace geopm
         m_uncore_perf_model->update_recommendation();
 
         std::vector<double> uncore_freq_min_request = m_uncore_perf_model->sample_recommendation("CPU_UNCORE_FREQUENCY_MIN_CONTROL");
-
-        std::vector<double> uncore_freq_max_request = m_uncore_perf_model->sample_recommendation("CPU_UNCORE_FREQUENCY_MAX_CONTROL");
-
         // Set per package min
         for (int domain_idx = 0; domain_idx < uncore_freq_min_request.size(); ++domain_idx) {
             if (std::isnan(uncore_freq_min_request.at(domain_idx))) {
@@ -257,6 +253,7 @@ namespace geopm
             }
         }
 
+        std::vector<double> uncore_freq_max_request = m_uncore_perf_model->sample_recommendation("CPU_UNCORE_FREQUENCY_MAX_CONTROL");
         // Set per package max
         for (int domain_idx = 0; domain_idx < uncore_freq_max_request.size(); ++domain_idx) {
             if (std::isnan(uncore_freq_max_request.at(domain_idx))) {

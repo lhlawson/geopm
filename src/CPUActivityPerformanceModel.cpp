@@ -185,22 +185,8 @@ namespace geopm
                             GEOPM_ERROR_INVALID, __FILE__, __LINE__);
         }
 
-
-        //if (in_policy[M_POLICY_FREQ_MAX] < m_freq_min) {
-        //    throw Exception("UncoreActivityPerformanceModel::" + std::string(__func__) +
-        //                    "():FREQ_MAX out of range: " +
-        //                    std::to_string(in_policy[M_POLICY_FREQ_MAX]) +
-        //                    ". Acceptable range is " + std::to_string(m_freq_min) + " to " +
-        //                    std::to_string(m_freq_max) + ".",
-        //                    GEOPM_ERROR_INVALID, __FILE__, __LINE__);
-        //}
-
-        //if (in_policy[M_POLICY_FREQ_MAX] > m_freq_max) {
-        //    in_policy[M_POLICY_FREQ_MAX] = m_freq_max;
-        //}
-
         // Check for NAN to set default values for policy
-        if (!std::isnan(in_policy[M_POLICY_FREQ_EFFICIENT])) {
+        if (std::isnan(in_policy[M_POLICY_FREQ_EFFICIENT])) {
             in_policy[M_POLICY_FREQ_EFFICIENT] = m_freq_efficient;
         }
 
