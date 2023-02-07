@@ -366,6 +366,20 @@ namespace geopm
                         m_gpu_active_region_stop.at(domain_idx) = m_time.value;
                         m_gpu_active_energy_stop.at(domain_idx) = m_gpu_energy.at(domain_idx).value;
                     }
+
+                    // GPU on time tracking
+                    if (m_gpu_on_time_stop.at(domain_idx) == 0) {
+                        m_gpu_on_time_stop.at(domain_idx) = m_time.value;
+                        m_gpu_on_time.at(domain_idx) += m_gpu_on_time_stop.at(domain_idx) -
+                                                        m_gpu_on_time_start.at(domain_idx);
+
+                        if(m_gpu_on_energy_start.at(domain_idx) != 0.0) {
+                            m_gpu_on_energy.at(domain_idx) += m_gpu_energy.at(domain_idx).value -
+                                                              m_gpu_on_energy_start.at(domain_idx);
+                        }
+                    }
+                    m_gpu_on_time_start.at(domain_idx) = 0;
+                    m_gpu_on_energy_start.at(domain_idx) = 0;
                 }
             }
         }
