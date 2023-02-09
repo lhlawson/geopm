@@ -1,0 +1,168 @@
+/*
+ * Copyright (c) 2015 - 2022, Intel Corporation
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
+#ifndef NODEACTIVITYAGENT_HPP_INCLUDE
+#define NODEACTIVITYAGENT_HPP_INCLUDE
+
+#include <functional>
+#include <vector>
+
+#include "geopm_time.h"
+#include "Agent.hpp"
+
+namespace geopm
+{
+    class PlatformTopo;
+    class PlatformIO;
+    class FrequencyGovernor;
+
+    /// @brief Agent
+    class NodeActivityAgent : public Agent
+    {
+        public:
+            NodeActivityAgent();
+            NodeActivityAgent(PlatformIO &plat_io, const PlatformTopo &topo,
+                              std::shared_ptr<FrequencyGovernor> gov);
+            virtual ~NodeActivityAgent() = default;
+            void init(int level, const std::vector<int> &fan_in, bool is_level_root) override;
+            void validate_policy(std::vector<double> &in_policy) const override;
+            void split_policy(const std::vector<double> &in_policy,
+                              std::vector<std::vector<double> > &out_policy) override;
+            bool do_send_policy(void) const override;
+            void aggregate_sample(const std::vector<std::vector<double> > &in_sample,
+                                  std::vector<double> &out_sample) override;
+            bool do_send_sample(void) const override;
+            void adjust_platform(const std::vector<double> &in_policy) override;
+            bool do_write_batch(void) const override;
+            void sample_platform(std::vector<double> &out_sample) override;
+            void wait(void) override;
+            std::vector<std::pair<std::string, std::string> > report_header(void) const override;
+            std::vector<std::pair<std::string, std::string> > report_host(void) const override;
+            std::map<uint64_t, std::vector<std::pair<std::string, std::string> > > report_region(void) const override;
+            std::vector<std::string> trace_names(void) const override;
+            void trace_values(std::vector<double> &values) override;
+            void enforce_policy(const std::vector<double> &policy) const override;
+            std::vector<std::function<std::string(double)> > trace_formats(void) const override;
+
+            static std::string plugin_name(void);
+            static std::unique_ptr<Agent> make_plugin(void);
+            static std::vector<std::string> policy_names(void);
+            static std::vector<std::string> sample_names(void);
+        private:
+            PlatformIO &m_platform_io;
+            const PlatformTopo &m_platform_topo;
+            geopm_time_s m_last_wait;
+            double M_WAIT_SEC;
+            const double M_POLICY_PHI_DEFAULT;
+            const double M_GPU_ACTIVITY_CUTOFF;
+            const int M_NUM_GPU;
+            const int M_NUM_GPU_CHIP;
+            const int M_NUM_CHIP_PER_GPU;
+            bool m_do_write_batch;
+            bool m_do_send_policy;
+            const int M_NUM_PACKAGE;
+
+            int m_agent_domain_count;
+            int m_agent_domain;
+
+            struct m_signal
+            {
+                int batch_idx;
+                double value;
+            };
+
+            struct m_control
+            {
+                int batch_idx;
+                double last_setting;
+            };
+
+            // Policy indices; must match policy_names()
+            enum m_policy_e {
+                M_POLICY_PHI,
+                M_NUM_POLICY
+            };
+
+            // Sample indices; must match sample_names()
+            enum m_sample_e {
+                M_NUM_SAMPLE
+            };
+
+            std::map<std::string, double> m_policy_available;
+
+            // GPU
+            double m_gpu_frequency_requests;
+            double m_gpu_frequency_clipped;
+            double m_freq_gpu_min;
+            double m_freq_gpu_max;
+            double m_freq_gpu_efficient;
+            double m_resolved_f_gpu_max;
+            double m_resolved_f_gpu_efficient;
+            double m_f_range;
+            std::vector<double> m_gpu_active_region_start;
+            std::vector<double> m_gpu_active_region_stop;
+            std::vector<double> m_gpu_active_energy_start;
+            std::vector<double> m_gpu_active_energy_stop;
+            std::vector<double> m_gpu_on_time_start;
+            std::vector<double> m_gpu_on_time_stop;
+            std::vector<double> m_gpu_on_time;
+            std::vector<double> m_gpu_on_energy_start;
+            std::vector<double> m_gpu_on_energy;
+            std::vector<int> m_gpu_idle_samples;
+
+            std::vector<m_signal> m_gpu_core_activity;
+            std::vector<m_signal> m_gpu_utilization;
+            std::vector<m_signal> m_gpu_energy;
+            std::vector<int> m_gpu_idle_timer;
+
+            m_signal m_time;
+            m_signal m_cpu_energy;
+
+            std::vector<m_control> m_gpu_freq_min_control;
+            std::vector<m_control> m_gpu_freq_max_control;
+
+            // CPU
+            std::shared_ptr<FrequencyGovernor> m_freq_governor;
+            int m_freq_ctl_domain_type;
+            int m_num_freq_ctl_domain;
+            double m_core_batch_writes;
+            double m_uncore_frequency_requests;
+            double m_uncore_frequency_clamped;
+            double m_resolved_f_uncore_efficient;
+            double m_resolved_f_uncore_max;
+            double m_resolved_f_core_efficient;
+            double m_resolved_f_core_max;
+            double m_freq_uncore_min;
+            double m_freq_uncore_max;
+            double m_freq_uncore_efficient;
+            double m_freq_core_min;
+            double m_freq_core_max;
+            double m_freq_core_efficient;
+            double m_cpu_active_energy_start;
+            double m_cpu_active_energy_stop;
+            double m_cpu_on_energy_start;
+            double m_cpu_on_energy;
+
+            // Maps uncore frequency -> maximum memory bandwidth achieved by
+            // that frequency (determined by system characterization)
+            std::map<double, double> m_qm_max_rate;
+
+            std::vector<m_signal> m_core_scal;
+            std::vector<m_control> m_core_freq_control;
+
+            std::vector<m_signal> m_qm_rate;
+            std::vector<m_signal> m_uncore_freq_status;
+            std::vector<m_control> m_uncore_freq_min_control;
+            std::vector<m_control> m_uncore_freq_max_control;
+
+
+            void init_gpu_platform_io(void);
+            void init_cpu_platform_io(void);
+            void init_constconfig_io(void);
+            bool gpu_adjust_platform(const std::vector<double> &in_policy);
+            bool cpu_adjust_platform(const std::vector<double> &in_policy);
+    };
+}
+#endif
