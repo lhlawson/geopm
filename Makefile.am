@@ -483,6 +483,8 @@ beta_source_files = src/CPUActivityAgent.cpp \
                     src/DaemonImp.hpp \
                     src/GPUActivityAgent.cpp \
                     src/GPUActivityAgent.hpp \
+                    src/NodeActivityAgent.cpp \
+                    src/NodeActivityAgent.hpp \
                     src/PolicyStore.cpp \
                     src/PolicyStore.hpp \
                     src/PolicyStoreImp.cpp \

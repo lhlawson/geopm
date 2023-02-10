@@ -83,16 +83,13 @@ namespace geopm
             m_gpu_active_energy_start.push_back(0.0);
             m_gpu_active_energy_stop.push_back(0.0);
 
-            m_gpu_on_time_start.push_back(0.0);
-            m_gpu_on_time_stop.push_back(0.0);
             m_gpu_on_time.push_back(0.0);
 
-            m_gpu_on_energy_start.push_back(0.0);
+            m_gpu_prev_energy.push_back(0.0);
             m_gpu_on_energy.push_back(0.0);
         }
         m_cpu_active_energy_start = 0.0;
         m_cpu_active_energy_stop = 0.0;
-        m_cpu_on_energy_start = 0.0;
         m_cpu_on_energy = 0.0;
 
         if (level == 0) {
@@ -668,15 +665,10 @@ namespace geopm
                         m_cpu_active_energy_start = m_cpu_energy.value;
                     }
 
-                    // GPU on time tracking
-                    m_gpu_on_time_stop.at(domain_idx) = 0;
-                    if (m_gpu_on_time_start.at(domain_idx) == 0) {
-                        m_gpu_on_time_start.at(domain_idx) = m_time.value;
-                        m_gpu_on_energy_start.at(domain_idx) = m_gpu_energy.at(domain_idx).value;
-
-                        if(domain_idx == 0) {
-                            m_cpu_on_energy_start = m_cpu_energy.value;
-                        }
+                    m_gpu_on_time.at(domain_idx) += m_time.value - m_prev_time;
+                    m_gpu_on_energy.at(domain_idx) += m_gpu_energy.at(domain_idx).value - m_gpu_prev_energy.at(domain_idx);
+                    if (domain_idx == M_NUM_GPU-1) { //pick a GPU, I've picked the last
+                        m_cpu_on_energy += m_cpu_energy.value - m_cpu_prev_energy;
                     }
                 }
                 else {
@@ -686,25 +678,6 @@ namespace geopm
                         m_gpu_active_energy_stop.at(domain_idx) = m_gpu_energy.at(domain_idx).value;
                         m_cpu_active_energy_stop = m_cpu_energy.value;
                     }
-
-                    // GPU on time tracking
-                    if (m_gpu_on_time_stop.at(domain_idx) == 0) {
-                        m_gpu_on_time_stop.at(domain_idx) = m_time.value;
-                        m_gpu_on_time.at(domain_idx) += m_gpu_on_time_stop.at(domain_idx) -
-                                                        m_gpu_on_time_start.at(domain_idx);
-
-                        if(m_gpu_on_energy_start.at(domain_idx) != 0.0) {
-                            m_gpu_on_energy.at(domain_idx) += m_gpu_energy.at(domain_idx).value -
-                                                              m_gpu_on_energy_start.at(domain_idx);
-                        }
-                        // only add the CPU energy once
-                        if(m_cpu_on_energy_start != 0.0 && domain_idx == 0) {
-                            m_cpu_on_energy += m_cpu_energy.value - m_cpu_on_energy_start;
-                        }
-                    }
-                    m_gpu_on_time_start.at(domain_idx) = 0;
-                    m_gpu_on_energy_start.at(domain_idx) = 0;
-                    m_cpu_on_energy_start = 0;
                 }
             }
         }
@@ -753,6 +726,7 @@ namespace geopm
         }
 
         for (int domain_idx = 0; domain_idx < M_NUM_GPU; ++domain_idx) {
+            m_gpu_prev_energy.at(domain_idx) = m_gpu_energy.at(domain_idx).value;
             m_gpu_energy.at(domain_idx).value = m_platform_io.sample(m_gpu_energy.at(
                                                                      domain_idx).batch_idx);
         }
@@ -771,9 +745,11 @@ namespace geopm
             m_core_scal.at(domain_idx).value = m_platform_io.sample(m_core_scal.at(domain_idx).batch_idx);
         }
 
+        m_cpu_prev_energy = m_cpu_energy.value;
         m_cpu_energy.value = m_platform_io.sample(m_cpu_energy.batch_idx);
 
         // Collect time value
+        m_prev_time = m_time.value;
         m_time.value = m_platform_io.sample(m_time.batch_idx);
     }
 

@@ -105,10 +105,7 @@ namespace geopm
             std::vector<double> m_gpu_active_region_stop;
             std::vector<double> m_gpu_active_energy_start;
             std::vector<double> m_gpu_active_energy_stop;
-            std::vector<double> m_gpu_on_time_start;
-            std::vector<double> m_gpu_on_time_stop;
             std::vector<double> m_gpu_on_time;
-            std::vector<double> m_gpu_on_energy_start;
             std::vector<double> m_gpu_on_energy;
             std::vector<int> m_gpu_idle_samples;
 
@@ -116,6 +113,10 @@ namespace geopm
             std::vector<m_signal> m_gpu_utilization;
             std::vector<m_signal> m_gpu_energy;
             std::vector<int> m_gpu_idle_timer;
+
+            double m_prev_time;
+            double m_cpu_prev_energy;
+            std::vector<double> m_gpu_prev_energy;
 
             m_signal m_time;
             m_signal m_cpu_energy;
@@ -142,7 +143,6 @@ namespace geopm
             double m_freq_core_efficient;
             double m_cpu_active_energy_start;
             double m_cpu_active_energy_stop;
-            double m_cpu_on_energy_start;
             double m_cpu_on_energy;
 
             // Maps uncore frequency -> maximum memory bandwidth achieved by

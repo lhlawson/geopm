@@ -26,6 +26,7 @@
 #ifdef GEOPM_ENABLE_BETA
 #include "CPUActivityAgent.hpp"
 #include "GPUActivityAgent.hpp"
+#include "NodeActivityAgent.hpp"
 #endif
 
 namespace geopm
@@ -63,6 +64,10 @@ namespace geopm
                         GPUActivityAgent::make_plugin,
                         Agent::make_dictionary(GPUActivityAgent::policy_names(),
                                                GPUActivityAgent::sample_names()));
+        register_plugin(NodeActivityAgent::plugin_name(),
+                        NodeActivityAgent::make_plugin,
+                        Agent::make_dictionary(NodeActivityAgent::policy_names(),
+                                               NodeActivityAgent::sample_names()));
 #endif
     }
 
