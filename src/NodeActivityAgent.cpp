@@ -41,7 +41,7 @@ namespace geopm
         , M_WAIT_SEC(0.020) // 20ms wait default
         // GPU centric entries
         , M_POLICY_PHI_DEFAULT(0.5)
-        , M_GPU_ACTIVITY_CUTOFF(0.05)
+        , M_GPU_ACTIVITY_CUTOFF(0.20)
         , M_NUM_GPU(m_platform_topo.num_domain(
                     GEOPM_DOMAIN_GPU))
         , M_NUM_GPU_CHIP(m_platform_topo.num_domain(
@@ -782,6 +782,9 @@ namespace geopm
         result.push_back({"Resolved Efficient Frequency", std::to_string(m_resolved_f_gpu_efficient)});
         result.push_back({"Resolved Frequency Range", std::to_string(m_f_range)});
 
+        double total_gpu_roi_energy = 0;
+        double total_gpu_on_energy = 0;
+
         for (int domain_idx = 0; domain_idx < M_NUM_GPU; ++domain_idx) {
             double energy_stop = m_gpu_active_energy_stop.at(domain_idx);
             double energy_start = m_gpu_active_energy_start.at(domain_idx);
@@ -795,12 +798,19 @@ namespace geopm
                               " On Energy", std::to_string(m_gpu_on_energy.at(domain_idx))});
             result.push_back({"GPU " + std::to_string(domain_idx) +
                               " On Time", std::to_string(m_gpu_on_time.at(domain_idx))});
+            total_gpu_roi_energy += energy_stop - energy_start;
+            total_gpu_on_energy += m_gpu_on_energy.at(domain_idx);
         }
 
         for (int domain_idx = 0; domain_idx < m_agent_domain_count; ++domain_idx) {
             result.push_back({"GPU Chip " + std::to_string(domain_idx) +
                               " Idle Agent Actions", std::to_string(m_gpu_idle_samples.at(domain_idx))});
         }
+
+        result.push_back({"Total GPU Active Region Energy",
+                          std::to_string(total_gpu_roi_energy)});
+        result.push_back({"Total GPU On Energy",
+                          std::to_string(total_gpu_on_energy)});
 
         result.push_back({"Core Batch Writes",
                           std::to_string(m_core_batch_writes)});
@@ -827,6 +837,15 @@ namespace geopm
                           std::to_string(m_cpu_active_energy_stop - m_cpu_active_energy_start)});
         result.push_back({"CPU Energy During GPU On Time",
                           std::to_string(m_cpu_on_energy)});
+
+        double node_roi_energy = total_gpu_roi_energy;
+        double node_on_energy = total_gpu_on_energy;
+        node_roi_energy += m_cpu_active_energy_stop - m_cpu_active_energy_start;
+        node_on_energy += m_cpu_on_energy;
+        result.push_back({"Node Energy During GPU Active Region",
+                          std::to_string(node_roi_energy)});
+        result.push_back({"Node Energy During GPU On Time",
+                          std::to_string(node_on_energy)});
         return result;
     }
 
