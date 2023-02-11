@@ -41,7 +41,7 @@ namespace geopm
         , M_WAIT_SEC(0.020) // 20ms wait default
         // GPU centric entries
         , M_POLICY_PHI_DEFAULT(0.5)
-        , M_GPU_ACTIVITY_CUTOFF(0.20)
+        , M_GPU_ACTIVITY_CUTOFF(0.25)
         , M_NUM_GPU(m_platform_topo.num_domain(
                     GEOPM_DOMAIN_GPU))
         , M_NUM_GPU_CHIP(m_platform_topo.num_domain(
@@ -665,10 +665,21 @@ namespace geopm
                         m_cpu_active_energy_start = m_cpu_energy.value;
                     }
 
-                    m_gpu_on_time.at(domain_idx) += m_time.value - m_prev_time;
-                    m_gpu_on_energy.at(domain_idx) += m_gpu_energy.at(domain_idx).value - m_gpu_prev_energy.at(domain_idx);
+                    double sample_energy_diff = m_gpu_energy.at(domain_idx).value - m_gpu_prev_energy.at(domain_idx);
+                    if(!std::isnan(sample_energy_diff)) {
+                        m_gpu_on_energy.at(domain_idx) += sample_energy_diff;
+                    }
+
+                    double sample_time_diff = m_time.value - m_prev_time;
+                    if(!std::isnan(sample_time_diff)) {
+                        m_gpu_on_time.at(domain_idx) += sample_time_diff;
+                    }
+
                     if (domain_idx == M_NUM_GPU-1) { //pick a GPU, I've picked the last
-                        m_cpu_on_energy += m_cpu_energy.value - m_cpu_prev_energy;
+                        sample_energy_diff = m_cpu_energy.value - m_cpu_prev_energy;
+                        if(!std::isnan(sample_energy_diff)) {
+                            m_cpu_on_energy += sample_energy_diff;
+                        }
                     }
                 }
                 else {
