@@ -110,8 +110,13 @@ namespace geopm
             std::vector<m_signal> m_gpu_energy;
             std::vector<int> m_gpu_idle_timer;
 
+            m_signal m_cpu_energy;
             m_signal m_time;
             double m_prev_time;
+            double m_cpu_prev_energy;
+            double m_cpu_active_energy_start;
+            double m_cpu_active_energy_stop;
+            double m_cpu_on_energy;
             std::vector<double> m_prev_gpu_energy;
 
             std::vector<m_control> m_gpu_freq_min_control;
