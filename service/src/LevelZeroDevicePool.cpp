@@ -581,25 +581,4 @@ namespace geopm
 
         return m_levelzero.metric_update_rate(domain_idx);
     }
-
-//    void LevelZeroDevicePoolImp::metric_polling_disable()
-//    {
-//        unsigned int num_device = num_gpu(GEOPM_DOMAIN_GPU);
-//        for (unsigned int l0_device_idx = 0; l0_device_idx < num_device; l0_device_idx++) {
-//            m_levelzero.metric_destroy(l0_device_idx);
-//        }
-//    }
-
-    void LevelZeroDevicePoolImp::metric_update_rate_control(int domain, unsigned int domain_idx,
-                                                            uint32_t setting) const
-    {
-        if (domain != GEOPM_DOMAIN_GPU) {
-            throw Exception("LevelZeroDevicePool::" + std::string(__func__) +
-                            ": domain " + std::to_string(domain) +
-                            " is not supported for metrics.",
-                            GEOPM_ERROR_INVALID, __FILE__, __LINE__);
-        }
-
-        m_levelzero.metric_update_rate_control(domain_idx, setting);
-    }
 }
