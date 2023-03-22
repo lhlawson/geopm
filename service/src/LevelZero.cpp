@@ -180,8 +180,9 @@ namespace geopm
             perf_domain_cache(gpu_idx);
             engine_domain_cache(gpu_idx);
             temperature_domain_cache(gpu_idx);
-            metric_group_cache(gpu_idx);
+            //metric_group_cache(gpu_idx);
        }
+       metric_group_cache(0);
     }
 
     void LevelZeroImp::frequency_domain_cache(unsigned int device_idx) {
@@ -529,7 +530,8 @@ namespace geopm
 
     void LevelZeroImp::metric_group_cache(unsigned int device_idx) {
         for (int subdevice_idx = 0;
-         subdevice_idx < m_devices.at(device_idx).m_num_subdevice;
+         //subdevice_idx < m_devices.at(device_idx).m_num_subdevice;
+         subdevice_idx < 1;
          ++subdevice_idx) {
             //assume false
             m_devices.at(device_idx).subdevice.metric_domain_cached.push_back(false);
