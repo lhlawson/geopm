@@ -181,7 +181,7 @@ namespace geopm
             perf_domain_cache(gpu_idx);
             engine_domain_cache(gpu_idx);
             temperature_domain_cache(gpu_idx);
-            if (gpu_idx < 6) {
+            if (gpu_idx < 1) {
                 metric_group_cache(gpu_idx);
             }
        }
@@ -653,6 +653,7 @@ namespace geopm
                                                 GEOPM_ERROR_INVALID, __FILE__, __LINE__);
                             }
                             m_devices.at(device_idx).subdevice.m_metric_data.at(subdevice_idx)[metric_name] = {};
+                            m_devices.at(device_idx).subdevice.m_metric_data.at(subdevice_idx)["NUM_REPORTS"] = {};
                         }
                         // Break out of loop once we've found the group of interest
                         break;
@@ -770,7 +771,7 @@ namespace geopm
         // Convert Raw Data //
         //////////////////////
         size_t data_size = 0;
-        uint32_t report_count_req = 10;
+        uint32_t report_count_req = UINT32_MAX;//10;
         //ze_result = zetMetricStreamerReadData(metric_streamer, UINT32_MAX, &data_size, nullptr);
         ze_result = zetMetricStreamerReadData(metric_streamer, report_count_req, &data_size, nullptr);
         check_ze_result(ze_result, GEOPM_ERROR_RUNTIME,
@@ -786,10 +787,10 @@ namespace geopm
                         __LINE__);
 
         // Dump all other reports
-        size_t temp_data_size = 0;
-        ze_result = zetMetricStreamerReadData(metric_streamer, UINT32_MAX, &temp_data_size, nullptr );
-        std::vector<uint8_t>temp_data(temp_data_size);
-        ze_result = zetMetricStreamerReadData(metric_streamer, UINT32_MAX, &temp_data_size, temp_data.data());
+//        size_t temp_data_size = 0;
+//        ze_result = zetMetricStreamerReadData(metric_streamer, UINT32_MAX, &temp_data_size, nullptr );
+//        std::vector<uint8_t>temp_data(temp_data_size);
+//        ze_result = zetMetricStreamerReadData(metric_streamer, UINT32_MAX, &temp_data_size, temp_data.data());
 
 //        end = std::chrono::system_clock::now();
 //        elapsed_seconds = end - start;
@@ -886,16 +887,15 @@ namespace geopm
                         if(report_idx == 0) {
                             m_devices.at(l0_device_idx).subdevice.m_metric_data.at(l0_domain_idx).at(metric_name) = {};
                             //m_devices.at(l0_device_idx).subdevice.m_metric_data.at(l0_domain_idx).at(metric_name).clear();
+                            m_devices.at(l0_device_idx).subdevice.m_metric_data.at(l0_domain_idx)["NUM_REPORTS"] = {};
+                            m_devices.at(l0_device_idx).subdevice.m_metric_data.at(l0_domain_idx)["NUM_REPORTS"].push_back(num_reports);
                         }
                         m_devices.at(l0_device_idx).subdevice.m_metric_data.at(l0_domain_idx).at(metric_name).push_back(data_double);
+                        if(report_idx == 1) {
+                        }
                     }
                 }
             }
-        //}
-        //else {
-        //    m_devices.at(l0_device_idx).subdevice.m_metric_data.at(l0_domain_idx).at("XVE_ACTIVE") = {};
-        //    m_devices.at(l0_device_idx).subdevice.m_metric_data.at(l0_domain_idx).at("XVE_STALL") = {};
-        //}
 //        end = std::chrono::system_clock::now();
 //        elapsed_seconds = end - start;
 //        std::cout << "Process Time: " <<
