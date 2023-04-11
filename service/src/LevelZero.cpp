@@ -771,7 +771,7 @@ namespace geopm
         // Convert Raw Data //
         //////////////////////
         size_t data_size = 0;
-        uint32_t report_count_req = UINT32_MAX;//10;
+        uint32_t report_count_req = 2;
         //ze_result = zetMetricStreamerReadData(metric_streamer, UINT32_MAX, &data_size, nullptr);
         ze_result = zetMetricStreamerReadData(metric_streamer, report_count_req, &data_size, nullptr);
         check_ze_result(ze_result, GEOPM_ERROR_RUNTIME,
@@ -787,10 +787,10 @@ namespace geopm
                         __LINE__);
 
         // Dump all other reports
-//        size_t temp_data_size = 0;
-//        ze_result = zetMetricStreamerReadData(metric_streamer, UINT32_MAX, &temp_data_size, nullptr );
-//        std::vector<uint8_t>temp_data(temp_data_size);
-//        ze_result = zetMetricStreamerReadData(metric_streamer, UINT32_MAX, &temp_data_size, temp_data.data());
+        size_t temp_data_size = 0;
+        ze_result = zetMetricStreamerReadData(metric_streamer, UINT32_MAX, &temp_data_size, nullptr );
+        std::vector<uint8_t>temp_data(temp_data_size);
+        ze_result = zetMetricStreamerReadData(metric_streamer, UINT32_MAX, &temp_data_size, temp_data.data());
 
 //        end = std::chrono::system_clock::now();
 //        elapsed_seconds = end - start;

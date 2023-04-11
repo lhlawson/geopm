@@ -545,7 +545,7 @@ namespace geopm
                                                    domain_idx,
                                                    "NUM_REPORTS");
                                   },
-                                  .01
+                                  1
                                   }},
                              })
         , m_control_available({{M_NAME_PREFIX + "GPU_CORE_FREQUENCY_MIN_CONTROL", {
