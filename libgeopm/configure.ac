@@ -63,6 +63,30 @@ fi
 [enable_overhead="0"]
 )
 
+AC_ARG_ENABLE([torch],
+  [AS_HELP_STRING([--enable-torch], [Enable use of the Pytorch C++ library to supporyt Pytorch based agents])],
+[if test "x$enable_torch" = "xno" ; then
+  enable_torch="0"
+else
+  enable_torch="1"
+fi
+],
+[enable_torch="0"]
+)
+
+AC_SUBST([enable_torch])
+AM_CONDITIONAL([ENABLE_TORCH], [test "x$enable_torch" = "x1"])
+
+AC_ARG_WITH([torch], [AS_HELP_STRING([--with-torch=PATH],
+            [specify directory for installed torch package.])])
+if test "x$with_torch" != x; then
+  AM_CPPFLAGS="$AM_CPPFLAGS -I$with_torch/include -I$with_torch/include/torch/csrc/api/include"
+  LD_LIBRARY_PATH="$with_torch/lib:$LD_LIBRARY_PATH"
+  AM_LDFLAGS="$AM_LDFLAGS -L$with_torch/lib"
+  AM_CXXFLAGS="$AM_CXXFLAGS -ltorch -ltorch_cpu -lc10 -ltorch_global_deps"
+fi
+
+
 AC_ARG_ENABLE([beta],
   [AS_HELP_STRING([--enable-beta], [Enable beta features of GEOPM that have interfaces expected to change])],
 [if test "x$enable_beta" = "xno" ; then
@@ -558,6 +582,14 @@ AC_SUBST([AM_FCFLAGS])
 AC_SUBST([AM_LDFLAGS])
 AC_SUBST([LDFLAGS_NOPIE])
 
+if test "x$enable_torch" = "x1" ; then
+  ENABLE_TORCH=True
+  AC_DEFINE([GEOPM_ENABLE_TORCH], [ ], [Enable use of the Pytorch C++ library to supporyt Pytorch based agents])
+else
+  ENABLE_TORCH=False
+fi
+AC_SUBST([ENABLE_TORCH])
+
 if test "x$enable_beta" = "x1"; then
   ENABLE_BETA=True
   AC_DEFINE([GEOPM_ENABLE_BETA], [ ], [Enables beta feature implementations.])
@@ -629,5 +661,6 @@ AC_MSG_RESULT([mpi                : ${enable_mpi}])
 AC_MSG_RESULT([openmp             : ${enable_openmp}])
 AC_MSG_RESULT([fortran            : ${enable_fortran}])
 AC_MSG_RESULT([ompt               : ${enable_ompt}])
+AC_MSG_RESULT([torch              : ${enable_torch}])
 AC_MSG_RESULT([beta               : ${enable_beta}])
 AC_MSG_RESULT([===============================================================================])
